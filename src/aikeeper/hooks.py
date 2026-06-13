@@ -36,6 +36,20 @@ def _tokens(value: int) -> str:
     return f"{value:,} tokens"
 
 
+def _usd(value: float | None) -> str:
+    amount = float(value or 0)
+    if 0 < abs(amount) < 0.01:
+        return f"${amount:,.4f}"
+    return f"${amount:,.2f}"
+
+
+def _tokens_with_cost(tokens: int, cost: float | None = None) -> str:
+    text = _tokens(tokens)
+    if cost is not None:
+        text += f" ({_usd(cost)} est.)"
+    return text
+
+
 def _dashboard_candidates() -> list[str]:
     configured = os.environ.get("AIKEEPER_DASHBOARD_URL")
     urls = [configured.rstrip("/")] if configured else []
@@ -57,8 +71,8 @@ def _find_dashboard_url() -> str | None:
 
 def _summary(status: dict, dashboard_url: str | None = None) -> str:
     line = (
-        f"> **AI Keeper** | turn {_tokens(status['session']['last_turn_tokens'])} | "
-        f"session {_tokens(status['session']['total_tokens'])} | "
+        f"> **AI Keeper** | turn {_tokens_with_cost(status['session']['last_turn_tokens'], status['session'].get('last_turn_cost_usd'))} | "
+        f"session {_tokens_with_cost(status['session']['total_tokens'], status['session'].get('estimated_cost_usd'))} | "
         f"task today {_tokens(status['task']['today_tokens'])} | "
         f"project today {_tokens(status['project']['today_tokens'])}"
     )

@@ -13,20 +13,26 @@
   <div class="metric-card">
     <span class="label">All time</span>
     <strong data-total-tokens title="{{ overview.total_tokens | tokens }}">{{ overview.total_tokens | compact_tokens }}</strong>
+    <small data-total-cost title="{{ overview.estimated_cost.total_usd | usd }}">Estimated spend {{ overview.estimated_cost.total_usd | compact_usd }}</small>
   </div>
   <div class="metric-card">
     <span class="label">Today</span>
     <strong data-today-tokens title="{{ overview.today_tokens | tokens }}">{{ overview.today_tokens | compact_tokens }}</strong>
+    <small data-today-cost title="{{ overview.estimated_cost.today_usd | usd }}">Estimated spend {{ overview.estimated_cost.today_usd | compact_usd }}</small>
   </div>
   <div class="metric-card">
     <span class="label">This week</span>
     <strong data-week-tokens title="{{ overview.week_tokens | tokens }}">{{ overview.week_tokens | compact_tokens }}</strong>
+    <small data-week-cost title="{{ overview.estimated_cost.week_usd | usd }}">Estimated spend {{ overview.estimated_cost.week_usd | compact_usd }}</small>
   </div>
   <div class="metric-card">
     <span class="label">Last turn</span>
     <strong data-last-turn-tokens>
       {% if overview.current_activity %}{{ overview.current_activity.last_turn_tokens | compact_tokens }}{% else %}0{% endif %}
     </strong>
+    <small data-last-turn-cost>
+      {% if overview.current_activity %}Estimated spend {{ overview.current_activity.last_turn_cost_usd | usd }}{% else %}Estimated spend $0.00{% endif %}
+    </small>
   </div>
 </section>
 
@@ -53,7 +59,7 @@
         <a href="/sessions/{{ overview.current_activity.id }}" title="{{ overview.current_activity.session_id }}">
           {{ overview.current_activity.session_label }}
         </a>
-        <small>{{ overview.current_activity.total_tokens | tokens }} tokens total</small>
+        <small>{{ overview.current_activity.total_tokens | tokens }} tokens / {{ overview.current_activity.estimated_cost_usd | usd }} est.</small>
       </div>
     </div>
     {% else %}
@@ -64,7 +70,7 @@
   <div class="panel trend-panel">
     <div class="panel-head">
       <h2>7-day trend</h2>
-      <span>tokens/day</span>
+      <span>tokens/day, est. USD</span>
     </div>
     {% set max_daily = overview.daily_tokens | map(attribute="tokens") | max %}
     <div class="trend-bars">
@@ -74,7 +80,7 @@
           <span style="height: {{ (day.tokens * 100 / max_daily) if max_daily else 0 }}%"></span>
         </div>
         <small>{{ day.date[5:] }}</small>
-        <strong title="{{ day.tokens | tokens }}">{{ day.tokens | compact_tokens }}</strong>
+        <strong title="{{ day.tokens | tokens }} / {{ day.estimated_cost_usd | usd }}">{{ day.tokens | compact_tokens }}</strong>
       </div>
       {% endfor %}
     </div>
@@ -88,13 +94,15 @@
       <span>{{ overview.projects | length }} tracked</span>
     </div>
     <table data-sortable>
-      <thead><tr><th>Project</th><th class="num">Today</th><th class="num">Total</th></tr></thead>
+      <thead><tr><th>Project</th><th class="num">Today</th><th class="num">Today $</th><th class="num">Total</th><th class="num">Total $</th></tr></thead>
       <tbody>
         {% for project in overview.projects %}
         <tr>
           <td><a href="/projects/{{ project.id }}">{{ project.name }}</a><small>{{ project.root_path }}</small></td>
           <td class="num" data-sort-value="{{ project.today_tokens }}" title="{{ project.today_tokens | tokens }}">{{ project.today_tokens | compact_tokens }}</td>
+          <td class="num" data-sort-value="{{ project.today_estimated_cost_usd }}" title="{{ project.today_estimated_cost_usd | usd }}">{{ project.today_estimated_cost_usd | compact_usd }}</td>
           <td class="num" data-sort-value="{{ project.tokens }}" title="{{ project.tokens | tokens }}">{{ project.tokens | compact_tokens }}</td>
+          <td class="num" data-sort-value="{{ project.estimated_cost_usd }}" title="{{ project.estimated_cost_usd | usd }}">{{ project.estimated_cost_usd | compact_usd }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -106,22 +114,29 @@
       <span>by total usage</span>
     </div>
     <table data-sortable>
-      <thead><tr><th>Task</th><th>Project</th><th class="num">Total</th></tr></thead>
+      <thead><tr><th>Task</th><th>Project</th><th class="num">Total</th><th class="num">Total $</th></tr></thead>
       <tbody>
         {% for task in overview.tasks %}
         <tr>
           <td>{{ task.display_name }}</td>
           <td>{{ task.project_name }}</td>
           <td class="num" data-sort-value="{{ task.tokens }}" title="{{ task.tokens | tokens }}">{{ task.tokens | compact_tokens }}</td>
+          <td class="num" data-sort-value="{{ task.estimated_cost_usd }}" title="{{ task.estimated_cost_usd | usd }}">{{ task.estimated_cost_usd | compact_usd }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </section>
+<p class="pricing-note">
+  Cost is an estimate from <a href="{{ overview.estimated_cost.source_url }}">{{ overview.estimated_cost.source_label }}</a>,
+  retrieved {{ overview.estimated_cost.retrieved_date }}.
+  {% if overview.estimated_cost.unpriced_models %}Unpriced models: {{ overview.estimated_cost.unpriced_models | join(", ") }}.{% endif %}
+</p>
 <script>
   const numberFormatter = new Intl.NumberFormat();
   const compactFormatter = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 2 });
+  const usdFormatter = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
 
   async function refreshOverview() {
     const response = await fetch("/api/overview", { headers: { "accept": "application/json" } });
@@ -130,8 +145,12 @@
     updateMetric("[data-total-tokens]", data.total_tokens);
     updateMetric("[data-today-tokens]", data.today_tokens);
     updateMetric("[data-week-tokens]", data.week_tokens);
+    updateCost("[data-total-cost]", data.estimated_cost.total_usd);
+    updateCost("[data-today-cost]", data.estimated_cost.today_usd);
+    updateCost("[data-week-cost]", data.estimated_cost.week_usd);
     if (data.current_activity) {
       updateMetric("[data-last-turn-tokens]", data.current_activity.last_turn_tokens);
+      updateCost("[data-last-turn-cost]", data.current_activity.last_turn_cost_usd);
     }
     const sync = document.querySelector("[data-last-sync]");
     if (sync) sync.textContent = "synced " + new Date(data.generated_at_ms).toLocaleTimeString();
@@ -142,6 +161,13 @@
     if (!element) return;
     element.textContent = compactFormatter.format(value);
     element.title = numberFormatter.format(value);
+  }
+
+  function updateCost(selector, value) {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    element.textContent = "Estimated spend " + usdFormatter.format(value);
+    element.title = usdFormatter.format(value);
   }
 
   setInterval(refreshOverview, 15000);

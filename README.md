@@ -21,7 +21,8 @@ uv run aikeeper sync codex --once
 uv run aikeeper daemon start
 ```
 
-Open <http://127.0.0.1:8765> for the dashboard.
+Open <http://127.0.0.1:8765> for the dashboard. If that port is busy, run the
+daemon with `--port 8766`.
 
 ## Codex Hooks
 
@@ -39,11 +40,22 @@ uv run aikeeper install codex-hooks --scope project
 
 The installer writes or merges a `hooks.json` with `SessionStart`,
 `UserPromptSubmit`, and `Stop` handlers. If a hooks file already exists, AI Keeper
-creates a `.bak` copy first. The `Stop` hook emits a short summary after each turn:
+creates a `.bak` copy first. The hooks emit a short summary after each turn:
 
 ```text
-AI Keeper: turn X tokens; session Y; task today Z; project today W.
+AI Keeper | turn X tokens ($A est.) | session Y tokens ($B est.) | task today Z tokens | project today W tokens | dashboard
 ```
+
+## Cost Estimates
+
+AI Keeper estimates USD spend locally from stored token events and the bundled
+OpenAI API pricing catalog. Estimates use Standard token prices from the
+official OpenAI pricing page, retrieved on 2026-06-13, and are labeled as
+estimates in the UI.
+
+The official OpenAI Admin Costs API reports real organization-level billing
+costs, but it requires an admin key and does not automatically map costs to
+AI Keeper's local Codex project/task/session attribution.
 
 ## CLI
 

@@ -36,8 +36,26 @@ def compact_tokens(value: int | None) -> str:
     return str(number)
 
 
+def format_usd(value: float | None) -> str:
+    amount = float(value or 0)
+    if 0 < abs(amount) < 0.01:
+        return f"${amount:,.4f}"
+    return f"${amount:,.2f}"
+
+
+def compact_usd(value: float | None) -> str:
+    amount = float(value or 0)
+    if abs(amount) >= 1_000_000:
+        return f"${amount / 1_000_000:.2f}M"
+    if abs(amount) >= 1_000:
+        return f"${amount / 1_000:.2f}K"
+    return format_usd(amount)
+
+
 templates.env.filters["tokens"] = format_tokens
 templates.env.filters["compact_tokens"] = compact_tokens
+templates.env.filters["usd"] = format_usd
+templates.env.filters["compact_usd"] = compact_usd
 
 
 def _run_polling_sync(db: Path, home: Path, stop: threading.Event, interval_seconds: int = 5) -> None:

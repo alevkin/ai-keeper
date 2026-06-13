@@ -2,6 +2,7 @@ import json
 import sqlite3
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from aikeeper.db import connect, init_db
@@ -103,6 +104,10 @@ def test_overview_exposes_v2_dashboard_metadata(tmp_path: Path) -> None:
     assert data["current_activity"]["last_turn_tokens"] == 300
     assert len(data["daily_tokens"]) == 7
     assert data["daily_tokens"][-1]["tokens"] == 300
+    assert data["daily_tokens"][-1]["estimated_cost_usd"] == pytest.approx(0.003775)
+    assert data["estimated_cost"]["today_usd"] == pytest.approx(0.003775)
+    assert data["current_activity"]["last_turn_cost_usd"] == pytest.approx(0.003775)
+    assert data["projects"][0]["estimated_cost_usd"] == pytest.approx(0.003775)
     assert data["generated_at_ms"] == now
 
 
@@ -119,5 +124,7 @@ def test_overview_page_renders_version_and_current_activity(tmp_path: Path, monk
 
     assert "v9.9.9" in page.text
     assert "Current activity" in page.text
+    assert "Estimated spend" in page.text
+    assert "$0.0038" in page.text
     assert "session-1" in page.text
     assert "7-day trend" in page.text

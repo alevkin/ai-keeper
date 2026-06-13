@@ -5,6 +5,7 @@ from pathlib import Path
 
 from aikeeper.db import connect, init_db
 from aikeeper.gitmeta import get_git_metadata, task_identity
+from aikeeper.pricing import PRICING_RETRIEVED_DATE, PRICING_SOURCE_LABEL, PRICING_SOURCE_URL, estimate_event_cost_usd
 from aikeeper.timeutils import now_ms as current_now_ms
 from aikeeper.timeutils import utc_day_start_ms, utc_week_start_ms
 
@@ -34,6 +35,54 @@ def _sum_tokens_between(con, start_ms: int, end_ms: int) -> int:
     return int(row["tokens"])
 
 
+def _estimate_rows_cost(rows) -> dict:
+    total = 0.0
+    unpriced: set[str] = set()
+    for row in rows:
+        cost = estimate_event_cost_usd(
+            row["model"],
+            input_tokens=int(row["input_tokens"]),
+            cached_input_tokens=int(row["cached_input_tokens"]),
+            output_tokens=int(row["output_tokens"]),
+        )
+        if cost is None:
+            unpriced.add(str(row["model"] or "unknown"))
+            continue
+        total += cost
+    return {"usd": round(total, 6), "unpriced_models": sorted(unpriced)}
+
+
+def _estimate_cost(con, session_filter: str = "1 = 1", params: tuple = (), since_ms: int | None = None) -> dict:
+    where = session_filter
+    query_params = params
+    if since_ms is not None:
+        where = f"{where} and te.timestamp_ms >= ?"
+        query_params = (*params, since_ms)
+    rows = con.execute(
+        f"""
+        select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+        from token_events te
+        join sessions s on s.id = te.session_pk
+        where {where}
+        """,
+        query_params,
+    ).fetchall()
+    return _estimate_rows_cost(rows)
+
+
+def _estimate_cost_between(con, start_ms: int, end_ms: int) -> dict:
+    rows = con.execute(
+        """
+        select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+        from token_events te
+        join sessions s on s.id = te.session_pk
+        where te.timestamp_ms >= ? and te.timestamp_ms < ?
+        """,
+        (start_ms, end_ms),
+    ).fetchall()
+    return _estimate_rows_cost(rows)
+
+
 def _date_label(day_start_ms: int) -> str:
     return datetime.fromtimestamp(day_start_ms / 1000, tz=UTC).date().isoformat()
 
@@ -45,7 +94,8 @@ def _daily_tokens(con, now_ms: int, days: int = 7) -> list[dict]:
     for index in range(days - 1, -1, -1):
         start = day_start - index * day_ms
         end = start + day_ms
-        rows.append({"date": _date_label(start), "tokens": _sum_tokens_between(con, start, end)})
+        cost = _estimate_cost_between(con, start, end)
+        rows.append({"date": _date_label(start), "tokens": _sum_tokens_between(con, start, end), "estimated_cost_usd": cost["usd"]})
     return rows
 
 
@@ -75,6 +125,20 @@ def _current_activity(con) -> dict | None:
     data["session_label"] = str(data["session_id"])[:8]
     data["last_turn_tokens"] = int(data["last_turn_tokens"] or 0)
     data["total_tokens"] = int(data["total_tokens"])
+    session_cost = _estimate_cost(con, "s.id = ?", (data["id"],))
+    data["estimated_cost_usd"] = session_cost["usd"]
+    last_turn = con.execute(
+        """
+        select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+        from token_events te
+        join sessions s on s.id = te.session_pk
+        where te.session_pk = ?
+        order by te.sequence desc
+        limit 1
+        """,
+        (data["id"],),
+    ).fetchall()
+    data["last_turn_cost_usd"] = _estimate_rows_cost(last_turn)["usd"]
     return data
 
 
@@ -100,15 +164,17 @@ def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = No
         ).fetchone()
         if not session:
             return {
-                "project": {"name": meta.root_path.name, "root_path": str(meta.root_path), "today_tokens": 0},
-                "task": {"task_key": task_key, "display_name": display_name, "issue_id": issue_id, "today_tokens": 0},
-                "session": {"session_id": None, "total_tokens": 0, "last_turn_tokens": 0},
+                "project": {"name": meta.root_path.name, "root_path": str(meta.root_path), "today_tokens": 0, "today_cost_usd": 0.0},
+                "task": {"task_key": task_key, "display_name": display_name, "issue_id": issue_id, "today_tokens": 0, "today_cost_usd": 0.0},
+                "session": {"session_id": None, "total_tokens": 0, "last_turn_tokens": 0, "estimated_cost_usd": 0.0, "last_turn_cost_usd": 0.0},
             }
 
         last_turn = con.execute(
             """
-            select total_tokens from token_events
-            where session_pk = ?
+            select te.total_tokens, s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+            from token_events te
+            join sessions s on s.id = te.session_pk
+            where te.session_pk = ?
             order by sequence desc
             limit 1
             """,
@@ -117,12 +183,17 @@ def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = No
 
         project_today = _sum_tokens_since(con, "s.project_id = ?", (session["project_id"],), day_start)
         task_today = _sum_tokens_since(con, "s.task_id = ?", (session["task_id"],), day_start)
+        project_today_cost = _estimate_cost(con, "s.project_id = ?", (session["project_id"],), day_start)
+        task_today_cost = _estimate_cost(con, "s.task_id = ?", (session["task_id"],), day_start)
+        session_cost = _estimate_cost(con, "s.id = ?", (session["id"],))
+        last_turn_cost = _estimate_rows_cost([last_turn]) if last_turn else {"usd": 0.0}
         return {
             "project": {
                 "id": session["project_id"],
                 "name": session["project_name"],
                 "root_path": session["root_path"],
                 "today_tokens": project_today,
+                "today_cost_usd": project_today_cost["usd"],
             },
             "task": {
                 "id": session["task_id"],
@@ -130,12 +201,15 @@ def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = No
                 "display_name": session["task_name"],
                 "issue_id": issue_id,
                 "today_tokens": task_today,
+                "today_cost_usd": task_today_cost["usd"],
             },
             "session": {
                 "id": session["id"],
                 "session_id": session["session_id"],
                 "total_tokens": int(session["total_tokens"]),
                 "last_turn_tokens": int(last_turn["total_tokens"]) if last_turn else 0,
+                "estimated_cost_usd": session_cost["usd"],
+                "last_turn_cost_usd": last_turn_cost["usd"],
             },
         }
 
@@ -182,15 +256,45 @@ def overview(db_path: Path | str, now_ms: int | None = None) -> dict:
             limit 12
             """
         ).fetchall()
+        total_cost = _estimate_cost(con)
+        today_cost = _estimate_cost(con, since_ms=day_start)
+        week_cost = _estimate_cost(con, since_ms=week_start)
+        project_rows = []
+        for row in projects:
+            item = dict(row)
+            item["estimated_cost_usd"] = _estimate_cost(con, "s.project_id = ?", (row["id"],))["usd"]
+            item["today_estimated_cost_usd"] = _estimate_cost(
+                con, "s.project_id = ?", (row["id"],), day_start
+            )["usd"]
+            project_rows.append(item)
+        task_rows = []
+        for row in tasks:
+            item = dict(row)
+            item["estimated_cost_usd"] = _estimate_cost(con, "s.task_id = ?", (row["id"],))["usd"]
+            task_rows.append(item)
         return {
             "generated_at_ms": now,
             "total_tokens": int(total_tokens["tokens"]),
             "today_tokens": int(today_tokens["tokens"]),
             "week_tokens": int(week_tokens["tokens"]),
+            "estimated_cost": {
+                "currency": "usd",
+                "total_usd": total_cost["usd"],
+                "today_usd": today_cost["usd"],
+                "week_usd": week_cost["usd"],
+                "unpriced_models": sorted(
+                    set(total_cost["unpriced_models"])
+                    | set(today_cost["unpriced_models"])
+                    | set(week_cost["unpriced_models"])
+                ),
+                "source_label": PRICING_SOURCE_LABEL,
+                "source_url": PRICING_SOURCE_URL,
+                "retrieved_date": PRICING_RETRIEVED_DATE,
+            },
             "daily_tokens": _daily_tokens(con, now),
             "current_activity": _current_activity(con),
-            "projects": [dict(row) for row in projects],
-            "tasks": [dict(row) for row in tasks],
+            "projects": project_rows,
+            "tasks": task_rows,
         }
 
 

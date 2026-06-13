@@ -171,6 +171,40 @@ def test_overview_exposes_live_burn_rate_and_model_efficiency(tmp_path: Path) ->
     assert model_rows["gpt-5.3-codex"]["estimated_cost_usd"] > 0
 
 
+def test_overview_exposes_budget_warnings_from_config(tmp_path: Path) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    budget_path = tmp_path / "budgets.toml"
+    budget_path.write_text(
+        """
+        [defaults]
+        warn_at = 0.8
+        project_daily_usd = 0.003
+        task_daily_usd = 0.003
+        session_usd = 0.003
+        turn_usd = 0.003
+        project_daily_tokens = 250
+        """,
+        encoding="utf-8",
+    )
+
+    data = build_overview(db_path, now_ms=1_781_000_000_000, budget_path=budget_path)
+
+    assert data["budget"]["configured"] is True
+    warnings = data["budget_warnings"]
+    assert warnings
+    labels = {warning["label"] for warning in warnings}
+    assert "project daily USD" in labels
+    assert "project daily tokens" in labels
+    project_usd = next(warning for warning in warnings if warning["label"] == "project daily USD")
+    assert project_usd["severity"] == "over"
+    assert project_usd["used"] == pytest.approx(0.003775)
+    assert project_usd["limit"] == pytest.approx(0.003)
+    assert project_usd["ratio"] > 1
+
+
 def test_web_overview_api_and_pages_render_usage(tmp_path: Path) -> None:
     db_path = tmp_path / "keeper.sqlite"
     cwd = tmp_path / "repo"
@@ -213,6 +247,25 @@ def test_overview_exposes_v2_dashboard_metadata(tmp_path: Path) -> None:
     assert data["current_activity"]["last_turn_cost_usd"] == pytest.approx(0.003775)
     assert data["projects"][0]["estimated_cost_usd"] == pytest.approx(0.003775)
     assert data["generated_at_ms"] == now
+
+
+def test_overview_page_renders_budget_guards(tmp_path: Path, monkeypatch) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    budget_path = tmp_path / "budgets.toml"
+    budget_path.write_text("[defaults]\nturn_usd = 0.003\n", encoding="utf-8")
+    monkeypatch.setattr("aikeeper.web.get_app_version", lambda: {"label": "v9.9.9", "commit": "abc123"})
+    app = create_app(db_path=db_path, budget_path=budget_path)
+    client = TestClient(app)
+
+    page = client.get("/")
+
+    assert "Budget Guards" in page.text
+    assert "turn USD" in page.text
+    assert "$0.0038" in page.text
+    assert "$0.0030" in page.text
 
 
 def test_overview_page_renders_version_and_current_activity(tmp_path: Path, monkeypatch) -> None:

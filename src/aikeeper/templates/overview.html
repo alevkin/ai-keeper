@@ -97,6 +97,36 @@
   </div>
 </section>
 
+<section class="panel budget-panel">
+  <div class="panel-head">
+    <h2>Budget Guards</h2>
+    <span>{% if overview.budget.configured %}configured{% else %}not configured{% endif %}</span>
+  </div>
+  {% if overview.budget_warnings %}
+  <div class="budget-list">
+    {% for warning in overview.budget_warnings %}
+    <div class="budget-warning {{ warning.severity }}">
+      <div>
+        <strong>{{ warning.label }}</strong>
+        <small>{{ warning.scope }} · warn at {{ warning.warn_at | percent }}</small>
+      </div>
+      <span>
+        {% if warning.unit == "usd" %}
+          {{ warning.used | usd }} / {{ warning.limit | usd }}
+        {% else %}
+          {{ warning.used | tokens }} / {{ warning.limit | tokens }} tokens
+        {% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% elif overview.budget.configured %}
+  <p class="empty-state">All configured budgets are below warning thresholds.</p>
+  {% else %}
+  <p class="empty-state">No budgets configured. Add <code>budgets.toml</code> under AI Keeper home to enable soft warnings.</p>
+  {% endif %}
+</section>
+
 <section class="panel model-panel">
   <div class="panel-head">
     <h2>Model Efficiency</h2>

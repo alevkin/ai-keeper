@@ -69,6 +69,28 @@ The overview dashboard includes:
 Burn-rate windows exclude long idle gaps, so the rate is about active agent work
 rather than the total time a session stayed open.
 
+## Budget Guards
+
+Budget guards are soft warnings. They never block Codex. Configure them in
+`$AIKEEPER_HOME/budgets.toml` or set `AIKEEPER_BUDGETS_FILE` to another TOML
+file.
+
+```toml
+[defaults]
+warn_at = 0.8
+project_daily_usd = 25
+task_daily_usd = 10
+session_usd = 5
+turn_usd = 1
+project_daily_tokens = 1000000
+task_daily_tokens = 500000
+session_tokens = 750000
+turn_tokens = 100000
+```
+
+Warnings appear in the dashboard and in the Codex hook summary when usage
+crosses `warn_at * limit`.
+
 ## CLI
 
 ```bash

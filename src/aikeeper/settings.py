@@ -16,6 +16,10 @@ def default_db_path() -> Path:
     return app_home() / "aikeeper.sqlite"
 
 
+def budget_config_path() -> Path:
+    return Path(os.environ.get("AIKEEPER_BUDGETS_FILE", app_home() / "budgets.toml")).expanduser()
+
+
 def codex_home() -> Path:
     return Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser()
 

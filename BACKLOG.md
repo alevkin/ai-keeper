@@ -39,9 +39,9 @@ Acceptance:
 - Dashboard renders a model table.
 - Tests cover multiple models and cached ratio.
 
-## Now
-
 ### AK-003 Budget Guards
+
+Status: shipped in v0.5.0.
 
 Warn when a project, task, session, or turn approaches a configured token or USD
 budget.
@@ -49,6 +49,15 @@ budget.
 - Start with config-file budgets.
 - Surface warnings in the dashboard and Codex hook summary.
 - Keep enforcement soft in MVP: warn, do not block.
+
+Acceptance:
+
+- `/api/overview` exposes budget config state and warning rows.
+- Dashboard renders configured budget warnings.
+- Codex hook summary includes the top budget warning.
+- Tests cover TOML config budgets, dashboard rendering, and hook output.
+
+## Now
 
 ### AK-004 Task Budgets
 

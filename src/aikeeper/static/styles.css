@@ -193,6 +193,44 @@ a:hover {
   overflow-x: auto;
 }
 
+.budget-panel {
+  margin-bottom: 18px;
+}
+
+.budget-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+
+.budget-warning {
+  align-items: center;
+  background: #fff8ed;
+  border: 1px solid #f0d7aa;
+  border-radius: 7px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.budget-warning.over {
+  background: #fff1f1;
+  border-color: #e7b9b9;
+}
+
+.budget-warning strong,
+.budget-warning span {
+  font-size: 14px;
+}
+
+.budget-warning small {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 .panel {
   overflow: hidden;
 }

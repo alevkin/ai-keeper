@@ -45,6 +45,27 @@ def test_summary_includes_estimated_cost_when_available() -> None:
     assert "session 12,621,389 tokens ($321.45 est.)" in summary
 
 
+def test_summary_includes_budget_warning_when_available() -> None:
+    status = {
+        "session": {"last_turn_tokens": 60_981, "total_tokens": 12_621_389, "last_turn_cost_usd": 1.2345, "estimated_cost_usd": 321.45},
+        "task": {"today_tokens": 4_123_229, "today_cost_usd": 98.76},
+        "project": {"today_tokens": 4_123_229, "today_cost_usd": 98.76},
+        "budget_warnings": [
+            {
+                "severity": "over",
+                "label": "turn USD",
+                "used": 1.2345,
+                "limit": 1.0,
+                "unit": "usd",
+            }
+        ],
+    }
+
+    summary = _summary(status)
+
+    assert "budget over: turn USD $1.23/$1.00" in summary
+
+
 def test_stop_hook_returns_summary_json_and_discards_prompt_text(tmp_path: Path, monkeypatch) -> None:
     db_path = tmp_path / "keeper.sqlite"
     codex_home = tmp_path / "codex"

@@ -50,6 +50,22 @@ def _tokens_with_cost(tokens: int, cost: float | None = None) -> str:
     return text
 
 
+def _budget_value(value: float | int, unit: str) -> str:
+    if unit == "usd":
+        return _usd(float(value))
+    return _tokens(int(value))
+
+
+def _budget_fragment(warnings: list[dict] | None) -> str:
+    if not warnings:
+        return ""
+    warning = warnings[0]
+    return (
+        f" | budget {warning['severity']}: {warning['label']} "
+        f"{_budget_value(warning['used'], warning['unit'])}/{_budget_value(warning['limit'], warning['unit'])}"
+    )
+
+
 def _dashboard_candidates() -> list[str]:
     configured = os.environ.get("AIKEEPER_DASHBOARD_URL")
     urls = [configured.rstrip("/")] if configured else []
@@ -78,6 +94,7 @@ def _summary(status: dict, dashboard_url: str | None = None) -> str:
     )
     if dashboard_url:
         line += f" | [dashboard]({dashboard_url})"
+    line += _budget_fragment(status.get("budget_warnings"))
     return line
 
 

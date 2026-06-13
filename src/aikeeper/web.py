@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
 from aikeeper.service import overview, project_detail, session_detail
+from aikeeper.settings import budget_config_path as default_budget_config_path
 from aikeeper.settings import codex_home as default_codex_home
 from aikeeper.settings import default_db_path
 from aikeeper.version import get_app_version
@@ -90,10 +91,12 @@ def create_app(
     *,
     db_path: Path | str | None = None,
     codex_home: Path | str | None = None,
+    budget_path: Path | str | None = None,
     auto_sync: bool = False,
 ) -> FastAPI:
     db = Path(db_path).expanduser() if db_path else default_db_path()
     home = Path(codex_home).expanduser() if codex_home else default_codex_home()
+    budgets = Path(budget_path).expanduser() if budget_path else default_budget_config_path()
     with connect(db) as con:
         init_db(con)
 
@@ -116,7 +119,7 @@ def create_app(
 
     @app.get("/api/overview")
     def api_overview() -> dict:
-        data = overview(db)
+        data = overview(db, budget_path=budgets)
         data["version"] = get_app_version()
         return data
 
@@ -130,7 +133,7 @@ def create_app(
         return templates.TemplateResponse(
             request,
             "overview.html",
-            {"overview": overview(db), "version": get_app_version()},
+            {"overview": overview(db, budget_path=budgets), "version": get_app_version()},
         )
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)

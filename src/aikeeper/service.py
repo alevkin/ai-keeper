@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from aikeeper.budgets import budget_state, evaluate_budget_warnings, load_budget_config
 from aikeeper.db import connect, init_db
 from aikeeper.gitmeta import get_git_metadata, task_identity
 from aikeeper.pricing import PRICING_RETRIEVED_DATE, PRICING_SOURCE_LABEL, PRICING_SOURCE_URL, estimate_event_cost_usd
+from aikeeper.settings import budget_config_path as default_budget_config_path
 from aikeeper.timeutils import now_ms as current_now_ms
 from aikeeper.timeutils import utc_day_start_ms, utc_week_start_ms
 
@@ -261,9 +263,64 @@ def _model_efficiency(con) -> list[dict]:
     return sorted(models, key=lambda item: (item["estimated_cost_usd"], item["total_tokens"]), reverse=True)
 
 
-def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = None) -> dict:
+def _budget_values(
+    *,
+    project_today_tokens: int,
+    project_today_cost_usd: float,
+    task_today_tokens: int,
+    task_today_cost_usd: float,
+    session_tokens: int,
+    session_cost_usd: float,
+    turn_tokens: int,
+    turn_cost_usd: float,
+) -> dict[str, float | int]:
+    return {
+        "project_daily_tokens": project_today_tokens,
+        "project_daily_usd": project_today_cost_usd,
+        "task_daily_tokens": task_today_tokens,
+        "task_daily_usd": task_today_cost_usd,
+        "session_tokens": session_tokens,
+        "session_usd": session_cost_usd,
+        "turn_tokens": turn_tokens,
+        "turn_usd": turn_cost_usd,
+    }
+
+
+def _budget_config(path: Path | str | None):
+    return load_budget_config(path or default_budget_config_path())
+
+
+def _overview_budget(con, current: dict | None, day_start: int, budget_path: Path | str | None) -> tuple[dict, list[dict]]:
+    config = _budget_config(budget_path)
+    if not current:
+        return budget_state(config), []
+
+    project_today_tokens = _sum_tokens_since(con, "s.project_id = ?", (current["project_id"],), day_start)
+    task_today_tokens = _sum_tokens_since(con, "s.task_id = ?", (current["task_id"],), day_start)
+    project_today_cost = _estimate_cost(con, "s.project_id = ?", (current["project_id"],), day_start)
+    task_today_cost = _estimate_cost(con, "s.task_id = ?", (current["task_id"],), day_start)
+    values = _budget_values(
+        project_today_tokens=project_today_tokens,
+        project_today_cost_usd=project_today_cost["usd"],
+        task_today_tokens=task_today_tokens,
+        task_today_cost_usd=task_today_cost["usd"],
+        session_tokens=int(current["total_tokens"]),
+        session_cost_usd=float(current["estimated_cost_usd"]),
+        turn_tokens=int(current["last_turn_tokens"]),
+        turn_cost_usd=float(current["last_turn_cost_usd"]),
+    )
+    return budget_state(config), evaluate_budget_warnings(values, config)
+
+
+def status_for_cwd(
+    db_path: Path | str,
+    cwd: Path | str,
+    now_ms: int | None = None,
+    budget_path: Path | str | None = None,
+) -> dict:
     now = now_ms or current_now_ms()
     day_start = utc_day_start_ms(now)
+    config = _budget_config(budget_path)
     meta = get_git_metadata(cwd)
     task_key, _source, issue_id, display_name = task_identity(meta.branch)
 
@@ -286,6 +343,8 @@ def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = No
                 "project": {"name": meta.root_path.name, "root_path": str(meta.root_path), "today_tokens": 0, "today_cost_usd": 0.0},
                 "task": {"task_key": task_key, "display_name": display_name, "issue_id": issue_id, "today_tokens": 0, "today_cost_usd": 0.0},
                 "session": {"session_id": None, "total_tokens": 0, "last_turn_tokens": 0, "estimated_cost_usd": 0.0, "last_turn_cost_usd": 0.0},
+                "budget": budget_state(config),
+                "budget_warnings": [],
             }
 
         last_turn = con.execute(
@@ -306,7 +365,7 @@ def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = No
         task_today_cost = _estimate_cost(con, "s.task_id = ?", (session["task_id"],), day_start)
         session_cost = _estimate_cost(con, "s.id = ?", (session["id"],))
         last_turn_cost = _estimate_rows_cost([last_turn]) if last_turn else {"usd": 0.0}
-        return {
+        status = {
             "project": {
                 "id": session["project_id"],
                 "name": session["project_name"],
@@ -331,9 +390,22 @@ def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = No
                 "last_turn_cost_usd": last_turn_cost["usd"],
             },
         }
+        values = _budget_values(
+            project_today_tokens=project_today,
+            project_today_cost_usd=project_today_cost["usd"],
+            task_today_tokens=task_today,
+            task_today_cost_usd=task_today_cost["usd"],
+            session_tokens=int(session["total_tokens"]),
+            session_cost_usd=session_cost["usd"],
+            turn_tokens=int(last_turn["total_tokens"]) if last_turn else 0,
+            turn_cost_usd=last_turn_cost["usd"],
+        )
+        status["budget"] = budget_state(config)
+        status["budget_warnings"] = evaluate_budget_warnings(values, config)
+        return status
 
 
-def overview(db_path: Path | str, now_ms: int | None = None) -> dict:
+def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path | str | None = None) -> dict:
     now = now_ms or current_now_ms()
     day_start = utc_day_start_ms(now)
     week_start = utc_week_start_ms(now)
@@ -391,6 +463,8 @@ def overview(db_path: Path | str, now_ms: int | None = None) -> dict:
             item = dict(row)
             item["estimated_cost_usd"] = _estimate_cost(con, "s.task_id = ?", (row["id"],))["usd"]
             task_rows.append(item)
+        current_activity = _current_activity(con)
+        budget, budget_warnings = _overview_budget(con, current_activity, day_start, budget_path)
         return {
             "generated_at_ms": now,
             "total_tokens": int(total_tokens["tokens"]),
@@ -411,9 +485,11 @@ def overview(db_path: Path | str, now_ms: int | None = None) -> dict:
                 "retrieved_date": PRICING_RETRIEVED_DATE,
             },
             "daily_tokens": _daily_tokens(con, now),
-            "current_activity": _current_activity(con),
+            "current_activity": current_activity,
             "burn_rate": _current_burn_rate(con, now),
             "model_efficiency": _model_efficiency(con),
+            "budget": budget,
+            "budget_warnings": budget_warnings,
             "projects": project_rows,
             "tasks": task_rows,
         }

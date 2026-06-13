@@ -57,9 +57,9 @@ Acceptance:
 - Codex hook summary includes the top budget warning.
 - Tests cover TOML config budgets, dashboard rendering, and hook output.
 
-## Now
-
 ### AK-004 Task Budgets
+
+Status: shipped in v0.6.0.
 
 Attach budgets to branch/task keys.
 
@@ -67,7 +67,15 @@ Attach budgets to branch/task keys.
 - Show budget burn-down and remaining estimate.
 - Export task budget status.
 
+Acceptance:
+
+- Task-specific TOML overrides are supported under `[tasks.<task-key>]`.
+- Project pages show task budget status.
+- Exports include task budget status.
+
 ### AK-005 Context Bloat Tracker
+
+Status: shipped in v0.6.0.
 
 Track context growth and caching health.
 
@@ -75,7 +83,14 @@ Track context growth and caching health.
 - Highlight drops in cached input ratio.
 - Suggest when a session is likely ready for compaction or restart.
 
+Acceptance:
+
+- Session pages show context health and compaction guidance.
+- Service output exposes cache ratio and input growth.
+
 ### AK-006 Anomaly Detection
+
+Status: shipped in v0.6.0.
 
 Flag unusual turns.
 
@@ -83,7 +98,14 @@ Flag unusual turns.
 - Show anomalies on session and project pages.
 - Include a concise reason for each anomaly.
 
+Acceptance:
+
+- Session pages flag large turns, cost jumps, and cache regressions.
+- Project pages flag model switches.
+
 ### AK-007 Savings Simulator
+
+Status: shipped in v0.6.0.
 
 Estimate what a project/task/session would have cost on another model.
 
@@ -91,7 +113,14 @@ Estimate what a project/task/session would have cost on another model.
 - Compare actual estimate vs simulated estimate.
 - Keep tool/hosting costs out until they are modeled explicitly.
 
+Acceptance:
+
+- `/api/simulate` and `aikeeper simulate` reprice stored metadata.
+- Overview dashboard shows common target-model scenarios.
+
 ### AK-008 Exports
+
+Status: shipped in v0.6.0.
 
 Generate weekly/monthly reports for personal review.
 
@@ -99,9 +128,14 @@ Generate weekly/monthly reports for personal review.
 - Markdown weekly digest.
 - Include source/pricing metadata and privacy statement.
 
-## Later
+Acceptance:
+
+- `aikeeper export --format json|csv|markdown` emits metadata-only reports.
+- Reports include task budget status.
 
 ### AK-009 OpenAI Admin Costs Import
+
+Status: shipped in v0.6.0.
 
 Optionally import official organization-level billing from the OpenAI Admin Costs
 API when the user provides an admin key.
@@ -110,9 +144,26 @@ API when the user provides an admin key.
 - Make clear that official org costs do not automatically map to local Codex
   project/task/session attribution.
 
+Acceptance:
+
+- OpenAI Admin Costs payloads import into aggregate external cost buckets.
+- CLI supports `aikeeper sync openai-costs` with `OPENAI_ADMIN_KEY`.
+
 ### AK-010 Claude Adapter
+
+Status: shipped in v0.6.0.
 
 Add a second provider adapter after Codex MVP stabilizes.
 
 - Keep the same project/task/session/event model.
 - Add provider-specific parser tests from local Claude metadata.
+
+Acceptance:
+
+- `aikeeper sync claude` imports local Claude JSONL metadata.
+- Parser stores token counts, model, cwd, session id, and path only.
+
+## Now
+
+All current backlog items are shipped. Next work should start from new feedback
+or hardening tasks found while using the dashboard.

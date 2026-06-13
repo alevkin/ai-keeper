@@ -5,6 +5,47 @@
   <h1>{{ session.session_id }}</h1>
   <p>{{ session.project_name }} / {{ session.task_name }} / {{ session.model or "unknown model" }}</p>
 </section>
+<section class="grid">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Context Health</h2>
+      <span>{{ context_health.cached_input_ratio | percent }} cached</span>
+    </div>
+    <div class="insight-grid">
+      <div>
+        <span class="label">Input growth</span>
+        <strong>{{ context_health.input_growth_ratio | round(2) }}x</strong>
+      </div>
+      <div>
+        <span class="label">Cached input</span>
+        <strong>{{ context_health.cached_input_tokens | compact_tokens }}</strong>
+      </div>
+      <div>
+        <span class="label">Output</span>
+        <strong>{{ context_health.output_tokens | compact_tokens }}</strong>
+      </div>
+      <p>{{ context_health.recommendation }}</p>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Anomalies</h2>
+      <span>{{ anomalies | length }} flagged</span>
+    </div>
+    {% if anomalies %}
+    <div class="anomaly-list">
+      {% for anomaly in anomalies %}
+      <div class="anomaly-item {{ anomaly.severity }}">
+        <strong>#{{ anomaly.sequence }} · {{ anomaly.reason }}</strong>
+        <small>{{ anomaly.detail }}</small>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state">No unusual turns detected.</p>
+    {% endif %}
+  </div>
+</section>
 <section class="panel">
   <div class="panel-head">
     <h2>Token Events</h2>

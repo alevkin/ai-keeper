@@ -24,6 +24,10 @@ def codex_home() -> Path:
     return Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser()
 
 
+def claude_home() -> Path:
+    return Path(os.environ.get("CLAUDE_HOME", "~/.claude")).expanduser()
+
+
 def ensure_app_home() -> Path:
     home = app_home()
     home.mkdir(parents=True, exist_ok=True)

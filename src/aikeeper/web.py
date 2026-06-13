@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 
 from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
-from aikeeper.service import overview, project_detail, session_detail
+from aikeeper.service import overview, project_detail, session_detail, simulate_model_cost
 from aikeeper.settings import budget_config_path as default_budget_config_path
 from aikeeper.settings import codex_home as default_codex_home
 from aikeeper.settings import default_db_path
@@ -123,6 +123,10 @@ def create_app(
         data["version"] = get_app_version()
         return data
 
+    @app.get("/api/simulate")
+    def api_simulate(target_model: str) -> dict:
+        return simulate_model_cost(db, target_model=target_model)
+
     @app.post("/api/sync/codex")
     def api_sync_codex() -> dict:
         result = sync_codex_once(db_path=db, codex_home=home)
@@ -139,7 +143,7 @@ def create_app(
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
     def project(request: Request, project_id: int) -> HTMLResponse:
         try:
-            data = project_detail(db, project_id)
+            data = project_detail(db, project_id, budget_path=budgets)
         except KeyError as exc:
             raise HTTPException(status_code=404) from exc
         data["version"] = get_app_version()

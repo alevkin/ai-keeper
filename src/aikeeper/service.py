@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from aikeeper.budgets import budget_state, evaluate_budget_warnings, load_budget_config
+from aikeeper.analytics import context_health, detect_session_anomalies, simulate_cost_rows
+from aikeeper.budgets import budget_state, config_for_task, evaluate_budget_warnings, load_budget_config
 from aikeeper.db import connect, init_db
 from aikeeper.gitmeta import get_git_metadata, task_identity
 from aikeeper.pricing import PRICING_RETRIEVED_DATE, PRICING_SOURCE_LABEL, PRICING_SOURCE_URL, estimate_event_cost_usd
@@ -263,6 +264,33 @@ def _model_efficiency(con) -> list[dict]:
     return sorted(models, key=lambda item: (item["estimated_cost_usd"], item["total_tokens"]), reverse=True)
 
 
+def _simulation_summaries(con) -> list[dict]:
+    rows = con.execute(
+        """
+        select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+        from token_events te
+        join sessions s on s.id = te.session_pk
+        order by te.timestamp_ms asc, te.sequence asc
+        """
+    ).fetchall()
+    source = [dict(row) for row in rows]
+    return [simulate_cost_rows(source, target) for target in ("gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.3-codex")]
+
+
+def _project_anomalies(sessions: list[dict]) -> list[dict]:
+    models = [session["model"] or "unknown" for session in sessions]
+    unique_models = list(dict.fromkeys(models))
+    if len(unique_models) <= 1:
+        return []
+    return [
+        {
+            "severity": "low",
+            "reason": "model switch",
+            "detail": "Project has sessions across models: " + ", ".join(unique_models[:5]),
+        }
+    ]
+
+
 def _budget_values(
     *,
     project_today_tokens: int,
@@ -294,6 +322,7 @@ def _overview_budget(con, current: dict | None, day_start: int, budget_path: Pat
     config = _budget_config(budget_path)
     if not current:
         return budget_state(config), []
+    task_config = config_for_task(config, str(current["task_key"]))
 
     project_today_tokens = _sum_tokens_since(con, "s.project_id = ?", (current["project_id"],), day_start)
     task_today_tokens = _sum_tokens_since(con, "s.task_id = ?", (current["task_id"],), day_start)
@@ -309,7 +338,7 @@ def _overview_budget(con, current: dict | None, day_start: int, budget_path: Pat
         turn_tokens=int(current["last_turn_tokens"]),
         turn_cost_usd=float(current["last_turn_cost_usd"]),
     )
-    return budget_state(config), evaluate_budget_warnings(values, config)
+    return budget_state(task_config), evaluate_budget_warnings(values, task_config)
 
 
 def status_for_cwd(
@@ -390,6 +419,7 @@ def status_for_cwd(
                 "last_turn_cost_usd": last_turn_cost["usd"],
             },
         }
+        task_config = config_for_task(config, str(session["task_key"]))
         values = _budget_values(
             project_today_tokens=project_today,
             project_today_cost_usd=project_today_cost["usd"],
@@ -400,8 +430,8 @@ def status_for_cwd(
             turn_tokens=int(last_turn["total_tokens"]) if last_turn else 0,
             turn_cost_usd=last_turn_cost["usd"],
         )
-        status["budget"] = budget_state(config)
-        status["budget_warnings"] = evaluate_budget_warnings(values, config)
+        status["budget"] = budget_state(task_config)
+        status["budget_warnings"] = evaluate_budget_warnings(values, task_config)
         return status
 
 
@@ -488,6 +518,7 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
             "current_activity": current_activity,
             "burn_rate": _current_burn_rate(con, now),
             "model_efficiency": _model_efficiency(con),
+            "simulations": _simulation_summaries(con),
             "budget": budget,
             "budget_warnings": budget_warnings,
             "projects": project_rows,
@@ -495,7 +526,33 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
         }
 
 
-def project_detail(db_path: Path | str, project_id: int) -> dict:
+def _task_budget_summary(con, task, *, day_start: int, config) -> tuple[dict, list[dict]]:
+    task_config = config_for_task(config, str(task["task_key"]))
+    task_today_tokens = _sum_tokens_since(con, "s.task_id = ?", (task["id"],), day_start)
+    task_today_cost = _estimate_cost(con, "s.task_id = ?", (task["id"],), day_start)
+    values = _budget_values(
+        project_today_tokens=0,
+        project_today_cost_usd=0.0,
+        task_today_tokens=task_today_tokens,
+        task_today_cost_usd=task_today_cost["usd"],
+        session_tokens=0,
+        session_cost_usd=0.0,
+        turn_tokens=0,
+        turn_cost_usd=0.0,
+    )
+    return budget_state(task_config), evaluate_budget_warnings(values, task_config)
+
+
+def project_detail(
+    db_path: Path | str,
+    project_id: int,
+    *,
+    budget_path: Path | str | None = None,
+    now_ms: int | None = None,
+) -> dict:
+    now = now_ms or current_now_ms()
+    day_start = utc_day_start_ms(now)
+    config = _budget_config(budget_path)
     with connect(db_path) as con:
         init_db(con)
         project = con.execute("select * from projects where id = ?", (project_id,)).fetchone()
@@ -524,7 +581,20 @@ def project_detail(db_path: Path | str, project_id: int) -> dict:
             """,
             (project_id,),
         ).fetchall()
-        return {"project": dict(project), "tasks": [dict(row) for row in tasks], "sessions": [dict(row) for row in sessions]}
+        task_rows = []
+        for row in tasks:
+            item = dict(row)
+            budget, warnings = _task_budget_summary(con, row, day_start=day_start, config=config)
+            item["budget"] = budget
+            item["budget_warnings"] = warnings
+            task_rows.append(item)
+        session_rows = [dict(row) for row in sessions]
+        return {
+            "project": dict(project),
+            "tasks": task_rows,
+            "sessions": session_rows,
+            "anomalies": _project_anomalies(session_rows),
+        }
 
 
 def session_detail(db_path: Path | str, session_pk: int) -> dict:
@@ -550,4 +620,58 @@ def session_detail(db_path: Path | str, session_pk: int) -> dict:
             """,
             (session_pk,),
         ).fetchall()
-        return {"session": dict(session), "events": [dict(row) for row in events]}
+        event_rows = [dict(row) for row in events]
+        return {
+            "session": dict(session),
+            "events": event_rows,
+            "context_health": context_health(event_rows, session["model"]),
+            "anomalies": detect_session_anomalies(event_rows, session["model"]),
+        }
+
+
+def simulate_model_cost(db_path: Path | str, target_model: str) -> dict:
+    with connect(db_path) as con:
+        init_db(con)
+        rows = con.execute(
+            """
+            select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+            from token_events te
+            join sessions s on s.id = te.session_pk
+            order by te.timestamp_ms asc, te.sequence asc
+            """
+        ).fetchall()
+    return simulate_cost_rows([dict(row) for row in rows], target_model)
+
+
+def task_budget_status(db_path: Path | str, *, budget_path: Path | str | None = None, now_ms: int | None = None) -> list[dict]:
+    now = now_ms or current_now_ms()
+    day_start = utc_day_start_ms(now)
+    config = _budget_config(budget_path)
+    with connect(db_path) as con:
+        init_db(con)
+        tasks = con.execute(
+            """
+            select t.id, t.task_key, t.display_name, p.name as project_name,
+                   coalesce(sum(te.total_tokens), 0) as total_tokens
+            from tasks t
+            join projects p on p.id = t.project_id
+            left join sessions s on s.task_id = t.id
+            left join token_events te on te.session_pk = s.id
+            group by t.id
+            order by total_tokens desc
+            """
+        ).fetchall()
+        rows = []
+        for task in tasks:
+            budget, warnings = _task_budget_summary(con, task, day_start=day_start, config=config)
+            rows.append(
+                {
+                    "task_key": task["task_key"],
+                    "display_name": task["display_name"],
+                    "project_name": task["project_name"],
+                    "total_tokens": int(task["total_tokens"]),
+                    "budget": budget,
+                    "budget_warnings": warnings,
+                }
+            )
+    return rows

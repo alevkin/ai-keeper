@@ -71,11 +71,29 @@ create table if not exists ingest_state (
     meta_json text not null default '{}'
 );
 
+create table if not exists external_costs (
+    id integer primary key autoincrement,
+    provider text not null,
+    source text not null,
+    bucket_start_s integer not null,
+    bucket_end_s integer not null,
+    amount_value real not null,
+    currency text not null,
+    line_item text,
+    project_ref text,
+    api_key_ref text,
+    quantity real,
+    raw_json text not null default '{}',
+    imported_at_ms integer not null,
+    unique(provider, source, bucket_start_s, bucket_end_s, line_item, project_ref, api_key_ref)
+);
+
 create index if not exists idx_sessions_cwd on sessions(cwd);
 create index if not exists idx_sessions_project on sessions(project_id);
 create index if not exists idx_sessions_task on sessions(task_id);
 create index if not exists idx_token_events_session on token_events(session_pk, sequence);
 create index if not exists idx_token_events_timestamp on token_events(timestamp_ms);
+create index if not exists idx_external_costs_bucket on external_costs(provider, bucket_start_s);
 """
 
 

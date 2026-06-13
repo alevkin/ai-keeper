@@ -165,6 +165,33 @@
   {% endif %}
 </section>
 
+<section class="panel sim-panel">
+  <div class="panel-head">
+    <h2>Savings Simulator</h2>
+    <span>repriced from stored metadata</span>
+  </div>
+  <table data-sortable>
+    <thead>
+      <tr>
+        <th>Target model</th>
+        <th class="num">Actual $</th>
+        <th class="num">Target $</th>
+        <th class="num">Savings</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sim in overview.simulations %}
+      <tr>
+        <td>{{ sim.target_model }}</td>
+        <td class="num" data-sort-value="{{ sim.actual_estimated_cost_usd }}">{{ sim.actual_estimated_cost_usd | compact_usd }}</td>
+        <td class="num" data-sort-value="{{ sim.target_estimated_cost_usd }}">{{ sim.target_estimated_cost_usd | compact_usd }}</td>
+        <td class="num" data-sort-value="{{ sim.estimated_savings_usd }}">{{ sim.estimated_savings_usd | compact_usd }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
 <section class="grid data-grid">
   <div class="panel">
     <div class="panel-head">

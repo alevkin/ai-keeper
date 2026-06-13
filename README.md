@@ -86,16 +86,60 @@ project_daily_tokens = 1000000
 task_daily_tokens = 500000
 session_tokens = 750000
 turn_tokens = 100000
+
+[tasks.AIK-42]
+task_daily_tokens = 300000
+task_daily_usd = 20
 ```
 
 Warnings appear in the dashboard and in the Codex hook summary when usage
 crosses `warn_at * limit`.
+
+## Analysis Features
+
+AI Keeper also tracks:
+
+- Context health on session pages, including cache ratio, input growth, and
+  compaction guidance.
+- Anomalies such as large turns, cost jumps, cache regressions, and project model
+  switches.
+- Savings simulations that reprice stored token events against another model.
+- Metadata-only exports in Markdown, CSV, and JSON.
+
+## OpenAI Costs Import
+
+Estimated local spend is still the primary project/task/session attribution
+source. You can additionally import official organization-level OpenAI Admin
+Costs API buckets when you have an admin key:
+
+```bash
+OPENAI_ADMIN_KEY=... uv run aikeeper sync openai-costs --start-time 1730419200
+```
+
+Imported costs are aggregate billing buckets. They are stored separately from
+local Codex attribution because the OpenAI Costs API does not automatically map
+organization spend to local AI Keeper tasks.
+
+## Claude Adapter
+
+Claude support imports local JSONL metadata from `$CLAUDE_HOME/projects`,
+defaulting to `~/.claude/projects`.
+
+```bash
+uv run aikeeper sync claude
+```
+
+Like Codex ingestion, Claude ingestion stores token counts, timestamps, model,
+cwd, session id, transcript path, and offsets only.
 
 ## CLI
 
 ```bash
 uv run aikeeper status --cwd "$PWD" --json
 uv run aikeeper sync codex --once
+uv run aikeeper sync claude
+uv run aikeeper simulate --target-model gpt-5.4-mini
+uv run aikeeper export --format markdown
 uv run aikeeper codex exec -- "summarize this repository"
 ```
 

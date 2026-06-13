@@ -23,6 +23,7 @@ class BudgetConfig:
     source_path: str | None
     warn_at: float
     limits: dict[str, float]
+    task_limits: dict[str, dict[str, float]]
 
 
 def _positive_number(value: object) -> float | None:
@@ -33,10 +34,10 @@ def _positive_number(value: object) -> float | None:
 
 def load_budget_config(path: Path | str | None) -> BudgetConfig:
     if not path:
-        return BudgetConfig(configured=False, source_path=None, warn_at=0.8, limits={})
+        return BudgetConfig(configured=False, source_path=None, warn_at=0.8, limits={}, task_limits={})
     config_path = Path(path).expanduser()
     if not config_path.exists():
-        return BudgetConfig(configured=False, source_path=str(config_path), warn_at=0.8, limits={})
+        return BudgetConfig(configured=False, source_path=str(config_path), warn_at=0.8, limits={}, task_limits={})
 
     with config_path.open("rb") as handle:
         data = tomllib.load(handle)
@@ -47,7 +48,38 @@ def load_budget_config(path: Path | str | None) -> BudgetConfig:
         limit = _positive_number(defaults.get(key))
         if limit is not None:
             limits[key] = limit
-    return BudgetConfig(configured=bool(limits), source_path=str(config_path), warn_at=warn_at, limits=limits)
+    task_limits = {}
+    tasks = data.get("tasks") if isinstance(data.get("tasks"), dict) else {}
+    for task_key, raw in tasks.items():
+        if not isinstance(raw, dict):
+            continue
+        task_values = {}
+        for key in LIMIT_DEFINITIONS:
+            limit = _positive_number(raw.get(key))
+            if limit is not None:
+                task_values[key] = limit
+        if task_values:
+            task_limits[str(task_key)] = task_values
+    return BudgetConfig(
+        configured=bool(limits or task_limits),
+        source_path=str(config_path),
+        warn_at=warn_at,
+        limits=limits,
+        task_limits=task_limits,
+    )
+
+
+def config_for_task(config: BudgetConfig, task_key: str | None) -> BudgetConfig:
+    if not task_key:
+        return config
+    limits = {**config.limits, **config.task_limits.get(str(task_key), {})}
+    return BudgetConfig(
+        configured=bool(limits),
+        source_path=config.source_path,
+        warn_at=config.warn_at,
+        limits=limits,
+        task_limits=config.task_limits,
+    )
 
 
 def budget_state(config: BudgetConfig) -> dict:
@@ -56,6 +88,7 @@ def budget_state(config: BudgetConfig) -> dict:
         "source_path": config.source_path,
         "warn_at": config.warn_at,
         "limits": config.limits,
+        "task_limits": config.task_limits,
     }
 
 

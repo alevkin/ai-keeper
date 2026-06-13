@@ -5,6 +5,22 @@
   <h1>{{ project.name }}</h1>
   <p>{{ project.root_path }}</p>
 </section>
+{% if anomalies %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Anomalies</h2>
+    <span>{{ anomalies | length }} flagged</span>
+  </div>
+  <div class="anomaly-list">
+    {% for anomaly in anomalies %}
+    <div class="anomaly-item {{ anomaly.severity }}">
+      <strong>{{ anomaly.reason }}</strong>
+      <small>{{ anomaly.detail }}</small>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 <section class="grid">
   <div class="panel">
     <div class="panel-head">
@@ -12,7 +28,7 @@
       <span>{{ tasks | length }} tracked</span>
     </div>
     <table data-sortable>
-      <thead><tr><th>Task</th><th>Branch</th><th class="num">Sessions</th><th class="num">Total</th></tr></thead>
+      <thead><tr><th>Task</th><th>Branch</th><th class="num">Sessions</th><th class="num">Total</th><th>Budget</th></tr></thead>
       <tbody>
         {% for task in tasks %}
         <tr>
@@ -20,6 +36,15 @@
           <td>{{ task.git_branch or "unassigned" }}</td>
           <td class="num" data-sort-value="{{ task.sessions_count }}">{{ task.sessions_count }}</td>
           <td class="num" data-sort-value="{{ task.tokens }}">{{ task.tokens | tokens }}</td>
+          <td>
+            {% if task.budget_warnings %}
+              {{ task.budget_warnings[0].severity }} · {{ task.budget_warnings[0].label }}
+            {% elif task.budget.configured %}
+              ok
+            {% else %}
+              not configured
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

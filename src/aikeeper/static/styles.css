@@ -188,7 +188,8 @@ a:hover {
   grid-template-columns: minmax(0, 1fr) minmax(360px, 0.7fr);
 }
 
-.model-panel {
+.model-panel,
+.sim-panel {
   margin-bottom: 18px;
   overflow-x: auto;
 }
@@ -228,6 +229,56 @@ a:hover {
   color: var(--muted);
   display: block;
   font-size: 12px;
+  margin-top: 4px;
+}
+
+.insight-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 18px 20px 20px;
+}
+
+.insight-grid strong {
+  display: block;
+  font-size: 22px;
+}
+
+.insight-grid p {
+  color: var(--muted);
+  grid-column: 1 / -1;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.anomaly-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+
+.anomaly-item {
+  background: #fff8ed;
+  border: 1px solid #f0d7aa;
+  border-radius: 7px;
+  padding: 12px 14px;
+}
+
+.anomaly-item.high {
+  background: #fff1f1;
+  border-color: #e7b9b9;
+}
+
+.anomaly-item strong {
+  display: block;
+  font-size: 14px;
+}
+
+.anomaly-item small {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
   margin-top: 4px;
 }
 
@@ -401,7 +452,8 @@ tbody tr:hover {
 
   .activity-grid,
   .grid,
-  .activity-main {
+  .activity-main,
+  .insight-grid {
     grid-template-columns: 1fr;
   }
 }

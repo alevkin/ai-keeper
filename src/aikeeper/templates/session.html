@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Session {{ session.session_id }} - AI Keeper{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>{{ session.session_id }}</h1>
+  <p>{{ session.project_name }} / {{ session.task_name }} / {{ session.model or "unknown model" }}</p>
+</section>
+<section class="panel">
+  <h2>Token Events</h2>
+  <table>
+    <thead><tr><th>#</th><th>Input</th><th>Cached</th><th>Output</th><th>Reasoning</th><th>Turn</th><th>Running</th></tr></thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td>{{ event.sequence }}</td>
+        <td>{{ event.input_tokens }}</td>
+        <td>{{ event.cached_input_tokens }}</td>
+        <td>{{ event.output_tokens }}</td>
+        <td>{{ event.reasoning_output_tokens }}</td>
+        <td>{{ event.total_tokens }}</td>
+        <td>{{ event.running_total_tokens }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

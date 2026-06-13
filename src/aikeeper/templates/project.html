@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} - AI Keeper{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>{{ project.name }}</h1>
+  <p>{{ project.root_path }}</p>
+</section>
+<section class="grid">
+  <div class="panel">
+    <h2>Tasks</h2>
+    <table>
+      <thead><tr><th>Task</th><th>Branch</th><th>Sessions</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <td>{{ task.display_name }}</td>
+          <td>{{ task.git_branch or "unassigned" }}</td>
+          <td>{{ task.sessions_count }}</td>
+          <td>{{ task.tokens }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h2>Sessions</h2>
+    <table>
+      <thead><tr><th>Session</th><th>Task</th><th>Model</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for session in sessions %}
+        <tr>
+          <td><a href="/sessions/{{ session.id }}">{{ session.session_id }}</a></td>
+          <td>{{ session.task_name }}</td>
+          <td>{{ session.model or "unknown" }}</td>
+          <td>{{ session.total_tokens }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

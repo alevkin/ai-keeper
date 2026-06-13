@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}AI Keeper Overview{% endblock %}
+{% block content %}
+<section class="summary">
+  <div>
+    <span class="label">All time</span>
+    <strong data-total-tokens>{{ overview.total_tokens }}</strong>
+  </div>
+  <div>
+    <span class="label">Today</span>
+    <strong data-today-tokens>{{ overview.today_tokens }}</strong>
+  </div>
+  <div>
+    <span class="label">This week</span>
+    <strong data-week-tokens>{{ overview.week_tokens }}</strong>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="panel">
+    <h1>Projects</h1>
+    <table>
+      <thead><tr><th>Project</th><th>Today</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for project in overview.projects %}
+        <tr>
+          <td><a href="/projects/{{ project.id }}">{{ project.name }}</a><small>{{ project.root_path }}</small></td>
+          <td>{{ project.today_tokens }}</td>
+          <td>{{ project.tokens }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h2>Top Tasks</h2>
+    <table>
+      <thead><tr><th>Task</th><th>Project</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for task in overview.tasks %}
+        <tr>
+          <td>{{ task.display_name }}</td>
+          <td>{{ task.project_name }}</td>
+          <td>{{ task.tokens }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+<script>
+  async function refreshOverview() {
+    const response = await fetch("/api/overview", { headers: { "accept": "application/json" } });
+    if (!response.ok) return;
+    const data = await response.json();
+    document.querySelector("[data-total-tokens]").textContent = data.total_tokens;
+    document.querySelector("[data-today-tokens]").textContent = data.today_tokens;
+    document.querySelector("[data-week-tokens]").textContent = data.week_tokens;
+  }
+  setInterval(refreshOverview, 15000);
+</script>
+{% endblock %}

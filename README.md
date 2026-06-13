@@ -57,6 +57,18 @@ The official OpenAI Admin Costs API reports real organization-level billing
 costs, but it requires an admin key and does not automatically map costs to
 AI Keeper's local Codex project/task/session attribution.
 
+## Dashboard Metrics
+
+The overview dashboard includes:
+
+- Active burn rate for the current session, shown as tokens/min and USD/min.
+- Model efficiency by provider/model, including total tokens, total estimated
+  spend, active speed, spend rate, and cached input ratio.
+- Project, task, session, and turn token totals.
+
+Burn-rate windows exclude long idle gaps, so the rate is about active agent work
+rather than the total time a session stayed open.
+
 ## CLI
 
 ```bash

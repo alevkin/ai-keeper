@@ -67,6 +67,110 @@ def seed_usage(db_path: Path, cwd: Path) -> None:
         )
 
 
+def test_overview_exposes_live_burn_rate_and_model_efficiency(tmp_path: Path) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    now = 1_781_000_000_000
+    with connect(db_path) as con:
+        init_db(con)
+        con.execute(
+            "insert into projects(root_path, name, git_origin, first_seen_ms, last_seen_ms) values (?, ?, ?, ?, ?)",
+            (str(cwd), "repo", None, now, now),
+        )
+        project_id = con.execute("select id from projects").fetchone()[0]
+        con.execute(
+            """
+            insert into tasks(project_id, task_key, source, git_branch, issue_id, display_name, first_seen_ms, last_seen_ms)
+            values (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (project_id, "main", "git_branch", "main", None, "main", now, now),
+        )
+        task_id = con.execute("select id from tasks").fetchone()[0]
+        for session_id, model, updated_at in (
+            ("session-fast", "gpt-5.5", now),
+            ("session-codex", "gpt-5.3-codex", now - 600_000),
+        ):
+            con.execute(
+                """
+                insert into sessions(
+                    provider, session_id, transcript_path, cwd, model, model_provider,
+                    source, project_id, task_id, git_sha, git_branch, git_origin_url,
+                    created_at_ms, updated_at_ms, total_tokens, last_seen_ms
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "codex",
+                    session_id,
+                    f"/tmp/{session_id}.jsonl",
+                    str(cwd),
+                    model,
+                    "openai",
+                    "test",
+                    project_id,
+                    task_id,
+                    "abc123",
+                    "main",
+                    None,
+                    updated_at - 240_000,
+                    updated_at,
+                    0,
+                    updated_at,
+                ),
+            )
+        fast_pk = con.execute("select id from sessions where session_id = 'session-fast'").fetchone()[0]
+        codex_pk = con.execute("select id from sessions where session_id = 'session-codex'").fetchone()[0]
+        events = [
+            (fast_pk, 1, now - 240_000, 100, 20, 50, 150, 150),
+            (fast_pk, 2, now - 180_000, 100, 50, 50, 150, 300),
+            (fast_pk, 3, now - 30_000, 200, 0, 100, 300, 600),
+            (codex_pk, 1, now - 120_000, 100, 50, 100, 200, 200),
+            (codex_pk, 2, now - 90_000, 100, 100, 100, 200, 400),
+        ]
+        for session_pk, sequence, timestamp_ms, input_tokens, cached_input_tokens, output_tokens, total_tokens, running in events:
+            con.execute(
+                """
+                insert into token_events(
+                    session_pk, sequence, timestamp_ms, input_tokens, cached_input_tokens,
+                    output_tokens, reasoning_output_tokens, total_tokens,
+                    running_total_tokens, source_path, source_offset
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_pk,
+                    sequence,
+                    timestamp_ms,
+                    input_tokens,
+                    cached_input_tokens,
+                    output_tokens,
+                    0,
+                    total_tokens,
+                    running,
+                    f"/tmp/{session_pk}.jsonl",
+                    sequence * 100,
+                ),
+            )
+        con.execute("update sessions set total_tokens = 600 where id = ?", (fast_pk,))
+        con.execute("update sessions set total_tokens = 400 where id = ?", (codex_pk,))
+
+    data = build_overview(db_path, now_ms=now)
+
+    assert data["burn_rate"]["active_window_ms"] == 600_000
+    assert data["burn_rate"]["idle_gap_ms"] == 120_000
+    assert data["burn_rate"]["current"]["session_id"] == "session-fast"
+    assert data["burn_rate"]["current"]["tokens"] == 600
+    assert data["burn_rate"]["current"]["active_ms"] == 180_000
+    assert data["burn_rate"]["current"]["tokens_per_minute"] == pytest.approx(200)
+    assert data["burn_rate"]["current"]["usd_per_minute"] > 0
+    model_rows = {row["model"]: row for row in data["model_efficiency"]}
+    assert model_rows["gpt-5.5"]["total_tokens"] == 600
+    assert model_rows["gpt-5.5"]["event_count"] == 3
+    assert model_rows["gpt-5.5"]["cached_input_ratio"] == pytest.approx(0.175)
+    assert model_rows["gpt-5.5"]["tokens_per_minute"] == pytest.approx(200)
+    assert model_rows["gpt-5.3-codex"]["session_count"] == 1
+    assert model_rows["gpt-5.3-codex"]["estimated_cost_usd"] > 0
+
+
 def test_web_overview_api_and_pages_render_usage(tmp_path: Path) -> None:
     db_path = tmp_path / "keeper.sqlite"
     cwd = tmp_path / "repo"
@@ -128,3 +232,5 @@ def test_overview_page_renders_version_and_current_activity(tmp_path: Path, monk
     assert "$0.0038" in page.text
     assert "session-1" in page.text
     assert "7-day trend" in page.text
+    assert "Active rate" in page.text
+    assert "Model Efficiency" in page.text

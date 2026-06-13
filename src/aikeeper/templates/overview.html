@@ -10,6 +10,7 @@
 </section>
 
 <section class="summary" aria-label="Token totals">
+  {% set burn = overview.burn_rate.current %}
   <div class="metric-card">
     <span class="label">All time</span>
     <strong data-total-tokens title="{{ overview.total_tokens | tokens }}">{{ overview.total_tokens | compact_tokens }}</strong>
@@ -32,6 +33,15 @@
     </strong>
     <small data-last-turn-cost>
       {% if overview.current_activity %}Estimated spend {{ overview.current_activity.last_turn_cost_usd | usd }}{% else %}Estimated spend $0.00{% endif %}
+    </small>
+  </div>
+  <div class="metric-card">
+    <span class="label">Active rate</span>
+    <strong data-active-token-rate title="{% if burn %}{{ burn.tokens_per_minute | round(2) }} tokens/min{% else %}0 tokens/min{% endif %}">
+      {% if burn %}{{ burn.tokens_per_minute | per_minute }}{% else %}0/min{% endif %}
+    </strong>
+    <small data-active-cost-rate title="{% if burn %}{{ burn.usd_per_minute | usd }}/min{% else %}$0.00/min{% endif %}">
+      {% if burn %}{{ burn.usd_per_minute | usd_per_minute }} est.{% else %}$0.00/min est.{% endif %}
     </small>
   </div>
 </section>
@@ -85,6 +95,44 @@
       {% endfor %}
     </div>
   </div>
+</section>
+
+<section class="panel model-panel">
+  <div class="panel-head">
+    <h2>Model Efficiency</h2>
+    <span>active speed and spend</span>
+  </div>
+  {% if overview.model_efficiency %}
+  <table data-sortable>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th class="num">Tokens/min</th>
+        <th class="num">$/min</th>
+        <th class="num">Total</th>
+        <th class="num">Total $</th>
+        <th class="num">Cache</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for model in overview.model_efficiency %}
+      <tr>
+        <td>
+          {{ model.model }}
+          <small>{{ model.provider }} · {{ model.session_count }} sessions · {{ model.event_count }} turns</small>
+        </td>
+        <td class="num" data-sort-value="{{ model.tokens_per_minute }}" title="{{ model.tokens_per_minute | round(2) }} tokens/min">{{ model.tokens_per_minute | per_minute }}</td>
+        <td class="num" data-sort-value="{{ model.usd_per_minute }}" title="{{ model.usd_per_minute | usd }}/min">{{ model.usd_per_minute | usd_per_minute }}</td>
+        <td class="num" data-sort-value="{{ model.total_tokens }}" title="{{ model.total_tokens | tokens }}">{{ model.total_tokens | compact_tokens }}</td>
+        <td class="num" data-sort-value="{{ model.estimated_cost_usd }}" title="{{ model.estimated_cost_usd | usd }}">{{ model.estimated_cost_usd | compact_usd }}</td>
+        <td class="num" data-sort-value="{{ model.cached_input_ratio }}" title="cached input / input">{{ model.cached_input_ratio | percent }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">No model usage imported yet.</p>
+  {% endif %}
 </section>
 
 <section class="grid data-grid">
@@ -152,6 +200,10 @@
       updateMetric("[data-last-turn-tokens]", data.current_activity.last_turn_tokens);
       updateCost("[data-last-turn-cost]", data.current_activity.last_turn_cost_usd);
     }
+    if (data.burn_rate && data.burn_rate.current) {
+      updateTokenRate("[data-active-token-rate]", data.burn_rate.current.tokens_per_minute);
+      updateUsdRate("[data-active-cost-rate]", data.burn_rate.current.usd_per_minute);
+    }
     const sync = document.querySelector("[data-last-sync]");
     if (sync) sync.textContent = "synced " + new Date(data.generated_at_ms).toLocaleTimeString();
   }
@@ -168,6 +220,20 @@
     if (!element) return;
     element.textContent = "Estimated spend " + usdFormatter.format(value);
     element.title = usdFormatter.format(value);
+  }
+
+  function updateTokenRate(selector, value) {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    element.textContent = compactFormatter.format(value) + "/min";
+    element.title = numberFormatter.format(value) + " tokens/min";
+  }
+
+  function updateUsdRate(selector, value) {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    element.textContent = usdFormatter.format(value) + "/min est.";
+    element.title = usdFormatter.format(value) + "/min";
   }
 
   setInterval(refreshOverview, 15000);

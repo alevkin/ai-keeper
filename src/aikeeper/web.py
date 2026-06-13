@@ -52,10 +52,32 @@ def compact_usd(value: float | None) -> str:
     return format_usd(amount)
 
 
+def compact_per_minute(value: float | None) -> str:
+    amount = float(value or 0)
+    if abs(amount) >= 1_000_000:
+        return f"{amount / 1_000_000:.2f}M/min"
+    if abs(amount) >= 1_000:
+        return f"{amount / 1_000:.1f}K/min"
+    if amount.is_integer():
+        return f"{int(amount)}/min"
+    return f"{amount:.1f}/min"
+
+
+def usd_per_minute(value: float | None) -> str:
+    return f"{format_usd(value)}/min"
+
+
+def percent(value: float | None) -> str:
+    return f"{float(value or 0) * 100:.1f}%"
+
+
 templates.env.filters["tokens"] = format_tokens
 templates.env.filters["compact_tokens"] = compact_tokens
 templates.env.filters["usd"] = format_usd
 templates.env.filters["compact_usd"] = compact_usd
+templates.env.filters["per_minute"] = compact_per_minute
+templates.env.filters["usd_per_minute"] = usd_per_minute
+templates.env.filters["percent"] = percent
 
 
 def _run_polling_sync(db: Path, home: Path, stop: threading.Event, interval_seconds: int = 5) -> None:

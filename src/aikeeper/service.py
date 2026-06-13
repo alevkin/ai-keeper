@@ -10,6 +10,10 @@ from aikeeper.timeutils import now_ms as current_now_ms
 from aikeeper.timeutils import utc_day_start_ms, utc_week_start_ms
 
 
+ACTIVE_WINDOW_MS = 600_000
+IDLE_GAP_MS = 120_000
+
+
 def _sum_tokens_since(con, session_filter: str, params: tuple, since_ms: int) -> int:
     row = con.execute(
         f"""
@@ -50,6 +54,23 @@ def _estimate_rows_cost(rows) -> dict:
             continue
         total += cost
     return {"usd": round(total, 6), "unpriced_models": sorted(unpriced)}
+
+
+def _active_ms(rows, idle_gap_ms: int = IDLE_GAP_MS) -> int:
+    timestamps = sorted({int(row["timestamp_ms"]) for row in rows})
+    if len(timestamps) < 2:
+        return 0
+    active = 0
+    for previous, current in zip(timestamps, timestamps[1:]):
+        delta = max(current - previous, 0)
+        active += min(delta, idle_gap_ms)
+    return active
+
+
+def _per_minute(value: int | float, active_ms: int) -> float:
+    if active_ms <= 0:
+        return 0.0
+    return round(float(value) * 60_000 / active_ms, 6)
 
 
 def _estimate_cost(con, session_filter: str = "1 = 1", params: tuple = (), since_ms: int | None = None) -> dict:
@@ -140,6 +161,104 @@ def _current_activity(con) -> dict | None:
     ).fetchall()
     data["last_turn_cost_usd"] = _estimate_rows_cost(last_turn)["usd"]
     return data
+
+
+def _current_burn_rate(con, now_ms: int) -> dict:
+    session = con.execute(
+        """
+        select id, session_id, model
+        from sessions
+        order by updated_at_ms desc, id desc
+        limit 1
+        """
+    ).fetchone()
+    empty = {
+        "active_window_ms": ACTIVE_WINDOW_MS,
+        "idle_gap_ms": IDLE_GAP_MS,
+        "current": None,
+    }
+    if not session:
+        return empty
+
+    rows = con.execute(
+        """
+        select s.model, te.timestamp_ms, te.input_tokens, te.cached_input_tokens,
+               te.output_tokens, te.total_tokens
+        from token_events te
+        join sessions s on s.id = te.session_pk
+        where te.session_pk = ? and te.timestamp_ms >= ?
+        order by te.timestamp_ms asc, te.sequence asc
+        """,
+        (session["id"], now_ms - ACTIVE_WINDOW_MS),
+    ).fetchall()
+    if not rows:
+        return empty
+
+    tokens = sum(int(row["total_tokens"]) for row in rows)
+    cost = _estimate_rows_cost(rows)["usd"]
+    active = _active_ms(rows)
+    return {
+        "active_window_ms": ACTIVE_WINDOW_MS,
+        "idle_gap_ms": IDLE_GAP_MS,
+        "current": {
+            "session_id": session["session_id"],
+            "model": session["model"],
+            "events": len(rows),
+            "tokens": tokens,
+            "estimated_cost_usd": cost,
+            "active_ms": active,
+            "tokens_per_minute": _per_minute(tokens, active),
+            "usd_per_minute": _per_minute(cost, active),
+        },
+    }
+
+
+def _model_efficiency(con) -> list[dict]:
+    rows = con.execute(
+        """
+        select s.provider, coalesce(s.model, 'unknown') as model, s.id as session_pk,
+               te.timestamp_ms, te.input_tokens, te.cached_input_tokens,
+               te.output_tokens, te.total_tokens
+        from token_events te
+        join sessions s on s.id = te.session_pk
+        order by s.provider asc, model asc, te.timestamp_ms asc, te.sequence asc
+        """
+    ).fetchall()
+    grouped: dict[tuple[str, str], list] = {}
+    sessions: dict[tuple[str, str], set[int]] = {}
+    for row in rows:
+        key = (str(row["provider"]), str(row["model"]))
+        grouped.setdefault(key, []).append(row)
+        sessions.setdefault(key, set()).add(int(row["session_pk"]))
+
+    models = []
+    for (provider, model), model_rows in grouped.items():
+        total_tokens = sum(int(row["total_tokens"]) for row in model_rows)
+        input_tokens = sum(int(row["input_tokens"]) for row in model_rows)
+        cached_input_tokens = sum(int(row["cached_input_tokens"]) for row in model_rows)
+        output_tokens = sum(int(row["output_tokens"]) for row in model_rows)
+        cost = _estimate_rows_cost(model_rows)["usd"]
+        active = _active_ms(model_rows)
+        event_count = len(model_rows)
+        models.append(
+            {
+                "provider": provider,
+                "model": model,
+                "session_count": len(sessions[(provider, model)]),
+                "event_count": event_count,
+                "total_tokens": total_tokens,
+                "input_tokens": input_tokens,
+                "cached_input_tokens": cached_input_tokens,
+                "output_tokens": output_tokens,
+                "estimated_cost_usd": cost,
+                "avg_cost_per_turn_usd": round(cost / event_count, 6) if event_count else 0.0,
+                "cached_input_ratio": round(cached_input_tokens / input_tokens, 6) if input_tokens else 0.0,
+                "active_ms": active,
+                "tokens_per_minute": _per_minute(total_tokens, active),
+                "usd_per_minute": _per_minute(cost, active),
+            }
+        )
+    return sorted(models, key=lambda item: (item["estimated_cost_usd"], item["total_tokens"]), reverse=True)
 
 
 def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = None) -> dict:
@@ -293,6 +412,8 @@ def overview(db_path: Path | str, now_ms: int | None = None) -> dict:
             },
             "daily_tokens": _daily_tokens(con, now),
             "current_activity": _current_activity(con),
+            "burn_rate": _current_burn_rate(con, now),
+            "model_efficiency": _model_efficiency(con),
             "projects": project_rows,
             "tasks": task_rows,
         }

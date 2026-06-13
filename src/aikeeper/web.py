@@ -14,10 +14,30 @@ from aikeeper.db import connect, init_db
 from aikeeper.service import overview, project_detail, session_detail
 from aikeeper.settings import codex_home as default_codex_home
 from aikeeper.settings import default_db_path
+from aikeeper.version import get_app_version
 
 
 PACKAGE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=str(PACKAGE_DIR / "templates"))
+
+
+def format_tokens(value: int | None) -> str:
+    return f"{int(value or 0):,}"
+
+
+def compact_tokens(value: int | None) -> str:
+    number = int(value or 0)
+    if abs(number) >= 1_000_000_000:
+        return f"{number / 1_000_000_000:.2f}B"
+    if abs(number) >= 1_000_000:
+        return f"{number / 1_000_000:.2f}M"
+    if abs(number) >= 1_000:
+        return f"{number / 1_000:.1f}K"
+    return str(number)
+
+
+templates.env.filters["tokens"] = format_tokens
+templates.env.filters["compact_tokens"] = compact_tokens
 
 
 def _run_polling_sync(db: Path, home: Path, stop: threading.Event, interval_seconds: int = 5) -> None:
@@ -56,7 +76,9 @@ def create_app(
 
     @app.get("/api/overview")
     def api_overview() -> dict:
-        return overview(db)
+        data = overview(db)
+        data["version"] = get_app_version()
+        return data
 
     @app.post("/api/sync/codex")
     def api_sync_codex() -> dict:
@@ -65,7 +87,11 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request) -> HTMLResponse:
-        return templates.TemplateResponse(request, "overview.html", {"overview": overview(db)})
+        return templates.TemplateResponse(
+            request,
+            "overview.html",
+            {"overview": overview(db), "version": get_app_version()},
+        )
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
     def project(request: Request, project_id: int) -> HTMLResponse:
@@ -73,6 +99,7 @@ def create_app(
             data = project_detail(db, project_id)
         except KeyError as exc:
             raise HTTPException(status_code=404) from exc
+        data["version"] = get_app_version()
         return templates.TemplateResponse(request, "project.html", data)
 
     @app.get("/sessions/{session_id}", response_class=HTMLResponse)
@@ -81,6 +108,7 @@ def create_app(
             data = session_detail(db, session_id)
         except KeyError as exc:
             raise HTTPException(status_code=404) from exc
+        data["version"] = get_app_version()
         return templates.TemplateResponse(request, "session.html", data)
 
     return app

@@ -6,22 +6,26 @@
   <p>{{ session.project_name }} / {{ session.task_name }} / {{ session.model or "unknown model" }}</p>
 </section>
 <section class="panel">
-  <h2>Token Events</h2>
-  <table>
-    <thead><tr><th>#</th><th>Input</th><th>Cached</th><th>Output</th><th>Reasoning</th><th>Turn</th><th>Running</th></tr></thead>
+  <div class="panel-head">
+    <h2>Token Events</h2>
+    <span>{{ events | length }} turns</span>
+  </div>
+  <table data-sortable>
+    <thead><tr><th class="num">#</th><th class="num">Input</th><th class="num">Cached</th><th class="num">Output</th><th class="num">Reasoning</th><th class="num">Turn</th><th class="num">Running</th></tr></thead>
     <tbody>
       {% for event in events %}
       <tr>
-        <td>{{ event.sequence }}</td>
-        <td>{{ event.input_tokens }}</td>
-        <td>{{ event.cached_input_tokens }}</td>
-        <td>{{ event.output_tokens }}</td>
-        <td>{{ event.reasoning_output_tokens }}</td>
-        <td>{{ event.total_tokens }}</td>
-        <td>{{ event.running_total_tokens }}</td>
+        <td class="num" data-sort-value="{{ event.sequence }}">{{ event.sequence }}</td>
+        <td class="num" data-sort-value="{{ event.input_tokens }}">{{ event.input_tokens | tokens }}</td>
+        <td class="num" data-sort-value="{{ event.cached_input_tokens }}">{{ event.cached_input_tokens | tokens }}</td>
+        <td class="num" data-sort-value="{{ event.output_tokens }}">{{ event.output_tokens | tokens }}</td>
+        <td class="num" data-sort-value="{{ event.reasoning_output_tokens }}">{{ event.reasoning_output_tokens | tokens }}</td>
+        <td class="num" data-sort-value="{{ event.total_tokens }}">{{ event.total_tokens | tokens }}</td>
+        <td class="num" data-sort-value="{{ event.running_total_tokens }}">{{ event.running_total_tokens | tokens }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </section>
+<script src="/static/tables.js"></script>
 {% endblock %}

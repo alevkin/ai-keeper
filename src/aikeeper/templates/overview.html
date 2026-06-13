@@ -1,47 +1,118 @@
 {% extends "base.html" %}
 {% block title %}AI Keeper Overview{% endblock %}
 {% block content %}
-<section class="summary">
+<section class="dashboard-head">
   <div>
+    <h1>Overview</h1>
+    <p>Local Codex token usage by project, task, session, and turn.</p>
+  </div>
+  <span class="privacy-badge">metadata only</span>
+</section>
+
+<section class="summary" aria-label="Token totals">
+  <div class="metric-card">
     <span class="label">All time</span>
-    <strong data-total-tokens>{{ overview.total_tokens }}</strong>
+    <strong data-total-tokens title="{{ overview.total_tokens | tokens }}">{{ overview.total_tokens | compact_tokens }}</strong>
   </div>
-  <div>
+  <div class="metric-card">
     <span class="label">Today</span>
-    <strong data-today-tokens>{{ overview.today_tokens }}</strong>
+    <strong data-today-tokens title="{{ overview.today_tokens | tokens }}">{{ overview.today_tokens | compact_tokens }}</strong>
   </div>
-  <div>
+  <div class="metric-card">
     <span class="label">This week</span>
-    <strong data-week-tokens>{{ overview.week_tokens }}</strong>
+    <strong data-week-tokens title="{{ overview.week_tokens | tokens }}">{{ overview.week_tokens | compact_tokens }}</strong>
+  </div>
+  <div class="metric-card">
+    <span class="label">Last turn</span>
+    <strong data-last-turn-tokens>
+      {% if overview.current_activity %}{{ overview.current_activity.last_turn_tokens | compact_tokens }}{% else %}0{% endif %}
+    </strong>
   </div>
 </section>
 
-<section class="grid">
+<section class="activity-grid">
+  <div class="panel current-panel">
+    <div class="panel-head">
+      <h2>Current activity</h2>
+      <span data-last-sync>live</span>
+    </div>
+    {% if overview.current_activity %}
+    <div class="activity-main">
+      <div>
+        <span class="label">Project</span>
+        <a href="/projects/{{ overview.current_activity.project_id }}">{{ overview.current_activity.project_name }}</a>
+        <small>{{ overview.current_activity.root_path }}</small>
+      </div>
+      <div>
+        <span class="label">Task</span>
+        <strong>{{ overview.current_activity.task_name }}</strong>
+        <small>{{ overview.current_activity.model or "unknown model" }}</small>
+      </div>
+      <div>
+        <span class="label">Session</span>
+        <a href="/sessions/{{ overview.current_activity.id }}" title="{{ overview.current_activity.session_id }}">
+          {{ overview.current_activity.session_label }}
+        </a>
+        <small>{{ overview.current_activity.total_tokens | tokens }} tokens total</small>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty-state">No Codex activity imported yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel trend-panel">
+    <div class="panel-head">
+      <h2>7-day trend</h2>
+      <span>tokens/day</span>
+    </div>
+    {% set max_daily = overview.daily_tokens | map(attribute="tokens") | max %}
+    <div class="trend-bars">
+      {% for day in overview.daily_tokens %}
+      <div class="trend-day">
+        <div class="bar-track">
+          <span style="height: {{ (day.tokens * 100 / max_daily) if max_daily else 0 }}%"></span>
+        </div>
+        <small>{{ day.date[5:] }}</small>
+        <strong title="{{ day.tokens | tokens }}">{{ day.tokens | compact_tokens }}</strong>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="grid data-grid">
   <div class="panel">
-    <h1>Projects</h1>
-    <table>
-      <thead><tr><th>Project</th><th>Today</th><th>Total</th></tr></thead>
+    <div class="panel-head">
+      <h2>Projects</h2>
+      <span>{{ overview.projects | length }} tracked</span>
+    </div>
+    <table data-sortable>
+      <thead><tr><th>Project</th><th class="num">Today</th><th class="num">Total</th></tr></thead>
       <tbody>
         {% for project in overview.projects %}
         <tr>
           <td><a href="/projects/{{ project.id }}">{{ project.name }}</a><small>{{ project.root_path }}</small></td>
-          <td>{{ project.today_tokens }}</td>
-          <td>{{ project.tokens }}</td>
+          <td class="num" data-sort-value="{{ project.today_tokens }}" title="{{ project.today_tokens | tokens }}">{{ project.today_tokens | compact_tokens }}</td>
+          <td class="num" data-sort-value="{{ project.tokens }}" title="{{ project.tokens | tokens }}">{{ project.tokens | compact_tokens }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   <div class="panel">
-    <h2>Top Tasks</h2>
-    <table>
-      <thead><tr><th>Task</th><th>Project</th><th>Total</th></tr></thead>
+    <div class="panel-head">
+      <h2>Top Tasks</h2>
+      <span>by total usage</span>
+    </div>
+    <table data-sortable>
+      <thead><tr><th>Task</th><th>Project</th><th class="num">Total</th></tr></thead>
       <tbody>
         {% for task in overview.tasks %}
         <tr>
           <td>{{ task.display_name }}</td>
           <td>{{ task.project_name }}</td>
-          <td>{{ task.tokens }}</td>
+          <td class="num" data-sort-value="{{ task.tokens }}" title="{{ task.tokens | tokens }}">{{ task.tokens | compact_tokens }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -49,14 +120,31 @@
   </div>
 </section>
 <script>
+  const numberFormatter = new Intl.NumberFormat();
+  const compactFormatter = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 2 });
+
   async function refreshOverview() {
     const response = await fetch("/api/overview", { headers: { "accept": "application/json" } });
     if (!response.ok) return;
     const data = await response.json();
-    document.querySelector("[data-total-tokens]").textContent = data.total_tokens;
-    document.querySelector("[data-today-tokens]").textContent = data.today_tokens;
-    document.querySelector("[data-week-tokens]").textContent = data.week_tokens;
+    updateMetric("[data-total-tokens]", data.total_tokens);
+    updateMetric("[data-today-tokens]", data.today_tokens);
+    updateMetric("[data-week-tokens]", data.week_tokens);
+    if (data.current_activity) {
+      updateMetric("[data-last-turn-tokens]", data.current_activity.last_turn_tokens);
+    }
+    const sync = document.querySelector("[data-last-sync]");
+    if (sync) sync.textContent = "synced " + new Date(data.generated_at_ms).toLocaleTimeString();
   }
+
+  function updateMetric(selector, value) {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    element.textContent = compactFormatter.format(value);
+    element.title = numberFormatter.format(value);
+  }
+
   setInterval(refreshOverview, 15000);
 </script>
+<script src="/static/tables.js"></script>
 {% endblock %}

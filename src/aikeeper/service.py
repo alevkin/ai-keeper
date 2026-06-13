@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 from aikeeper.db import connect, init_db
@@ -19,6 +20,62 @@ def _sum_tokens_since(con, session_filter: str, params: tuple, since_ms: int) ->
         (*params, since_ms),
     ).fetchone()
     return int(row["tokens"])
+
+
+def _sum_tokens_between(con, start_ms: int, end_ms: int) -> int:
+    row = con.execute(
+        """
+        select coalesce(sum(total_tokens), 0) as tokens
+        from token_events
+        where timestamp_ms >= ? and timestamp_ms < ?
+        """,
+        (start_ms, end_ms),
+    ).fetchone()
+    return int(row["tokens"])
+
+
+def _date_label(day_start_ms: int) -> str:
+    return datetime.fromtimestamp(day_start_ms / 1000, tz=UTC).date().isoformat()
+
+
+def _daily_tokens(con, now_ms: int, days: int = 7) -> list[dict]:
+    day_start = utc_day_start_ms(now_ms)
+    day_ms = 86_400_000
+    rows = []
+    for index in range(days - 1, -1, -1):
+        start = day_start - index * day_ms
+        end = start + day_ms
+        rows.append({"date": _date_label(start), "tokens": _sum_tokens_between(con, start, end)})
+    return rows
+
+
+def _current_activity(con) -> dict | None:
+    session = con.execute(
+        """
+        select s.id, s.session_id, s.cwd, s.model, s.updated_at_ms, s.total_tokens,
+               p.id as project_id, p.name as project_name, p.root_path,
+               t.id as task_id, t.task_key, t.display_name as task_name,
+               (
+                   select te.total_tokens
+                   from token_events te
+                   where te.session_pk = s.id
+                   order by te.sequence desc
+                   limit 1
+               ) as last_turn_tokens
+        from sessions s
+        join projects p on p.id = s.project_id
+        join tasks t on t.id = s.task_id
+        order by s.updated_at_ms desc, s.id desc
+        limit 1
+        """
+    ).fetchone()
+    if not session:
+        return None
+    data = dict(session)
+    data["session_label"] = str(data["session_id"])[:8]
+    data["last_turn_tokens"] = int(data["last_turn_tokens"] or 0)
+    data["total_tokens"] = int(data["total_tokens"])
+    return data
 
 
 def status_for_cwd(db_path: Path | str, cwd: Path | str, now_ms: int | None = None) -> dict:
@@ -126,9 +183,12 @@ def overview(db_path: Path | str, now_ms: int | None = None) -> dict:
             """
         ).fetchall()
         return {
+            "generated_at_ms": now,
             "total_tokens": int(total_tokens["tokens"]),
             "today_tokens": int(today_tokens["tokens"]),
             "week_tokens": int(week_tokens["tokens"]),
+            "daily_tokens": _daily_tokens(con, now),
+            "current_activity": _current_activity(con),
             "projects": [dict(row) for row in projects],
             "tasks": [dict(row) for row in tasks],
         }

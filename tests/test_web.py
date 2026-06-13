@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from aikeeper.db import connect, init_db
+from aikeeper.service import overview as build_overview
 from aikeeper.web import create_app
 
 
@@ -85,3 +86,38 @@ def test_web_overview_api_and_pages_render_usage(tmp_path: Path) -> None:
     assert "AIK-7" in project_page.text
     assert "gpt-5.5" in session_page.text
     assert json.dumps(overview)
+
+
+def test_overview_exposes_v2_dashboard_metadata(tmp_path: Path) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    now = 1_781_000_000_000
+
+    data = build_overview(db_path, now_ms=now)
+
+    assert data["current_activity"]["session_id"] == "session-1"
+    assert data["current_activity"]["project_name"] == "repo"
+    assert data["current_activity"]["task_name"] == "AIK-7"
+    assert data["current_activity"]["last_turn_tokens"] == 300
+    assert len(data["daily_tokens"]) == 7
+    assert data["daily_tokens"][-1]["tokens"] == 300
+    assert data["generated_at_ms"] == now
+
+
+def test_overview_page_renders_version_and_current_activity(tmp_path: Path, monkeypatch) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    monkeypatch.setattr("aikeeper.web.get_app_version", lambda: {"label": "v9.9.9", "commit": "abc123"})
+    app = create_app(db_path=db_path)
+    client = TestClient(app)
+
+    page = client.get("/")
+
+    assert "v9.9.9" in page.text
+    assert "Current activity" in page.text
+    assert "session-1" in page.text
+    assert "7-day trend" in page.text

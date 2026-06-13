@@ -8,9 +8,15 @@
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href="/">AI Keeper</a>
-      <nav>
+      <div class="topbar-main">
+        <a class="brand" href="/">AI Keeper</a>
+        {% if version %}
+        <span class="version-badge">{{ version.label }}</span>
+        {% endif %}
+      </div>
+      <nav class="topnav">
         <a href="/">Overview</a>
+        <span class="daemon-status"><span aria-hidden="true"></span> local daemon</span>
       </nav>
     </header>
     <main class="shell">

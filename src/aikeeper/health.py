@@ -38,10 +38,14 @@ def ingest_health(db_path: Path | str, *, now_ms: int | None = None) -> dict:
         token_events = con.execute("select count(*) as count from token_events").fetchone()
         transcript_rows = con.execute(
             """
-            select distinct transcript_path
-            from sessions
-            where transcript_path is not null and transcript_path != ''
-            order by transcript_path asc
+            select s.id as session_pk, s.provider, s.session_id, s.transcript_path,
+                   s.cwd, s.model, s.updated_at_ms,
+                   p.name as project_name, t.display_name as task_name
+            from sessions s
+            join projects p on p.id = s.project_id
+            join tasks t on t.id = s.task_id
+            where s.transcript_path is not null and s.transcript_path != ''
+            order by s.updated_at_ms desc, s.id desc
             """
         ).fetchall()
         ingest_rows = con.execute(
@@ -60,8 +64,29 @@ def ingest_health(db_path: Path | str, *, now_ms: int | None = None) -> dict:
             """
         ).fetchall()
 
-    transcript_paths = [str(row["transcript_path"]) for row in transcript_rows]
-    missing_transcripts = [path for path in transcript_paths if not Path(path).expanduser().exists()]
+    transcript_groups: dict[str, list] = {}
+    for row in transcript_rows:
+        transcript_groups.setdefault(str(row["transcript_path"]), []).append(row)
+    missing_transcripts = []
+    for path, rows in transcript_groups.items():
+        if Path(path).expanduser().exists():
+            continue
+        latest = rows[0]
+        missing_transcripts.append(
+            {
+                "path": path,
+                "exists": False,
+                "session_count": len(rows),
+                "session_pk": int(latest["session_pk"]),
+                "provider": latest["provider"],
+                "session_id": latest["session_id"],
+                "cwd": latest["cwd"],
+                "model": latest["model"],
+                "project_name": latest["project_name"],
+                "task_name": latest["task_name"],
+                "updated_at_ms": int(latest["updated_at_ms"]),
+            }
+        )
 
     source_details = []
     lagging_sources = 0
@@ -71,11 +96,12 @@ def ingest_health(db_path: Path | str, *, now_ms: int | None = None) -> dict:
         path = _source_path(source_key)
         source_file = Path(path).expanduser() if path else None
         exists = source_file.exists() if source_file else None
+        file_size = source_file.stat().st_size if exists and source_file else None
         if exists is False:
             missing_sources += 1
         is_lagging = False
-        if exists and source_file:
-            is_lagging = source_file.stat().st_size > int(row["last_offset"])
+        if file_size is not None:
+            is_lagging = file_size > int(row["last_offset"])
         if is_lagging:
             lagging_sources += 1
         source_details.append(
@@ -87,6 +113,8 @@ def ingest_health(db_path: Path | str, *, now_ms: int | None = None) -> dict:
                 "updated_at_ms": int(row["updated_at_ms"]),
                 "stale": is_lagging,
                 "lagging": is_lagging,
+                "file_size": file_size,
+                "lag_bytes": max(file_size - int(row["last_offset"]), 0) if file_size is not None else None,
             }
         )
 
@@ -115,8 +143,10 @@ def ingest_health(db_path: Path | str, *, now_ms: int | None = None) -> dict:
             "total": int(token_events["count"]),
         },
         "transcripts": {
-            "tracked": len(transcript_paths),
+            "tracked": len(transcript_groups),
             "missing": len(missing_transcripts),
+            "missing_paths": sorted(missing_transcripts, key=lambda item: (-item["updated_at_ms"], item["path"]))[:SOURCE_LIMIT],
+            "truncated": len(missing_transcripts) > SOURCE_LIMIT,
         },
         "ingest_state": {
             "sources": len(ingest_rows),
@@ -124,6 +154,9 @@ def ingest_health(db_path: Path | str, *, now_ms: int | None = None) -> dict:
             "lagging_sources": lagging_sources,
             "missing_sources": missing_sources,
             "sample": _prioritized_sources(source_details),
+            "problem_sources": _prioritized_sources(
+                [source for source in source_details if source["exists"] is False or source["lagging"]]
+            ),
             "truncated": len(source_details) > SOURCE_LIMIT,
         },
         "models": {

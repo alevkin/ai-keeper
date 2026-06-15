@@ -196,6 +196,23 @@ Acceptance:
 - `/api/health/ingest` exposes the same result.
 - Overview dashboard renders ingest health.
 
+### AK-013 Ingest Health Details
+
+Status: shipped in v0.7.1.
+
+Make ingest warnings actionable.
+
+- Show missing transcript paths with provider, session id, project, task, cwd,
+  and model metadata.
+- Show missing and lagging source paths with offsets and byte lag.
+- Keep details metadata-only; never read or display transcript contents.
+
+Acceptance:
+
+- `aikeeper health ingest --json` exposes `transcripts.missing_paths` and
+  `ingest_state.problem_sources`.
+- Overview dashboard renders detailed missing transcript and source sections.
+
 ## Now
 
 All current backlog items are shipped. Next work should start from new feedback

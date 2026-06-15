@@ -103,6 +103,8 @@ AI Keeper also tracks:
   for prompt, assistant, or raw transcript storage.
 - Ingest health for sessions, token events, transcript paths, ingest offsets,
   lagging sources, and unpriced model labels.
+- Ingest health details for missing transcript paths and source offset lag,
+  shown without transcript contents.
 - Context health on session pages, including cache ratio, input growth, and
   compaction guidance.
 - Anomalies such as large turns, cost jumps, cache regressions, and project model

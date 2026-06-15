@@ -143,8 +143,13 @@ def test_ingest_health_reports_missing_sources_and_quality_counts(tmp_path: Path
     assert result["token_events"]["total"] == 1
     assert result["transcripts"]["tracked"] == 2
     assert result["transcripts"]["missing"] == 1
+    assert result["transcripts"]["missing_paths"][0]["session_id"] == "codex-missing"
+    assert result["transcripts"]["missing_paths"][0]["path"].endswith("missing.jsonl")
     assert result["ingest_state"]["sources"] == 2
     assert result["ingest_state"]["stale_sources"] == 1
+    problem_paths = {source["path"] for source in result["ingest_state"]["problem_sources"]}
+    assert str(transcript) in problem_paths
+    assert str(transcript.with_name("missing.jsonl")) in problem_paths
     assert result["models"]["unpriced"] == ["unknown-model"]
 
 
@@ -163,7 +168,9 @@ def test_cli_audit_and_health_commands_emit_json(tmp_path: Path) -> None:
     assert audit_result.exit_code == 0
     assert json.loads(audit_result.stdout)["status"] == "pass"
     assert health_result.exit_code == 0
-    assert json.loads(health_result.stdout)["transcripts"]["missing"] == 1
+    health_payload = json.loads(health_result.stdout)
+    assert health_payload["transcripts"]["missing"] == 1
+    assert health_payload["transcripts"]["missing_paths"][0]["task_name"] == "main"
 
 
 def test_web_exposes_ingest_health_and_privacy_audit(tmp_path: Path) -> None:
@@ -184,4 +191,7 @@ def test_web_exposes_ingest_health_and_privacy_audit(tmp_path: Path) -> None:
     assert audit.status_code == 200
     assert audit.json()["metadata_only"] is True
     assert "Ingest Health" in page.text
+    assert "Missing Transcript Details" in page.text
+    assert "codex-missing" in page.text
+    assert "missing.jsonl" in page.text
     assert "Privacy Audit" in page.text

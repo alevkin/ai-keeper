@@ -182,6 +182,11 @@ def health_ingest_cmd(
     )
     for issue in data["issues"]:
         console.print(f"- {issue}")
+    for item in data["transcripts"]["missing_paths"][:5]:
+        console.print(f"  missing transcript: {item['path']} ({item['session_id']})")
+    for source in data["ingest_state"]["problem_sources"][:5]:
+        state = "missing" if source["exists"] is False else "lagging" if source["lagging"] else "ok"
+        console.print(f"  {state} source: {source['path'] or source['source_key']}")
 
 
 @app.command("simulate")

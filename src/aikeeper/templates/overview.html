@@ -135,6 +135,39 @@
         <li>{{ issue }}</li>
         {% endfor %}
       </ul>
+      <div class="health-details-grid">
+        {% if overview.ingest_health.transcripts.missing_paths %}
+        <details class="health-details" open>
+          <summary>Missing Transcript Details</summary>
+          <ul class="path-list">
+            {% for item in overview.ingest_health.transcripts.missing_paths[:5] %}
+            <li>
+              <code>{{ item.path }}</code>
+              <small>{{ item.provider }} · {{ item.session_id }} · {{ item.project_name }} / {{ item.task_name }} · {{ item.model or "unknown model" }}</small>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+        {% if overview.ingest_health.ingest_state.problem_sources %}
+        <details class="health-details" open>
+          <summary>Ingest Source Details</summary>
+          <ul class="path-list">
+            {% for source in overview.ingest_health.ingest_state.problem_sources[:5] %}
+            <li>
+              <span class="source-state">{% if source.exists is sameas false %}missing{% elif source.lagging %}lagging{% else %}ok{% endif %}</span>
+              <code>{{ source.path or source.source_key }}</code>
+              <small>
+                offset {{ source.last_offset | tokens }}
+                {% if source.file_size is not none %} · size {{ source.file_size | tokens }}{% endif %}
+                {% if source.lag_bytes %} · lag {{ source.lag_bytes | tokens }} bytes{% endif %}
+              </small>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </div>
       {% else %}
       <p>Sources, offsets, transcript paths, and model labels look healthy.</p>
       {% endif %}

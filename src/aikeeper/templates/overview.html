@@ -137,7 +137,7 @@
       </ul>
       <div class="health-details-grid">
         {% if overview.ingest_health.transcripts.missing_paths %}
-        <details class="health-details" open>
+        <details class="health-details">
           <summary>Missing Transcript Details</summary>
           <ul class="path-list">
             {% for item in overview.ingest_health.transcripts.missing_paths[:5] %}
@@ -150,7 +150,7 @@
         </details>
         {% endif %}
         {% if overview.ingest_health.ingest_state.problem_sources %}
-        <details class="health-details" open>
+        <details class="health-details">
           <summary>Ingest Source Details</summary>
           <ul class="path-list">
             {% for source in overview.ingest_health.ingest_state.problem_sources[:5] %}

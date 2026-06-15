@@ -194,4 +194,6 @@ def test_web_exposes_ingest_health_and_privacy_audit(tmp_path: Path) -> None:
     assert "Missing Transcript Details" in page.text
     assert "codex-missing" in page.text
     assert "missing.jsonl" in page.text
+    assert '<details class="health-details" open>' not in page.text
+    assert page.text.count('<details class="health-details">') == 2
     assert "Privacy Audit" in page.text

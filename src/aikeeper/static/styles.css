@@ -229,6 +229,56 @@ a:hover {
   color: #2f3a42;
 }
 
+.active-rate-card {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+}
+
+.rate-trend {
+  align-self: end;
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.rate-sparkline {
+  align-items: end;
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  height: 34px;
+}
+
+.rate-sparkline span {
+  background: linear-gradient(180deg, #5d9d90, var(--accent));
+  border-radius: 999px 999px 3px 3px;
+  display: block;
+  min-height: 2px;
+  opacity: 0.94;
+}
+
+.rate-sparkline span.empty {
+  background: var(--surface-muted);
+  opacity: 1;
+}
+
+.trend-summary {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1.25;
+  min-height: 15px;
+}
+
+.trend-summary.up {
+  color: var(--accent-strong);
+}
+
+.trend-summary.down {
+  color: var(--amber);
+}
+
 .command-layout {
   align-items: start;
   display: grid;

@@ -164,6 +164,12 @@ def test_overview_exposes_live_burn_rate_and_model_efficiency(tmp_path: Path) ->
     assert data["burn_rate"]["current"]["active_ms"] == 180_000
     assert data["burn_rate"]["current"]["tokens_per_minute"] == pytest.approx(200)
     assert data["burn_rate"]["current"]["usd_per_minute"] > 0
+    trend = data["burn_rate"]["trend"]
+    assert trend["bucket_ms"] == 60_000
+    assert len(trend["points"]) == 10
+    assert sum(point["tokens"] for point in trend["points"]) == 600
+    assert trend["recent_tokens_per_minute"] > trend["previous_tokens_per_minute"]
+    assert trend["direction"] == "up"
     model_rows = {row["model"]: row for row in data["model_efficiency"]}
     assert model_rows["gpt-5.5"]["total_tokens"] == 600
     assert model_rows["gpt-5.5"]["event_count"] == 3
@@ -357,6 +363,9 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     assert "session-1" in page.text
     assert "7-day spend" in page.text
     assert "Active rate" in page.text
+    assert "Active rate trend" in page.text
+    assert "previous 5m" in page.text
+    assert 'data-rate-trend-bars' in page.text
     assert "Operator alerts" in page.text
     assert "Model Efficiency" not in page.text
 

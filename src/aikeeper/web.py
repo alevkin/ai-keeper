@@ -75,6 +75,10 @@ def percent(value: float | None) -> str:
     return f"{float(value or 0) * 100:.1f}%"
 
 
+def signed_percent(value: float | None) -> str:
+    return f"{float(value or 0) * 100:+.1f}%"
+
+
 templates.env.filters["tokens"] = format_tokens
 templates.env.filters["compact_tokens"] = compact_tokens
 templates.env.filters["usd"] = format_usd
@@ -82,6 +86,7 @@ templates.env.filters["compact_usd"] = compact_usd
 templates.env.filters["per_minute"] = compact_per_minute
 templates.env.filters["usd_per_minute"] = usd_per_minute
 templates.env.filters["percent"] = percent
+templates.env.filters["signed_percent"] = signed_percent
 
 
 def _run_polling_sync(db: Path, home: Path, stop: threading.Event, interval_seconds: int = 5) -> None:

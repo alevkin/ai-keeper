@@ -2,6 +2,7 @@
 {% block title %}AI Keeper Command{% endblock %}
 {% block content %}
 {% set burn = overview.burn_rate.current %}
+{% set burn_trend = overview.burn_rate.trend %}
 <section class="hero-strip" aria-label="Operator summary">
   <div>
     <h1>Command</h1>
@@ -28,7 +29,7 @@
       {% if overview.current_activity %}{{ overview.current_activity.last_turn_cost_usd | usd }} estimated{% else %}$0.00 estimated{% endif %}
     </small>
   </article>
-  <article class="metric-card">
+  <article class="metric-card active-rate-card">
     <span class="label">Active rate</span>
     <strong data-active-token-rate title="{% if burn %}{{ burn.tokens_per_minute | round(2) }} tokens/min{% else %}0 tokens/min{% endif %}">
       {% if burn %}{{ burn.tokens_per_minute | per_minute }}{% else %}0/min{% endif %}
@@ -36,6 +37,31 @@
     <small data-active-cost-rate title="{% if burn %}{{ burn.usd_per_minute | usd }}/min{% else %}$0.00/min{% endif %}">
       {% if burn %}{{ burn.usd_per_minute | usd_per_minute }} est.{% else %}$0.00/min est.{% endif %}
     </small>
+    <div class="rate-trend" aria-label="Active rate trend">
+      {% set trend_points = burn_trend.points %}
+      {% set max_rate = trend_points | map(attribute="tokens_per_minute") | max if trend_points else 0 %}
+      <div class="rate-sparkline" data-rate-trend-bars>
+        {% for point in trend_points %}
+        <span
+          data-rate-bar
+          class="{% if point.tokens_per_minute == 0 %}empty{% endif %}"
+          style="height: {{ (point.tokens_per_minute * 100 / max_rate) if max_rate else 0 }}%"
+          title="{{ point.tokens_per_minute | per_minute }} · {{ point.usd_per_minute | usd_per_minute }}"
+        ></span>
+        {% endfor %}
+      </div>
+      <span class="trend-summary {{ burn_trend.direction }}" data-active-trend-summary>
+        {% if burn_trend.previous_tokens_per_minute == 0 and burn_trend.recent_tokens_per_minute > 0 %}
+          new activity vs previous 5m
+        {% elif burn_trend.direction == "up" %}
+          {{ burn_trend.delta_ratio | signed_percent }} vs previous 5m
+        {% elif burn_trend.direction == "down" %}
+          {{ burn_trend.delta_ratio | signed_percent }} vs previous 5m
+        {% else %}
+          steady vs previous 5m
+        {% endif %}
+      </span>
+    </div>
   </article>
   <article class="metric-card quiet-metric">
     <span class="label">This week</span>
@@ -212,6 +238,9 @@
       updateTokenRate("[data-active-token-rate]", data.burn_rate.current.tokens_per_minute);
       updateUsdRate("[data-active-cost-rate]", data.burn_rate.current.usd_per_minute);
     }
+    if (data.burn_rate && data.burn_rate.trend) {
+      updateBurnRateTrend(data.burn_rate.trend);
+    }
     const sync = document.querySelector("[data-last-sync]");
     if (sync) sync.textContent = "synced " + new Date(data.generated_at_ms).toLocaleTimeString();
   }
@@ -249,6 +278,45 @@
     if (!element) return;
     element.textContent = usdFormatter.format(value) + "/min est.";
     element.title = usdFormatter.format(value) + "/min";
+  }
+
+  function updateBurnRateTrend(trend) {
+    const container = document.querySelector("[data-rate-trend-bars]");
+    if (!container) return;
+    const points = trend.points || [];
+    const maxRate = Math.max(...points.map(point => point.tokens_per_minute || 0), 0);
+    container.replaceChildren(...points.map(point => {
+      const bar = document.createElement("span");
+      bar.dataset.rateBar = "";
+      if ((point.tokens_per_minute || 0) === 0) bar.className = "empty";
+      bar.style.height = maxRate ? `${(point.tokens_per_minute || 0) * 100 / maxRate}%` : "0%";
+      bar.title = `${formatRate(point.tokens_per_minute || 0)} · ${usdFormatter.format(point.usd_per_minute || 0)}/min`;
+      return bar;
+    }));
+    const summary = document.querySelector("[data-active-trend-summary]");
+    if (!summary) return;
+    summary.className = `trend-summary ${trend.direction || "flat"}`;
+    summary.textContent = trendSummary(trend);
+  }
+
+  function formatRate(value) {
+    return compactFormatter.format(value) + "/min";
+  }
+
+  function trendSummary(trend) {
+    if (!trend.points || trend.points.length === 0) return "waiting for samples";
+    if ((trend.previous_tokens_per_minute || 0) === 0 && (trend.recent_tokens_per_minute || 0) > 0) {
+      return "new activity vs previous 5m";
+    }
+    if (trend.direction === "up" || trend.direction === "down") {
+      return `${signedPercent(trend.delta_ratio || 0)} vs previous 5m`;
+    }
+    return "steady vs previous 5m";
+  }
+
+  function signedPercent(value) {
+    const amount = value * 100;
+    return `${amount > 0 ? "+" : ""}${amount.toFixed(1)}%`;
   }
 
   setInterval(refreshOverview, 15000);

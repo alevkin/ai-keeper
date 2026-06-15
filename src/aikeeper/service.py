@@ -23,6 +23,8 @@ from aikeeper.timeutils import utc_day_start_ms, utc_week_start_ms
 
 ACTIVE_WINDOW_MS = 600_000
 IDLE_GAP_MS = 120_000
+BURN_TREND_BUCKET_MS = 60_000
+BURN_TREND_BUCKETS = ACTIVE_WINDOW_MS // BURN_TREND_BUCKET_MS
 
 
 def _sum_tokens_since(con, session_filter: str, params: tuple, since_ms: int) -> int:
@@ -82,6 +84,60 @@ def _per_minute(value: int | float, active_ms: int) -> float:
     if active_ms <= 0:
         return 0.0
     return round(float(value) * 60_000 / active_ms, 6)
+
+
+def _burn_rate_trend(rows, now_ms: int) -> dict:
+    bucket_ms = BURN_TREND_BUCKET_MS
+    bucket_count = BURN_TREND_BUCKETS
+    window_start = now_ms - bucket_ms * bucket_count
+    points = []
+    for index in range(bucket_count):
+        start = window_start + index * bucket_ms
+        end = start + bucket_ms
+        bucket_rows = [
+            row
+            for row in rows
+            if start <= int(row["timestamp_ms"]) < end
+            or (index == bucket_count - 1 and int(row["timestamp_ms"]) == now_ms)
+        ]
+        tokens = sum(int(row["total_tokens"]) for row in bucket_rows)
+        cost = _estimate_rows_cost(bucket_rows)["usd"] if bucket_rows else 0.0
+        elapsed_ms = min(bucket_ms, max(now_ms - start, 0))
+        duration_ms = max(elapsed_ms, 1)
+        points.append(
+            {
+                "start_ms": start,
+                "end_ms": min(end, now_ms),
+                "tokens": tokens,
+                "estimated_cost_usd": cost,
+                "tokens_per_minute": _per_minute(tokens, duration_ms),
+                "usd_per_minute": _per_minute(cost, duration_ms),
+            }
+        )
+
+    split = bucket_count // 2
+    previous = points[:split]
+    recent = points[split:]
+    previous_rate = sum(point["tokens_per_minute"] for point in previous) / len(previous) if previous else 0.0
+    recent_rate = sum(point["tokens_per_minute"] for point in recent) / len(recent) if recent else 0.0
+    delta = recent_rate - previous_rate
+    delta_ratio = delta / previous_rate if previous_rate else (1.0 if recent_rate else 0.0)
+    threshold = max(previous_rate * 0.05, 1.0)
+    if delta > threshold:
+        direction = "up"
+    elif delta < -threshold:
+        direction = "down"
+    else:
+        direction = "flat"
+    return {
+        "bucket_ms": bucket_ms,
+        "points": points,
+        "previous_tokens_per_minute": round(previous_rate, 6),
+        "recent_tokens_per_minute": round(recent_rate, 6),
+        "delta_tokens_per_minute": round(delta, 6),
+        "delta_ratio": round(delta_ratio, 6),
+        "direction": direction,
+    }
 
 
 def _estimate_cost(con, session_filter: str = "1 = 1", params: tuple = (), since_ms: int | None = None) -> dict:
@@ -186,6 +242,7 @@ def _current_burn_rate(con, now_ms: int) -> dict:
     empty = {
         "active_window_ms": ACTIVE_WINDOW_MS,
         "idle_gap_ms": IDLE_GAP_MS,
+        "trend": _burn_rate_trend([], now_ms),
         "current": None,
     }
     if not session:
@@ -211,6 +268,7 @@ def _current_burn_rate(con, now_ms: int) -> dict:
     return {
         "active_window_ms": ACTIVE_WINDOW_MS,
         "idle_gap_ms": IDLE_GAP_MS,
+        "trend": _burn_rate_trend(rows, now_ms),
         "current": {
             "session_id": session["session_id"],
             "model": session["model"],

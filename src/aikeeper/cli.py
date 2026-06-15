@@ -11,10 +11,12 @@ import typer
 import uvicorn
 from rich.console import Console
 
+from aikeeper.audit import audit_privacy
 from aikeeper.claude import sync_claude_once
 from aikeeper.codex import ExecIngestState, ingest_codex_exec_line, sync_codex_once
 from aikeeper.db import connect, init_db
 from aikeeper.exports import export_usage
+from aikeeper.health import ingest_health
 from aikeeper.hooks import handle_codex_hook
 from aikeeper.installer import install_codex_hooks
 from aikeeper.openai_costs import fetch_and_import_costs
@@ -31,11 +33,15 @@ sync_app = typer.Typer(help="Synchronize provider usage data.")
 hook_app = typer.Typer(help="Codex hook entrypoints.")
 install_app = typer.Typer(help="Install AI Keeper integrations.")
 codex_app = typer.Typer(help="Codex wrapper commands.")
+audit_app = typer.Typer(help="Inspect AI Keeper privacy guarantees.")
+health_app = typer.Typer(help="Inspect AI Keeper ingest health.")
 app.add_typer(daemon_app, name="daemon")
 app.add_typer(sync_app, name="sync")
 app.add_typer(hook_app, name="hook")
 app.add_typer(install_app, name="install")
 app.add_typer(codex_app, name="codex")
+app.add_typer(audit_app, name="audit")
+app.add_typer(health_app, name="health")
 
 
 @daemon_app.command("start")
@@ -137,6 +143,45 @@ def status(
         f"task today {data['task']['today_tokens']}, "
         f"project today {data['project']['today_tokens']}"
     )
+
+
+@audit_app.command("privacy")
+def audit_privacy_cmd(
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+    db_path: Annotated[Path, typer.Option()] = default_db_path(),
+) -> None:
+    data = audit_privacy(db_path)
+    if as_json:
+        sys.stdout.write(json.dumps(data, indent=2) + "\n")
+        return
+    if data["metadata_only"]:
+        console.print(
+            f"Privacy audit passed: {data['tables_checked']} tables, "
+            f"{data['text_columns_checked']} text columns checked."
+        )
+        return
+    console.print(f"Privacy audit failed: {len(data['findings'])} finding(s).")
+    for finding in data["findings"]:
+        console.print(f"- {finding['table']}.{finding['column']}: {finding['reason']}")
+
+
+@health_app.command("ingest")
+def health_ingest_cmd(
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+    db_path: Annotated[Path, typer.Option()] = default_db_path(),
+) -> None:
+    data = ingest_health(db_path)
+    if as_json:
+        sys.stdout.write(json.dumps(data, indent=2) + "\n")
+        return
+    console.print(
+        f"Ingest health: {data['status']} · "
+        f"{data['sessions']['total']} sessions · "
+        f"{data['token_events']['total']} token events · "
+        f"{data['transcripts']['missing']} missing transcript(s)"
+    )
+    for issue in data["issues"]:
+        console.print(f"- {issue}")
 
 
 @app.command("simulate")

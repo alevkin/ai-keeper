@@ -163,6 +163,39 @@ Acceptance:
 - `aikeeper sync claude` imports local Claude JSONL metadata.
 - Parser stores token counts, model, cwd, session id, and path only.
 
+### AK-011 Privacy Audit
+
+Status: shipped in v0.7.0.
+
+Continuously verify that the local AI Keeper database remains metadata-only.
+
+- Check schema for prompt/message/content-style columns.
+- Sample text columns for raw chat JSON shapes without echoing values.
+- Surface the result in CLI, API, and dashboard.
+
+Acceptance:
+
+- `aikeeper audit privacy --json` reports pass/fail without leaking sensitive
+  values.
+- `/api/audit/privacy` exposes the same result.
+- Overview dashboard renders the privacy status.
+
+### AK-012 Ingest Health
+
+Status: shipped in v0.7.0.
+
+Show whether local usage ingestion is complete and fresh.
+
+- Count sessions, providers, token events, transcript paths, ingest offsets,
+  missing sources, lagging sources, and unpriced model labels.
+- Surface the result in CLI, API, and dashboard.
+
+Acceptance:
+
+- `aikeeper health ingest --json` reports source and model quality counts.
+- `/api/health/ingest` exposes the same result.
+- Overview dashboard renders ingest health.
+
 ## Now
 
 All current backlog items are shipped. Next work should start from new feedback

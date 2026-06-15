@@ -97,6 +97,51 @@
   </div>
 </section>
 
+<section class="ops-grid">
+  <div class="panel status-panel {{ overview.privacy_audit.status }}">
+    <div class="panel-head">
+      <h2>Privacy Audit</h2>
+      <span>{{ overview.privacy_audit.status }}</span>
+    </div>
+    <div class="status-body">
+      <strong>{% if overview.privacy_audit.metadata_only %}Metadata-only confirmed{% else %}Review required{% endif %}</strong>
+      <small>{{ overview.privacy_audit.tables_checked }} tables · {{ overview.privacy_audit.text_columns_checked }} text columns checked</small>
+      {% if overview.privacy_audit.findings %}
+      <ul>
+        {% for finding in overview.privacy_audit.findings[:3] %}
+        <li>{{ finding.table }}.{{ finding.column }} · {{ finding.reason }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p>No prompt, assistant, or raw transcript storage detected.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="panel status-panel {{ overview.ingest_health.status }}">
+    <div class="panel-head">
+      <h2>Ingest Health</h2>
+      <span>{{ overview.ingest_health.status }}</span>
+    </div>
+    <div class="status-body">
+      <div class="status-stats">
+        <div><strong>{{ overview.ingest_health.sessions.total | tokens }}</strong><small>sessions</small></div>
+        <div><strong>{{ overview.ingest_health.token_events.total | tokens }}</strong><small>events</small></div>
+        <div><strong>{{ overview.ingest_health.transcripts.missing | tokens }}</strong><small>missing transcripts</small></div>
+        <div><strong>{{ overview.ingest_health.models.unpriced | length }}</strong><small>unpriced models</small></div>
+      </div>
+      {% if overview.ingest_health.issues %}
+      <ul>
+        {% for issue in overview.ingest_health.issues[:3] %}
+        <li>{{ issue }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p>Sources, offsets, transcript paths, and model labels look healthy.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
 <section class="panel budget-panel">
   <div class="panel-head">
     <h2>Budget Guards</h2>

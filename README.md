@@ -99,6 +99,10 @@ crosses `warn_at * limit`.
 
 AI Keeper also tracks:
 
+- Privacy audits that check the local database schema and sampled text columns
+  for prompt, assistant, or raw transcript storage.
+- Ingest health for sessions, token events, transcript paths, ingest offsets,
+  lagging sources, and unpriced model labels.
 - Context health on session pages, including cache ratio, input growth, and
   compaction guidance.
 - Anomalies such as large turns, cost jumps, cache regressions, and project model
@@ -138,6 +142,8 @@ cwd, session id, transcript path, and offsets only.
 uv run aikeeper status --cwd "$PWD" --json
 uv run aikeeper sync codex --once
 uv run aikeeper sync claude
+uv run aikeeper audit privacy --json
+uv run aikeeper health ingest --json
 uv run aikeeper simulate --target-model gpt-5.4-mini
 uv run aikeeper export --format markdown
 uv run aikeeper codex exec -- "summarize this repository"

@@ -9,8 +9,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from aikeeper.audit import audit_privacy
 from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
+from aikeeper.health import ingest_health
 from aikeeper.service import overview, project_detail, session_detail, simulate_model_cost
 from aikeeper.settings import budget_config_path as default_budget_config_path
 from aikeeper.settings import codex_home as default_codex_home
@@ -126,6 +128,14 @@ def create_app(
     @app.get("/api/simulate")
     def api_simulate(target_model: str) -> dict:
         return simulate_model_cost(db, target_model=target_model)
+
+    @app.get("/api/health/ingest")
+    def api_ingest_health() -> dict:
+        return ingest_health(db)
+
+    @app.get("/api/audit/privacy")
+    def api_privacy_audit() -> dict:
+        return audit_privacy(db)
 
     @app.post("/api/sync/codex")
     def api_sync_codex() -> dict:

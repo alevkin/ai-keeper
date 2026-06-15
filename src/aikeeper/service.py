@@ -4,9 +4,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from aikeeper.analytics import context_health, detect_session_anomalies, simulate_cost_rows
+from aikeeper.audit import audit_privacy
 from aikeeper.budgets import budget_state, config_for_task, evaluate_budget_warnings, load_budget_config
 from aikeeper.db import connect, init_db
 from aikeeper.gitmeta import get_git_metadata, task_identity
+from aikeeper.health import ingest_health
 from aikeeper.pricing import PRICING_RETRIEVED_DATE, PRICING_SOURCE_LABEL, PRICING_SOURCE_URL, estimate_event_cost_usd
 from aikeeper.settings import budget_config_path as default_budget_config_path
 from aikeeper.timeutils import now_ms as current_now_ms
@@ -521,6 +523,8 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
             "simulations": _simulation_summaries(con),
             "budget": budget,
             "budget_warnings": budget_warnings,
+            "privacy_audit": audit_privacy(db_path),
+            "ingest_health": ingest_health(db_path, now_ms=now),
             "projects": project_rows,
             "tasks": task_rows,
         }

@@ -198,6 +198,76 @@ a:hover {
   margin-bottom: 18px;
 }
 
+.ops-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.status-panel.pass .panel-head span,
+.status-panel.ok .panel-head span {
+  color: var(--accent-strong);
+}
+
+.status-panel.fail .panel-head span,
+.status-panel.warn .panel-head span {
+  color: var(--amber);
+}
+
+.status-body {
+  display: grid;
+  gap: 8px;
+  padding: 16px 20px 18px;
+}
+
+.status-body > strong {
+  font-size: 16px;
+}
+
+.status-body p,
+.status-body small,
+.status-body li {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.status-body p,
+.status-body ul {
+  margin: 0;
+}
+
+.status-body ul {
+  display: grid;
+  gap: 5px;
+  padding-left: 18px;
+}
+
+.status-stats {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.status-stats div {
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.status-stats strong,
+.status-stats small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.status-stats strong {
+  font-size: 18px;
+}
+
 .budget-list {
   display: grid;
   gap: 10px;
@@ -453,7 +523,8 @@ tbody tr:hover {
   .activity-grid,
   .grid,
   .activity-main,
-  .insight-grid {
+  .insight-grid,
+  .ops-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -477,6 +548,10 @@ tbody tr:hover {
 
   .summary {
     grid-template-columns: 1fr;
+  }
+
+  .status-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .metric-card strong {

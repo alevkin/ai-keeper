@@ -213,6 +213,22 @@ Acceptance:
   `ingest_state.problem_sources`.
 - Overview dashboard renders detailed missing transcript and source sections.
 
+### AK-014 DB Budget Settings UI
+
+Status: shipped in v0.8.0.
+
+Configure budget guards from the dashboard and store them in SQLite.
+
+- Add `budget_settings` storage for default and task-level limits.
+- Use database budgets by default across dashboard, hooks, exports, and status.
+- Keep `budgets.toml` available only as an explicit legacy override.
+
+Acceptance:
+
+- Overview budget warnings use DB settings when no `budget_path` is passed.
+- Dashboard form updates default budgets and current task overrides.
+- `/api/budgets` exposes the stored DB config.
+
 ## Now
 
 All current backlog items are shipped. Next work should start from new feedback

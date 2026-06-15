@@ -352,6 +352,69 @@ a:hover {
   margin-top: 4px;
 }
 
+.budget-settings {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  padding: 16px 20px 20px;
+}
+
+.budget-settings h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.budget-form {
+  display: grid;
+  gap: 12px;
+}
+
+.budget-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.budget-form label span,
+.form-title {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.budget-form input {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.budget-input-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.budget-form button {
+  background: var(--accent);
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 760;
+  justify-self: start;
+  padding: 9px 13px;
+}
+
+.task-budget-form {
+  border-top: 1px dashed var(--line);
+  padding-top: 14px;
+}
+
 .insight-grid {
   display: grid;
   gap: 16px;
@@ -577,6 +640,10 @@ tbody tr:hover {
   .ops-grid {
     grid-template-columns: 1fr;
   }
+
+  .budget-input-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -602,6 +669,10 @@ tbody tr:hover {
 
   .status-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .budget-input-grid {
+    grid-template-columns: 1fr;
   }
 
   .metric-card strong {

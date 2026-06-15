@@ -5,12 +5,18 @@ from pathlib import Path
 
 from aikeeper.analytics import context_health, detect_session_anomalies, simulate_cost_rows
 from aikeeper.audit import audit_privacy
-from aikeeper.budgets import budget_state, config_for_task, evaluate_budget_warnings, load_budget_config
+from aikeeper.budgets import (
+    budget_settings_state,
+    budget_state,
+    config_for_task,
+    evaluate_budget_warnings,
+    load_budget_config,
+    load_budget_config_from_db,
+)
 from aikeeper.db import connect, init_db
 from aikeeper.gitmeta import get_git_metadata, task_identity
 from aikeeper.health import ingest_health
 from aikeeper.pricing import PRICING_RETRIEVED_DATE, PRICING_SOURCE_LABEL, PRICING_SOURCE_URL, estimate_event_cost_usd
-from aikeeper.settings import budget_config_path as default_budget_config_path
 from aikeeper.timeutils import now_ms as current_now_ms
 from aikeeper.timeutils import utc_day_start_ms, utc_week_start_ms
 
@@ -316,12 +322,18 @@ def _budget_values(
     }
 
 
-def _budget_config(path: Path | str | None):
-    return load_budget_config(path or default_budget_config_path())
+def _budget_config(db_path: Path | str, path: Path | str | None = None):
+    if path is not None:
+        return load_budget_config(path)
+    return load_budget_config_from_db(db_path)
 
 
-def _overview_budget(con, current: dict | None, day_start: int, budget_path: Path | str | None) -> tuple[dict, list[dict]]:
-    config = _budget_config(budget_path)
+def _overview_budget(
+    con,
+    current: dict | None,
+    day_start: int,
+    config,
+) -> tuple[dict, list[dict]]:
     if not current:
         return budget_state(config), []
     task_config = config_for_task(config, str(current["task_key"]))
@@ -351,7 +363,7 @@ def status_for_cwd(
 ) -> dict:
     now = now_ms or current_now_ms()
     day_start = utc_day_start_ms(now)
-    config = _budget_config(budget_path)
+    config = _budget_config(db_path, budget_path)
     meta = get_git_metadata(cwd)
     task_key, _source, issue_id, display_name = task_identity(meta.branch)
 
@@ -496,7 +508,9 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
             item["estimated_cost_usd"] = _estimate_cost(con, "s.task_id = ?", (row["id"],))["usd"]
             task_rows.append(item)
         current_activity = _current_activity(con)
-        budget, budget_warnings = _overview_budget(con, current_activity, day_start, budget_path)
+        config = _budget_config(db_path, budget_path)
+        budget, budget_warnings = _overview_budget(con, current_activity, day_start, config)
+        current_task_key = current_activity["task_key"] if current_activity else None
         return {
             "generated_at_ms": now,
             "total_tokens": int(total_tokens["tokens"]),
@@ -523,6 +537,7 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
             "simulations": _simulation_summaries(con),
             "budget": budget,
             "budget_warnings": budget_warnings,
+            "budget_settings": budget_settings_state(config, current_task_key),
             "privacy_audit": audit_privacy(db_path),
             "ingest_health": ingest_health(db_path, now_ms=now),
             "projects": project_rows,
@@ -556,7 +571,7 @@ def project_detail(
 ) -> dict:
     now = now_ms or current_now_ms()
     day_start = utc_day_start_ms(now)
-    config = _budget_config(budget_path)
+    config = _budget_config(db_path, budget_path)
     with connect(db_path) as con:
         init_db(con)
         project = con.execute("select * from projects where id = ?", (project_id,)).fetchone()
@@ -650,7 +665,7 @@ def simulate_model_cost(db_path: Path | str, target_model: str) -> dict:
 def task_budget_status(db_path: Path | str, *, budget_path: Path | str | None = None, now_ms: int | None = None) -> list[dict]:
     now = now_ms or current_now_ms()
     day_start = utc_day_start_ms(now)
-    config = _budget_config(budget_path)
+    config = _budget_config(db_path, budget_path)
     with connect(db_path) as con:
         init_db(con)
         tasks = con.execute(

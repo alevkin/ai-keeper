@@ -71,29 +71,17 @@ rather than the total time a session stayed open.
 
 ## Budget Guards
 
-Budget guards are soft warnings. They never block Codex. Configure them in
-`$AIKEEPER_HOME/budgets.toml` or set `AIKEEPER_BUDGETS_FILE` to another TOML
-file.
+Budget guards are soft warnings. They never block Codex. Configure them in the
+dashboard; AI Keeper stores budget settings in the local SQLite database.
 
-```toml
-[defaults]
-warn_at = 0.8
-project_daily_usd = 25
-task_daily_usd = 10
-session_usd = 5
-turn_usd = 1
-project_daily_tokens = 1000000
-task_daily_tokens = 500000
-session_tokens = 750000
-turn_tokens = 100000
-
-[tasks.AIK-42]
-task_daily_tokens = 300000
-task_daily_usd = 20
-```
+The overview page supports default budgets and an override for the current task.
+The API exposes the stored configuration at `/api/budgets`.
 
 Warnings appear in the dashboard and in the Codex hook summary when usage
 crosses `warn_at * limit`.
+
+`budgets.toml` is still supported as an explicit legacy override for commands
+that accept `--budget-path`, but it is no longer the default configuration path.
 
 ## Analysis Features
 

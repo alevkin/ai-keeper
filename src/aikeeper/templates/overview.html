@@ -201,8 +201,45 @@
   {% elif overview.budget.configured %}
   <p class="empty-state">All configured budgets are below warning thresholds.</p>
   {% else %}
-  <p class="empty-state">No budgets configured. Add <code>budgets.toml</code> under AI Keeper home to enable soft warnings.</p>
+  <p class="empty-state">No budgets configured.</p>
   {% endif %}
+  <div class="budget-settings">
+    <h3>Budget Settings</h3>
+    <form method="post" action="/budgets" class="budget-form">
+      <input type="hidden" name="scope" value="defaults">
+      <label>
+        <span>Warn at</span>
+        <input name="warn_at" type="number" min="0.01" max="1" step="0.01" value="{{ overview.budget_settings.defaults.warn_at }}">
+      </label>
+      <div class="budget-input-grid">
+        {% for field in overview.budget_settings.limit_fields %}
+        <label>
+          <span>{{ field.label }}</span>
+          <input name="{{ field.key }}" type="number" min="0" step="{{ field.step }}" value="{{ overview.budget_settings.defaults.limits.get(field.key, '') }}">
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit">Save Defaults</button>
+    </form>
+    {% if overview.budget_settings.current_task %}
+    <form method="post" action="/budgets" class="budget-form task-budget-form">
+      <input type="hidden" name="scope" value="task">
+      <input type="hidden" name="task_key" value="{{ overview.budget_settings.current_task.task_key }}">
+      <div class="form-title">
+        <strong>Task: {{ overview.budget_settings.current_task.task_key }}</strong>
+      </div>
+      <div class="budget-input-grid">
+        {% for field in overview.budget_settings.limit_fields %}
+        <label>
+          <span>{{ field.label }}</span>
+          <input name="{{ field.key }}" type="number" min="0" step="{{ field.step }}" value="{{ overview.budget_settings.current_task.limits.get(field.key, '') }}">
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit">Save Task</button>
+    </form>
+    {% endif %}
+  </div>
 </section>
 
 <section class="panel model-panel">

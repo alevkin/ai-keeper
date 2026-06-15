@@ -88,12 +88,29 @@ create table if not exists external_costs (
     unique(provider, source, bucket_start_s, bucket_end_s, line_item, project_ref, api_key_ref)
 );
 
+create table if not exists budget_settings (
+    scope text not null,
+    scope_key text not null default '',
+    warn_at real,
+    project_daily_usd real,
+    project_daily_tokens real,
+    task_daily_usd real,
+    task_daily_tokens real,
+    session_usd real,
+    session_tokens real,
+    turn_usd real,
+    turn_tokens real,
+    updated_at_ms integer not null,
+    primary key(scope, scope_key)
+);
+
 create index if not exists idx_sessions_cwd on sessions(cwd);
 create index if not exists idx_sessions_project on sessions(project_id);
 create index if not exists idx_sessions_task on sessions(task_id);
 create index if not exists idx_token_events_session on token_events(session_pk, sequence);
 create index if not exists idx_token_events_timestamp on token_events(timestamp_ms);
 create index if not exists idx_external_costs_bucket on external_costs(provider, bucket_start_s);
+create index if not exists idx_budget_settings_scope on budget_settings(scope, scope_key);
 """
 
 

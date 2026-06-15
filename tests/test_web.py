@@ -5,8 +5,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from aikeeper.budgets import load_budget_config_from_db, save_budget_settings
 from aikeeper.db import connect, init_db
 from aikeeper.service import overview as build_overview
+from aikeeper.service import status_for_cwd
 from aikeeper.web import create_app
 
 
@@ -266,6 +268,68 @@ def test_overview_page_renders_budget_guards(tmp_path: Path, monkeypatch) -> Non
     assert "turn USD" in page.text
     assert "$0.0038" in page.text
     assert "$0.0030" in page.text
+
+
+def test_overview_uses_db_budget_settings_by_default(tmp_path: Path) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    save_budget_settings(
+        db_path,
+        scope="defaults",
+        warn_at=0.8,
+        limits={"turn_usd": 0.003, "project_daily_tokens": 250},
+    )
+
+    data = build_overview(db_path, now_ms=1_781_000_000_000)
+    status = status_for_cwd(db_path, cwd, now_ms=1_781_000_000_000)
+
+    assert data["budget"]["configured"] is True
+    assert data["budget"]["source_path"] == "sqlite"
+    assert data["budget"]["limits"]["turn_usd"] == pytest.approx(0.003)
+    labels = {warning["label"] for warning in data["budget_warnings"]}
+    assert "turn USD" in labels
+    assert "project daily tokens" in labels
+    assert any(warning["label"] == "turn USD" for warning in status["budget_warnings"])
+
+
+def test_budget_form_updates_db_defaults_and_task_overrides(tmp_path: Path, monkeypatch) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    monkeypatch.setattr("aikeeper.web.get_app_version", lambda: {"label": "v9.9.9", "commit": "abc123"})
+    app = create_app(db_path=db_path)
+    client = TestClient(app)
+
+    defaults_response = client.post(
+        "/budgets",
+        data={"scope": "defaults", "warn_at": "0.75", "turn_usd": "0.003", "project_daily_tokens": "250"},
+        follow_redirects=False,
+    )
+    task_response = client.post(
+        "/budgets",
+        data={"scope": "task", "task_key": "AIK-7", "task_daily_tokens": "200", "turn_usd": "0.002"},
+        follow_redirects=False,
+    )
+
+    config = load_budget_config_from_db(db_path)
+    overview = client.get("/api/overview").json()
+    page = client.get("/")
+
+    assert defaults_response.status_code == 303
+    assert task_response.status_code == 303
+    assert config.warn_at == pytest.approx(0.75)
+    assert config.limits["turn_usd"] == pytest.approx(0.003)
+    assert config.task_limits["AIK-7"]["task_daily_tokens"] == pytest.approx(200)
+    assert config.task_limits["AIK-7"]["turn_usd"] == pytest.approx(0.002)
+    assert overview["budget"]["limits"]["task_daily_tokens"] == pytest.approx(200)
+    assert overview["budget"]["limits"]["turn_usd"] == pytest.approx(0.002)
+    assert any(warning["label"] == "turn USD" for warning in overview["budget_warnings"])
+    assert "Budget Settings" in page.text
+    assert 'name="turn_usd"' in page.text
+    assert 'name="task_daily_tokens"' in page.text
 
 
 def test_overview_page_renders_version_and_current_activity(tmp_path: Path, monkeypatch) -> None:

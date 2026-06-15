@@ -3,18 +3,19 @@ from __future__ import annotations
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import parse_qs
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from aikeeper.audit import audit_privacy
+from aikeeper.budgets import LIMIT_DEFINITIONS, load_budget_config_from_db, save_budget_settings
 from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
 from aikeeper.health import ingest_health
 from aikeeper.service import overview, project_detail, session_detail, simulate_model_cost
-from aikeeper.settings import budget_config_path as default_budget_config_path
 from aikeeper.settings import codex_home as default_codex_home
 from aikeeper.settings import default_db_path
 from aikeeper.version import get_app_version
@@ -98,7 +99,7 @@ def create_app(
 ) -> FastAPI:
     db = Path(db_path).expanduser() if db_path else default_db_path()
     home = Path(codex_home).expanduser() if codex_home else default_codex_home()
-    budgets = Path(budget_path).expanduser() if budget_path else default_budget_config_path()
+    budgets = Path(budget_path).expanduser() if budget_path else None
     with connect(db) as con:
         init_db(con)
 
@@ -125,6 +126,17 @@ def create_app(
         data["version"] = get_app_version()
         return data
 
+    @app.get("/api/budgets")
+    def api_budgets() -> dict:
+        config = load_budget_config_from_db(db)
+        return {
+            "configured": config.configured,
+            "source_path": config.source_path,
+            "warn_at": config.warn_at,
+            "limits": config.limits,
+            "task_limits": config.task_limits,
+        }
+
     @app.get("/api/simulate")
     def api_simulate(target_model: str) -> dict:
         return simulate_model_cost(db, target_model=target_model)
@@ -141,6 +153,18 @@ def create_app(
     def api_sync_codex() -> dict:
         result = sync_codex_once(db_path=db, codex_home=home)
         return {"sessions_imported": result.sessions_imported, "token_events_imported": result.token_events_imported}
+
+    @app.post("/budgets")
+    async def save_budgets(request: Request) -> RedirectResponse:
+        form = await _read_form(request)
+        save_budget_settings(
+            db,
+            scope=form.get("scope", "defaults"),
+            scope_key=form.get("task_key", ""),
+            warn_at=form.get("warn_at"),
+            limits={key: form.get(key, "") for key in LIMIT_DEFINITIONS},
+        )
+        return RedirectResponse("/", status_code=303)
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request) -> HTMLResponse:
@@ -169,3 +193,9 @@ def create_app(
         return templates.TemplateResponse(request, "session.html", data)
 
     return app
+
+
+async def _read_form(request: Request) -> dict[str, str]:
+    body = (await request.body()).decode("utf-8")
+    parsed = parse_qs(body, keep_blank_values=True)
+    return {key: values[-1] if values else "" for key, values in parsed.items()}

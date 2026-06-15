@@ -15,7 +15,11 @@
         {% endif %}
       </div>
       <nav class="topnav">
-        <a href="/">Overview</a>
+        <a href="/" {% if active_page == "command" %}aria-current="page"{% endif %}>Command</a>
+        <a href="/usage" {% if active_page == "usage" %}aria-current="page"{% endif %}>Usage</a>
+        <a href="/models" {% if active_page == "models" %}aria-current="page"{% endif %}>Models</a>
+        <a href="/budgets" {% if active_page == "budgets" %}aria-current="page"{% endif %}>Budgets</a>
+        <a href="/health" {% if active_page == "health" %}aria-current="page"{% endif %}>Health</a>
         <span class="daemon-status"><span aria-hidden="true"></span> local daemon</span>
       </nav>
     </header>

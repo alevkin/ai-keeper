@@ -184,12 +184,13 @@ def test_web_exposes_ingest_health_and_privacy_audit(tmp_path: Path) -> None:
 
     health = client.get("/api/health/ingest")
     audit = client.get("/api/audit/privacy")
-    page = client.get("/")
+    page = client.get("/health")
 
     assert health.status_code == 200
     assert health.json()["transcripts"]["missing"] == 1
     assert audit.status_code == 200
     assert audit.json()["metadata_only"] is True
+    assert page.status_code == 200
     assert "Ingest Health" in page.text
     assert "Missing Transcript Details" in page.text
     assert "codex-missing" in page.text

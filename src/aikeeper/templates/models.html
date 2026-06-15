@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Models - AI Keeper{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>Models</h1>
+  <p>Efficiency, burn speed, cache ratio, and cost simulation by model.</p>
+</section>
+
+<section class="panel model-panel">
+  <div class="panel-head">
+    <h2>Model Efficiency</h2>
+    <span>active speed and spend</span>
+  </div>
+  {% if overview.model_efficiency %}
+  <table data-sortable>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th class="num">Tokens/min</th>
+        <th class="num">$/min</th>
+        <th class="num">Total</th>
+        <th class="num">Total $</th>
+        <th class="num">Cache</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for model in overview.model_efficiency %}
+      <tr>
+        <td>
+          {{ model.model }}
+          <small>{{ model.provider }} · {{ model.session_count }} sessions · {{ model.event_count }} turns</small>
+        </td>
+        <td class="num" data-sort-value="{{ model.tokens_per_minute }}" title="{{ model.tokens_per_minute | round(2) }} tokens/min">{{ model.tokens_per_minute | per_minute }}</td>
+        <td class="num" data-sort-value="{{ model.usd_per_minute }}" title="{{ model.usd_per_minute | usd }}/min">{{ model.usd_per_minute | usd_per_minute }}</td>
+        <td class="num" data-sort-value="{{ model.total_tokens }}" title="{{ model.total_tokens | tokens }}">{{ model.total_tokens | compact_tokens }}</td>
+        <td class="num" data-sort-value="{{ model.estimated_cost_usd }}" title="{{ model.estimated_cost_usd | usd }}">{{ model.estimated_cost_usd | compact_usd }}</td>
+        <td class="num" data-sort-value="{{ model.cached_input_ratio }}" title="cached input / input">{{ model.cached_input_ratio | percent }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">No model usage imported yet.</p>
+  {% endif %}
+</section>
+
+<section class="panel sim-panel">
+  <div class="panel-head">
+    <h2>Savings Simulator</h2>
+    <span>repriced from stored metadata</span>
+  </div>
+  <table data-sortable>
+    <thead>
+      <tr>
+        <th>Target model</th>
+        <th class="num">Actual $</th>
+        <th class="num">Target $</th>
+        <th class="num">Savings</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sim in overview.simulations %}
+      <tr>
+        <td>{{ sim.target_model }}</td>
+        <td class="num" data-sort-value="{{ sim.actual_estimated_cost_usd }}">{{ sim.actual_estimated_cost_usd | compact_usd }}</td>
+        <td class="num" data-sort-value="{{ sim.target_estimated_cost_usd }}">{{ sim.target_estimated_cost_usd | compact_usd }}</td>
+        <td class="num" data-sort-value="{{ sim.estimated_savings_usd }}">{{ sim.estimated_savings_usd | compact_usd }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+<p class="pricing-note">
+  Cost is an estimate from <a href="{{ overview.estimated_cost.source_url }}">{{ overview.estimated_cost.source_label }}</a>,
+  retrieved {{ overview.estimated_cost.retrieved_date }}.
+  {% if overview.estimated_cost.unpriced_models %}Unpriced models: {{ overview.estimated_cost.unpriced_models | join(", ") }}.{% endif %}
+</p>
+<script src="/static/tables.js"></script>
+{% endblock %}

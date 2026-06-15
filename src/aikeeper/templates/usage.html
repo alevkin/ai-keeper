@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Usage - AI Keeper{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>Usage</h1>
+  <p>Project and task totals for investigation and drill-down.</p>
+</section>
+
+<section class="grid data-grid">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Projects</h2>
+      <span>{{ overview.projects | length }} tracked</span>
+    </div>
+    <table data-sortable>
+      <thead><tr><th>Project</th><th class="num">Today</th><th class="num">Today $</th><th class="num">Total</th><th class="num">Total $</th></tr></thead>
+      <tbody>
+        {% for project in overview.projects %}
+        <tr>
+          <td><a href="/projects/{{ project.id }}">{{ project.name }}</a><small>{{ project.root_path }}</small></td>
+          <td class="num" data-sort-value="{{ project.today_tokens }}" title="{{ project.today_tokens | tokens }}">{{ project.today_tokens | compact_tokens }}</td>
+          <td class="num" data-sort-value="{{ project.today_estimated_cost_usd }}" title="{{ project.today_estimated_cost_usd | usd }}">{{ project.today_estimated_cost_usd | compact_usd }}</td>
+          <td class="num" data-sort-value="{{ project.tokens }}" title="{{ project.tokens | tokens }}">{{ project.tokens | compact_tokens }}</td>
+          <td class="num" data-sort-value="{{ project.estimated_cost_usd }}" title="{{ project.estimated_cost_usd | usd }}">{{ project.estimated_cost_usd | compact_usd }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Top Tasks</h2>
+      <span>by total usage</span>
+    </div>
+    <table data-sortable>
+      <thead><tr><th>Task</th><th>Project</th><th class="num">Total</th><th class="num">Total $</th></tr></thead>
+      <tbody>
+        {% for task in overview.tasks %}
+        <tr>
+          <td>{{ task.display_name }}</td>
+          <td>{{ task.project_name }}</td>
+          <td class="num" data-sort-value="{{ task.tokens }}" title="{{ task.tokens | tokens }}">{{ task.tokens | compact_tokens }}</td>
+          <td class="num" data-sort-value="{{ task.estimated_cost_usd }}" title="{{ task.estimated_cost_usd | usd }}">{{ task.estimated_cost_usd | compact_usd }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+<p class="pricing-note">
+  Cost is an estimate from <a href="{{ overview.estimated_cost.source_url }}">{{ overview.estimated_cost.source_label }}</a>,
+  retrieved {{ overview.estimated_cost.retrieved_date }}.
+  {% if overview.estimated_cost.unpriced_models %}Unpriced models: {{ overview.estimated_cost.unpriced_models | join(", ") }}.{% endif %}
+</p>
+<script src="/static/tables.js"></script>
+{% endblock %}

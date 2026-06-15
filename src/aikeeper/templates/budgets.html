@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Budgets - AI Keeper{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>Budgets</h1>
+  <p>Configure default and current-task limits stored in the local SQLite database.</p>
+</section>
+
+<section class="panel budget-panel">
+  <div class="panel-head">
+    <h2>Budget Guards</h2>
+    <span>{% if overview.budget.configured %}configured{% else %}not configured{% endif %}</span>
+  </div>
+  {% if overview.budget_warnings %}
+  <div class="budget-list">
+    {% for warning in overview.budget_warnings %}
+    <div class="budget-warning {{ warning.severity }}">
+      <div>
+        <strong>{{ warning.label }}</strong>
+        <small>{{ warning.scope }} · warn at {{ warning.warn_at | percent }}</small>
+      </div>
+      <span>
+        {% if warning.unit == "usd" %}
+          {{ warning.used | usd }} / {{ warning.limit | usd }}
+        {% else %}
+          {{ warning.used | tokens }} / {{ warning.limit | tokens }} tokens
+        {% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% elif overview.budget.configured %}
+  <p class="empty-state">All configured budgets are below warning thresholds.</p>
+  {% else %}
+  <p class="empty-state">No budgets configured.</p>
+  {% endif %}
+  <div class="budget-settings">
+    <h3>Budget Settings</h3>
+    <form method="post" action="/budgets" class="budget-form">
+      <input type="hidden" name="scope" value="defaults">
+      <label>
+        <span>Warn at</span>
+        <input name="warn_at" type="number" min="0.01" max="1" step="0.01" value="{{ overview.budget_settings.defaults.warn_at }}">
+      </label>
+      <div class="budget-input-grid">
+        {% for field in overview.budget_settings.limit_fields %}
+        <label>
+          <span>{{ field.label }}</span>
+          <input name="{{ field.key }}" type="number" min="0" step="{{ field.step }}" value="{{ overview.budget_settings.defaults.limits.get(field.key, '') }}">
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit">Save Defaults</button>
+    </form>
+    {% if overview.budget_settings.current_task %}
+    <form method="post" action="/budgets" class="budget-form task-budget-form">
+      <input type="hidden" name="scope" value="task">
+      <input type="hidden" name="task_key" value="{{ overview.budget_settings.current_task.task_key }}">
+      <div class="form-title">
+        <strong>Task: {{ overview.budget_settings.current_task.task_key }}</strong>
+      </div>
+      <div class="budget-input-grid">
+        {% for field in overview.budget_settings.limit_fields %}
+        <label>
+          <span>{{ field.label }}</span>
+          <input name="{{ field.key }}" type="number" min="0" step="{{ field.step }}" value="{{ overview.budget_settings.current_task.limits.get(field.key, '') }}">
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit">Save Task</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -262,7 +262,7 @@ def test_overview_page_renders_budget_guards(tmp_path: Path, monkeypatch) -> Non
     app = create_app(db_path=db_path, budget_path=budget_path)
     client = TestClient(app)
 
-    page = client.get("/")
+    page = client.get("/budgets")
 
     assert "Budget Guards" in page.text
     assert "turn USD" in page.text
@@ -316,10 +316,12 @@ def test_budget_form_updates_db_defaults_and_task_overrides(tmp_path: Path, monk
 
     config = load_budget_config_from_db(db_path)
     overview = client.get("/api/overview").json()
-    page = client.get("/")
+    page = client.get("/budgets")
 
     assert defaults_response.status_code == 303
+    assert defaults_response.headers["location"] == "/budgets"
     assert task_response.status_code == 303
+    assert task_response.headers["location"] == "/budgets"
     assert config.warn_at == pytest.approx(0.75)
     assert config.limits["turn_usd"] == pytest.approx(0.003)
     assert config.task_limits["AIK-7"]["task_daily_tokens"] == pytest.approx(200)
@@ -332,7 +334,7 @@ def test_budget_form_updates_db_defaults_and_task_overrides(tmp_path: Path, monk
     assert 'name="task_daily_tokens"' in page.text
 
 
-def test_overview_page_renders_version_and_current_activity(tmp_path: Path, monkeypatch) -> None:
+def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, monkeypatch) -> None:
     db_path = tmp_path / "keeper.sqlite"
     cwd = tmp_path / "repo"
     cwd.mkdir()
@@ -342,12 +344,34 @@ def test_overview_page_renders_version_and_current_activity(tmp_path: Path, monk
     client = TestClient(app)
 
     page = client.get("/")
+    usage_page = client.get("/usage")
+    models_page = client.get("/models")
+    budgets_page = client.get("/budgets")
+    health_page = client.get("/health")
 
     assert "v9.9.9" in page.text
+    assert 'aria-current="page">Command' in page.text
     assert "Current activity" in page.text
-    assert "Estimated spend" in page.text
+    assert "$0.0038 estimated" in page.text
     assert "$0.0038" in page.text
     assert "session-1" in page.text
-    assert "7-day trend" in page.text
+    assert "7-day spend" in page.text
     assert "Active rate" in page.text
-    assert "Model Efficiency" in page.text
+    assert "Operator alerts" in page.text
+    assert "Model Efficiency" not in page.text
+
+    assert usage_page.status_code == 200
+    assert "Projects" in usage_page.text
+    assert "Top Tasks" in usage_page.text
+    assert 'aria-current="page">Usage' in usage_page.text
+
+    assert models_page.status_code == 200
+    assert "Model Efficiency" in models_page.text
+    assert "Savings Simulator" in models_page.text
+
+    assert budgets_page.status_code == 200
+    assert "Budget Settings" in budgets_page.text
+
+    assert health_page.status_code == 200
+    assert "Privacy Audit" in health_page.text
+    assert "Ingest Health" in health_page.text

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Health - AI Keeper{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>Health</h1>
+  <p>Privacy and ingest checks for the local metadata-only store.</p>
+</section>
+
+<section class="ops-grid">
+  <div class="panel status-panel {{ overview.privacy_audit.status }}">
+    <div class="panel-head">
+      <h2>Privacy Audit</h2>
+      <span>{{ overview.privacy_audit.status }}</span>
+    </div>
+    <div class="status-body">
+      <strong>{% if overview.privacy_audit.metadata_only %}Metadata-only confirmed{% else %}Review required{% endif %}</strong>
+      <small>{{ overview.privacy_audit.tables_checked }} tables · {{ overview.privacy_audit.text_columns_checked }} text columns checked</small>
+      {% if overview.privacy_audit.findings %}
+      <ul>
+        {% for finding in overview.privacy_audit.findings %}
+        <li>{{ finding.table }}.{{ finding.column }} · {{ finding.reason }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p>No prompt, assistant, or raw transcript storage detected.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="panel status-panel {{ overview.ingest_health.status }}">
+    <div class="panel-head">
+      <h2>Ingest Health</h2>
+      <span>{{ overview.ingest_health.status }}</span>
+    </div>
+    <div class="status-body">
+      <div class="status-stats">
+        <div><strong>{{ overview.ingest_health.sessions.total | tokens }}</strong><small>sessions</small></div>
+        <div><strong>{{ overview.ingest_health.token_events.total | tokens }}</strong><small>events</small></div>
+        <div><strong>{{ overview.ingest_health.transcripts.missing | tokens }}</strong><small>missing transcripts</small></div>
+        <div><strong>{{ overview.ingest_health.models.unpriced | length }}</strong><small>unpriced models</small></div>
+      </div>
+      {% if overview.ingest_health.issues %}
+      <ul>
+        {% for issue in overview.ingest_health.issues %}
+        <li>{{ issue }}</li>
+        {% endfor %}
+      </ul>
+      <div class="health-details-grid">
+        {% if overview.ingest_health.transcripts.missing_paths %}
+        <details class="health-details">
+          <summary>Missing Transcript Details</summary>
+          <ul class="path-list">
+            {% for item in overview.ingest_health.transcripts.missing_paths %}
+            <li>
+              <code>{{ item.path }}</code>
+              <small>{{ item.provider }} · {{ item.session_id }} · {{ item.project_name }} / {{ item.task_name }} · {{ item.model or "unknown model" }}</small>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+        {% if overview.ingest_health.ingest_state.problem_sources %}
+        <details class="health-details">
+          <summary>Ingest Source Details</summary>
+          <ul class="path-list">
+            {% for source in overview.ingest_health.ingest_state.problem_sources %}
+            <li>
+              <span class="source-state">{% if source.exists is sameas false %}missing{% elif source.lagging %}lagging{% else %}ok{% endif %}</span>
+              <code>{{ source.path or source.source_key }}</code>
+              <small>
+                offset {{ source.last_offset | tokens }}
+                {% if source.file_size is not none %} · size {{ source.file_size | tokens }}{% endif %}
+                {% if source.lag_bytes %} · lag {{ source.lag_bytes | tokens }} bytes{% endif %}
+              </small>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </div>
+      {% else %}
+      <p>Sources, offsets, transcript paths, and model labels look healthy.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

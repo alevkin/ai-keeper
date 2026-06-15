@@ -164,14 +164,46 @@ def create_app(
             warn_at=form.get("warn_at"),
             limits={key: form.get(key, "") for key in LIMIT_DEFINITIONS},
         )
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/budgets", status_code=303)
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(
             request,
             "overview.html",
-            {"overview": overview(db, budget_path=budgets), "version": get_app_version()},
+            {"overview": overview(db, budget_path=budgets), "version": get_app_version(), "active_page": "command"},
+        )
+
+    @app.get("/usage", response_class=HTMLResponse)
+    def usage(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse(
+            request,
+            "usage.html",
+            {"overview": overview(db, budget_path=budgets), "version": get_app_version(), "active_page": "usage"},
+        )
+
+    @app.get("/models", response_class=HTMLResponse)
+    def models(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse(
+            request,
+            "models.html",
+            {"overview": overview(db, budget_path=budgets), "version": get_app_version(), "active_page": "models"},
+        )
+
+    @app.get("/budgets", response_class=HTMLResponse)
+    def budget_page(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse(
+            request,
+            "budgets.html",
+            {"overview": overview(db, budget_path=budgets), "version": get_app_version(), "active_page": "budgets"},
+        )
+
+    @app.get("/health", response_class=HTMLResponse)
+    def health(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse(
+            request,
+            "health.html",
+            {"overview": overview(db, budget_path=budgets), "version": get_app_version(), "active_page": "health"},
         )
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
@@ -181,6 +213,7 @@ def create_app(
         except KeyError as exc:
             raise HTTPException(status_code=404) from exc
         data["version"] = get_app_version()
+        data["active_page"] = "usage"
         return templates.TemplateResponse(request, "project.html", data)
 
     @app.get("/sessions/{session_id}", response_class=HTMLResponse)
@@ -190,6 +223,7 @@ def create_app(
         except KeyError as exc:
             raise HTTPException(status_code=404) from exc
         data["version"] = get_app_version()
+        data["active_page"] = "usage"
         return templates.TemplateResponse(request, "session.html", data)
 
     return app

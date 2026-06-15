@@ -1,41 +1,34 @@
 {% extends "base.html" %}
-{% block title %}AI Keeper Overview{% endblock %}
+{% block title %}AI Keeper Command{% endblock %}
 {% block content %}
-<section class="dashboard-head">
+{% set burn = overview.burn_rate.current %}
+<section class="hero-strip" aria-label="Operator summary">
   <div>
-    <h1>Overview</h1>
-    <p>Local Codex token usage by project, task, session, and turn.</p>
+    <h1>Command</h1>
+    <p>Live Codex usage, budget pressure, and data health in one operator view.</p>
   </div>
-  <span class="privacy-badge">metadata only</span>
+  <div class="hero-status">
+    <span class="privacy-badge">metadata only</span>
+    <span data-last-sync>live</span>
+  </div>
 </section>
 
-<section class="summary" aria-label="Token totals">
-  {% set burn = overview.burn_rate.current %}
-  <div class="metric-card">
-    <span class="label">All time</span>
-    <strong data-total-tokens title="{{ overview.total_tokens | tokens }}">{{ overview.total_tokens | compact_tokens }}</strong>
-    <small data-total-cost title="{{ overview.estimated_cost.total_usd | usd }}">Estimated spend {{ overview.estimated_cost.total_usd | compact_usd }}</small>
-  </div>
-  <div class="metric-card">
+<section class="metric-row" aria-label="Key usage metrics">
+  <article class="metric-card primary">
     <span class="label">Today</span>
     <strong data-today-tokens title="{{ overview.today_tokens | tokens }}">{{ overview.today_tokens | compact_tokens }}</strong>
-    <small data-today-cost title="{{ overview.estimated_cost.today_usd | usd }}">Estimated spend {{ overview.estimated_cost.today_usd | compact_usd }}</small>
-  </div>
-  <div class="metric-card">
-    <span class="label">This week</span>
-    <strong data-week-tokens title="{{ overview.week_tokens | tokens }}">{{ overview.week_tokens | compact_tokens }}</strong>
-    <small data-week-cost title="{{ overview.estimated_cost.week_usd | usd }}">Estimated spend {{ overview.estimated_cost.week_usd | compact_usd }}</small>
-  </div>
-  <div class="metric-card">
+    <small data-today-cost title="{{ overview.estimated_cost.today_usd | usd }}">{{ overview.estimated_cost.today_usd | compact_usd }} estimated</small>
+  </article>
+  <article class="metric-card">
     <span class="label">Last turn</span>
     <strong data-last-turn-tokens>
       {% if overview.current_activity %}{{ overview.current_activity.last_turn_tokens | compact_tokens }}{% else %}0{% endif %}
     </strong>
     <small data-last-turn-cost>
-      {% if overview.current_activity %}Estimated spend {{ overview.current_activity.last_turn_cost_usd | usd }}{% else %}Estimated spend $0.00{% endif %}
+      {% if overview.current_activity %}{{ overview.current_activity.last_turn_cost_usd | usd }} estimated{% else %}$0.00 estimated{% endif %}
     </small>
-  </div>
-  <div class="metric-card">
+  </article>
+  <article class="metric-card">
     <span class="label">Active rate</span>
     <strong data-active-token-rate title="{% if burn %}{{ burn.tokens_per_minute | round(2) }} tokens/min{% else %}0 tokens/min{% endif %}">
       {% if burn %}{{ burn.tokens_per_minute | per_minute }}{% else %}0/min{% endif %}
@@ -43,316 +36,159 @@
     <small data-active-cost-rate title="{% if burn %}{{ burn.usd_per_minute | usd }}/min{% else %}$0.00/min{% endif %}">
       {% if burn %}{{ burn.usd_per_minute | usd_per_minute }} est.{% else %}$0.00/min est.{% endif %}
     </small>
-  </div>
+  </article>
+  <article class="metric-card quiet-metric">
+    <span class="label">This week</span>
+    <strong data-week-tokens title="{{ overview.week_tokens | tokens }}">{{ overview.week_tokens | compact_tokens }}</strong>
+    <small data-week-cost title="{{ overview.estimated_cost.week_usd | usd }}">{{ overview.estimated_cost.week_usd | compact_usd }} estimated</small>
+  </article>
 </section>
 
-<section class="activity-grid">
-  <div class="panel current-panel">
-    <div class="panel-head">
-      <h2>Current activity</h2>
-      <span data-last-sync>live</span>
-    </div>
-    {% if overview.current_activity %}
-    <div class="activity-main">
-      <div>
-        <span class="label">Project</span>
-        <a href="/projects/{{ overview.current_activity.project_id }}">{{ overview.current_activity.project_name }}</a>
-        <small>{{ overview.current_activity.root_path }}</small>
+<section class="command-layout">
+  <div class="command-main">
+    <section class="panel current-panel">
+      <div class="panel-head">
+        <h2>Current activity</h2>
+        {% if overview.current_activity %}<a href="/sessions/{{ overview.current_activity.id }}">Open session</a>{% endif %}
       </div>
-      <div>
-        <span class="label">Task</span>
-        <strong>{{ overview.current_activity.task_name }}</strong>
-        <small>{{ overview.current_activity.model or "unknown model" }}</small>
-      </div>
-      <div>
-        <span class="label">Session</span>
-        <a href="/sessions/{{ overview.current_activity.id }}" title="{{ overview.current_activity.session_id }}">
-          {{ overview.current_activity.session_label }}
-        </a>
-        <small>{{ overview.current_activity.total_tokens | tokens }} tokens / {{ overview.current_activity.estimated_cost_usd | usd }} est.</small>
-      </div>
-    </div>
-    {% else %}
-    <p class="empty-state">No Codex activity imported yet.</p>
-    {% endif %}
-  </div>
-
-  <div class="panel trend-panel">
-    <div class="panel-head">
-      <h2>7-day trend</h2>
-      <span>tokens/day, est. USD</span>
-    </div>
-    {% set max_daily = overview.daily_tokens | map(attribute="tokens") | max %}
-    <div class="trend-bars">
-      {% for day in overview.daily_tokens %}
-      <div class="trend-day">
-        <div class="bar-track">
-          <span style="height: {{ (day.tokens * 100 / max_daily) if max_daily else 0 }}%"></span>
+      {% if overview.current_activity %}
+      <div class="activity-main">
+        <div>
+          <span class="label">Project</span>
+          <a href="/projects/{{ overview.current_activity.project_id }}">{{ overview.current_activity.project_name }}</a>
+          <small>{{ overview.current_activity.root_path }}</small>
         </div>
-        <small>{{ day.date[5:] }}</small>
-        <strong title="{{ day.tokens | tokens }} / {{ day.estimated_cost_usd | usd }}">{{ day.tokens | compact_tokens }}</strong>
+        <div>
+          <span class="label">Task</span>
+          <strong>{{ overview.current_activity.task_name }}</strong>
+          <small>{{ overview.current_activity.model or "unknown model" }}</small>
+        </div>
+        <div>
+          <span class="label">Session</span>
+          <a href="/sessions/{{ overview.current_activity.id }}" title="{{ overview.current_activity.session_id }}">
+            {{ overview.current_activity.session_label }}
+          </a>
+          <small>{{ overview.current_activity.total_tokens | tokens }} tokens / {{ overview.current_activity.estimated_cost_usd | usd }} est.</small>
+        </div>
       </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-
-<section class="ops-grid">
-  <div class="panel status-panel {{ overview.privacy_audit.status }}">
-    <div class="panel-head">
-      <h2>Privacy Audit</h2>
-      <span>{{ overview.privacy_audit.status }}</span>
-    </div>
-    <div class="status-body">
-      <strong>{% if overview.privacy_audit.metadata_only %}Metadata-only confirmed{% else %}Review required{% endif %}</strong>
-      <small>{{ overview.privacy_audit.tables_checked }} tables · {{ overview.privacy_audit.text_columns_checked }} text columns checked</small>
-      {% if overview.privacy_audit.findings %}
-      <ul>
-        {% for finding in overview.privacy_audit.findings[:3] %}
-        <li>{{ finding.table }}.{{ finding.column }} · {{ finding.reason }}</li>
-        {% endfor %}
-      </ul>
       {% else %}
-      <p>No prompt, assistant, or raw transcript storage detected.</p>
+      <p class="empty-state">No Codex activity imported yet.</p>
       {% endif %}
-    </div>
+    </section>
+
+    <section class="panel trend-panel">
+      <div class="panel-head">
+        <h2>7-day spend</h2>
+        <a href="/usage">Usage details</a>
+      </div>
+      {% set max_daily = overview.daily_tokens | map(attribute="tokens") | max %}
+      <div class="trend-bars">
+        {% for day in overview.daily_tokens %}
+        <div class="trend-day">
+          <div class="bar-track">
+            <span style="height: {{ (day.tokens * 100 / max_daily) if max_daily else 0 }}%"></span>
+          </div>
+          <small>{{ day.date[5:] }}</small>
+          <strong title="{{ day.tokens | tokens }} / {{ day.estimated_cost_usd | usd }}">{{ day.estimated_cost_usd | compact_usd }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel digest-panel">
+      <div class="panel-head">
+        <h2>Top projects</h2>
+        <a href="/usage">View all</a>
+      </div>
+      <div class="digest-list">
+        {% for project in overview.projects[:4] %}
+        <a class="digest-row" href="/projects/{{ project.id }}">
+          <span>
+            <strong>{{ project.name }}</strong>
+            <small>{{ project.root_path }}</small>
+          </span>
+          <span class="digest-number" title="{{ project.today_tokens | tokens }}">{{ project.today_tokens | compact_tokens }}</span>
+        </a>
+        {% endfor %}
+        {% if not overview.projects %}
+        <p class="empty-state">No projects imported yet.</p>
+        {% endif %}
+      </div>
+    </section>
   </div>
-  <div class="panel status-panel {{ overview.ingest_health.status }}">
-    <div class="panel-head">
-      <h2>Ingest Health</h2>
-      <span>{{ overview.ingest_health.status }}</span>
-    </div>
-    <div class="status-body">
-      <div class="status-stats">
+
+  <aside class="operator-rail" aria-label="Operator alerts">
+    <section class="panel alert-panel">
+      <div class="panel-head">
+        <h2>Operator alerts</h2>
+        <span>{{ (overview.budget_warnings | length) + (overview.ingest_health.issues | length) + (overview.privacy_audit.findings | length) }}</span>
+      </div>
+      <div class="alert-list">
+        {% if overview.budget_warnings %}
+          {% for warning in overview.budget_warnings[:3] %}
+          <a class="alert-item {{ warning.severity }}" href="/budgets">
+            <strong>{{ warning.label }}</strong>
+            <small>
+              {% if warning.unit == "usd" %}
+              {{ warning.used | usd }} / {{ warning.limit | usd }}
+              {% else %}
+              {{ warning.used | compact_tokens }} / {{ warning.limit | compact_tokens }} tokens
+              {% endif %}
+            </small>
+          </a>
+          {% endfor %}
+        {% endif %}
+        {% if overview.ingest_health.issues %}
+          <a class="alert-item warn" href="/health">
+            <strong>Ingest health</strong>
+            <small>{{ overview.ingest_health.issues[0] }}</small>
+          </a>
+        {% endif %}
+        {% if overview.privacy_audit.findings %}
+          <a class="alert-item over" href="/health">
+            <strong>Privacy audit</strong>
+            <small>{{ overview.privacy_audit.findings[0].reason }}</small>
+          </a>
+        {% endif %}
+        {% if not overview.budget_warnings and not overview.ingest_health.issues and not overview.privacy_audit.findings %}
+          <p class="empty-state">No active alerts.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel health-card {{ overview.ingest_health.status }}">
+      <div class="panel-head">
+        <h2>Health</h2>
+        <a href="/health">{{ overview.ingest_health.status }}</a>
+      </div>
+      <div class="rail-stats">
         <div><strong>{{ overview.ingest_health.sessions.total | tokens }}</strong><small>sessions</small></div>
         <div><strong>{{ overview.ingest_health.token_events.total | tokens }}</strong><small>events</small></div>
-        <div><strong>{{ overview.ingest_health.transcripts.missing | tokens }}</strong><small>missing transcripts</small></div>
-        <div><strong>{{ overview.ingest_health.models.unpriced | length }}</strong><small>unpriced models</small></div>
+        <div><strong>{{ overview.ingest_health.transcripts.missing | tokens }}</strong><small>missing</small></div>
       </div>
-      {% if overview.ingest_health.issues %}
-      <ul>
-        {% for issue in overview.ingest_health.issues[:3] %}
-        <li>{{ issue }}</li>
-        {% endfor %}
-      </ul>
-      <div class="health-details-grid">
-        {% if overview.ingest_health.transcripts.missing_paths %}
-        <details class="health-details">
-          <summary>Missing Transcript Details</summary>
-          <ul class="path-list">
-            {% for item in overview.ingest_health.transcripts.missing_paths[:5] %}
-            <li>
-              <code>{{ item.path }}</code>
-              <small>{{ item.provider }} · {{ item.session_id }} · {{ item.project_name }} / {{ item.task_name }} · {{ item.model or "unknown model" }}</small>
-            </li>
-            {% endfor %}
-          </ul>
-        </details>
-        {% endif %}
-        {% if overview.ingest_health.ingest_state.problem_sources %}
-        <details class="health-details">
-          <summary>Ingest Source Details</summary>
-          <ul class="path-list">
-            {% for source in overview.ingest_health.ingest_state.problem_sources[:5] %}
-            <li>
-              <span class="source-state">{% if source.exists is sameas false %}missing{% elif source.lagging %}lagging{% else %}ok{% endif %}</span>
-              <code>{{ source.path or source.source_key }}</code>
-              <small>
-                offset {{ source.last_offset | tokens }}
-                {% if source.file_size is not none %} · size {{ source.file_size | tokens }}{% endif %}
-                {% if source.lag_bytes %} · lag {{ source.lag_bytes | tokens }} bytes{% endif %}
-              </small>
-            </li>
-            {% endfor %}
-          </ul>
-        </details>
-        {% endif %}
+    </section>
+
+    <section class="panel cost-card">
+      <div class="panel-head">
+        <h2>Cost context</h2>
+        <a href="/models">Models</a>
       </div>
-      {% else %}
-      <p>Sources, offsets, transcript paths, and model labels look healthy.</p>
-      {% endif %}
-    </div>
-  </div>
+      <div class="cost-stack">
+        <div>
+          <span class="label">All time</span>
+          <strong data-total-cost title="{{ overview.estimated_cost.total_usd | usd }}">{{ overview.estimated_cost.total_usd | compact_usd }}</strong>
+          <small data-total-tokens title="{{ overview.total_tokens | tokens }}">{{ overview.total_tokens | compact_tokens }} tokens</small>
+        </div>
+        <p>
+          Cost is estimated from
+          <a href="{{ overview.estimated_cost.source_url }}">{{ overview.estimated_cost.source_label }}</a>,
+          retrieved {{ overview.estimated_cost.retrieved_date }}.
+        </p>
+      </div>
+    </section>
+  </aside>
 </section>
 
-<section class="panel budget-panel">
-  <div class="panel-head">
-    <h2>Budget Guards</h2>
-    <span>{% if overview.budget.configured %}configured{% else %}not configured{% endif %}</span>
-  </div>
-  {% if overview.budget_warnings %}
-  <div class="budget-list">
-    {% for warning in overview.budget_warnings %}
-    <div class="budget-warning {{ warning.severity }}">
-      <div>
-        <strong>{{ warning.label }}</strong>
-        <small>{{ warning.scope }} · warn at {{ warning.warn_at | percent }}</small>
-      </div>
-      <span>
-        {% if warning.unit == "usd" %}
-          {{ warning.used | usd }} / {{ warning.limit | usd }}
-        {% else %}
-          {{ warning.used | tokens }} / {{ warning.limit | tokens }} tokens
-        {% endif %}
-      </span>
-    </div>
-    {% endfor %}
-  </div>
-  {% elif overview.budget.configured %}
-  <p class="empty-state">All configured budgets are below warning thresholds.</p>
-  {% else %}
-  <p class="empty-state">No budgets configured.</p>
-  {% endif %}
-  <div class="budget-settings">
-    <h3>Budget Settings</h3>
-    <form method="post" action="/budgets" class="budget-form">
-      <input type="hidden" name="scope" value="defaults">
-      <label>
-        <span>Warn at</span>
-        <input name="warn_at" type="number" min="0.01" max="1" step="0.01" value="{{ overview.budget_settings.defaults.warn_at }}">
-      </label>
-      <div class="budget-input-grid">
-        {% for field in overview.budget_settings.limit_fields %}
-        <label>
-          <span>{{ field.label }}</span>
-          <input name="{{ field.key }}" type="number" min="0" step="{{ field.step }}" value="{{ overview.budget_settings.defaults.limits.get(field.key, '') }}">
-        </label>
-        {% endfor %}
-      </div>
-      <button type="submit">Save Defaults</button>
-    </form>
-    {% if overview.budget_settings.current_task %}
-    <form method="post" action="/budgets" class="budget-form task-budget-form">
-      <input type="hidden" name="scope" value="task">
-      <input type="hidden" name="task_key" value="{{ overview.budget_settings.current_task.task_key }}">
-      <div class="form-title">
-        <strong>Task: {{ overview.budget_settings.current_task.task_key }}</strong>
-      </div>
-      <div class="budget-input-grid">
-        {% for field in overview.budget_settings.limit_fields %}
-        <label>
-          <span>{{ field.label }}</span>
-          <input name="{{ field.key }}" type="number" min="0" step="{{ field.step }}" value="{{ overview.budget_settings.current_task.limits.get(field.key, '') }}">
-        </label>
-        {% endfor %}
-      </div>
-      <button type="submit">Save Task</button>
-    </form>
-    {% endif %}
-  </div>
-</section>
-
-<section class="panel model-panel">
-  <div class="panel-head">
-    <h2>Model Efficiency</h2>
-    <span>active speed and spend</span>
-  </div>
-  {% if overview.model_efficiency %}
-  <table data-sortable>
-    <thead>
-      <tr>
-        <th>Model</th>
-        <th class="num">Tokens/min</th>
-        <th class="num">$/min</th>
-        <th class="num">Total</th>
-        <th class="num">Total $</th>
-        <th class="num">Cache</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for model in overview.model_efficiency %}
-      <tr>
-        <td>
-          {{ model.model }}
-          <small>{{ model.provider }} · {{ model.session_count }} sessions · {{ model.event_count }} turns</small>
-        </td>
-        <td class="num" data-sort-value="{{ model.tokens_per_minute }}" title="{{ model.tokens_per_minute | round(2) }} tokens/min">{{ model.tokens_per_minute | per_minute }}</td>
-        <td class="num" data-sort-value="{{ model.usd_per_minute }}" title="{{ model.usd_per_minute | usd }}/min">{{ model.usd_per_minute | usd_per_minute }}</td>
-        <td class="num" data-sort-value="{{ model.total_tokens }}" title="{{ model.total_tokens | tokens }}">{{ model.total_tokens | compact_tokens }}</td>
-        <td class="num" data-sort-value="{{ model.estimated_cost_usd }}" title="{{ model.estimated_cost_usd | usd }}">{{ model.estimated_cost_usd | compact_usd }}</td>
-        <td class="num" data-sort-value="{{ model.cached_input_ratio }}" title="cached input / input">{{ model.cached_input_ratio | percent }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="empty-state">No model usage imported yet.</p>
-  {% endif %}
-</section>
-
-<section class="panel sim-panel">
-  <div class="panel-head">
-    <h2>Savings Simulator</h2>
-    <span>repriced from stored metadata</span>
-  </div>
-  <table data-sortable>
-    <thead>
-      <tr>
-        <th>Target model</th>
-        <th class="num">Actual $</th>
-        <th class="num">Target $</th>
-        <th class="num">Savings</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for sim in overview.simulations %}
-      <tr>
-        <td>{{ sim.target_model }}</td>
-        <td class="num" data-sort-value="{{ sim.actual_estimated_cost_usd }}">{{ sim.actual_estimated_cost_usd | compact_usd }}</td>
-        <td class="num" data-sort-value="{{ sim.target_estimated_cost_usd }}">{{ sim.target_estimated_cost_usd | compact_usd }}</td>
-        <td class="num" data-sort-value="{{ sim.estimated_savings_usd }}">{{ sim.estimated_savings_usd | compact_usd }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</section>
-
-<section class="grid data-grid">
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Projects</h2>
-      <span>{{ overview.projects | length }} tracked</span>
-    </div>
-    <table data-sortable>
-      <thead><tr><th>Project</th><th class="num">Today</th><th class="num">Today $</th><th class="num">Total</th><th class="num">Total $</th></tr></thead>
-      <tbody>
-        {% for project in overview.projects %}
-        <tr>
-          <td><a href="/projects/{{ project.id }}">{{ project.name }}</a><small>{{ project.root_path }}</small></td>
-          <td class="num" data-sort-value="{{ project.today_tokens }}" title="{{ project.today_tokens | tokens }}">{{ project.today_tokens | compact_tokens }}</td>
-          <td class="num" data-sort-value="{{ project.today_estimated_cost_usd }}" title="{{ project.today_estimated_cost_usd | usd }}">{{ project.today_estimated_cost_usd | compact_usd }}</td>
-          <td class="num" data-sort-value="{{ project.tokens }}" title="{{ project.tokens | tokens }}">{{ project.tokens | compact_tokens }}</td>
-          <td class="num" data-sort-value="{{ project.estimated_cost_usd }}" title="{{ project.estimated_cost_usd | usd }}">{{ project.estimated_cost_usd | compact_usd }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Top Tasks</h2>
-      <span>by total usage</span>
-    </div>
-    <table data-sortable>
-      <thead><tr><th>Task</th><th>Project</th><th class="num">Total</th><th class="num">Total $</th></tr></thead>
-      <tbody>
-        {% for task in overview.tasks %}
-        <tr>
-          <td>{{ task.display_name }}</td>
-          <td>{{ task.project_name }}</td>
-          <td class="num" data-sort-value="{{ task.tokens }}" title="{{ task.tokens | tokens }}">{{ task.tokens | compact_tokens }}</td>
-          <td class="num" data-sort-value="{{ task.estimated_cost_usd }}" title="{{ task.estimated_cost_usd | usd }}">{{ task.estimated_cost_usd | compact_usd }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-<p class="pricing-note">
-  Cost is an estimate from <a href="{{ overview.estimated_cost.source_url }}">{{ overview.estimated_cost.source_label }}</a>,
-  retrieved {{ overview.estimated_cost.retrieved_date }}.
-  {% if overview.estimated_cost.unpriced_models %}Unpriced models: {{ overview.estimated_cost.unpriced_models | join(", ") }}.{% endif %}
-</p>
 <script>
   const numberFormatter = new Intl.NumberFormat();
   const compactFormatter = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 2 });
@@ -365,12 +201,12 @@
     updateMetric("[data-total-tokens]", data.total_tokens);
     updateMetric("[data-today-tokens]", data.today_tokens);
     updateMetric("[data-week-tokens]", data.week_tokens);
-    updateCost("[data-total-cost]", data.estimated_cost.total_usd);
-    updateCost("[data-today-cost]", data.estimated_cost.today_usd);
-    updateCost("[data-week-cost]", data.estimated_cost.week_usd);
+    updatePlainCost("[data-total-cost]", data.estimated_cost.total_usd);
+    updateInlineCost("[data-today-cost]", data.estimated_cost.today_usd);
+    updateInlineCost("[data-week-cost]", data.estimated_cost.week_usd);
     if (data.current_activity) {
       updateMetric("[data-last-turn-tokens]", data.current_activity.last_turn_tokens);
-      updateCost("[data-last-turn-cost]", data.current_activity.last_turn_cost_usd);
+      updateInlineCost("[data-last-turn-cost]", data.current_activity.last_turn_cost_usd);
     }
     if (data.burn_rate && data.burn_rate.current) {
       updateTokenRate("[data-active-token-rate]", data.burn_rate.current.tokens_per_minute);
@@ -387,10 +223,17 @@
     element.title = numberFormatter.format(value);
   }
 
-  function updateCost(selector, value) {
+  function updatePlainCost(selector, value) {
     const element = document.querySelector(selector);
     if (!element) return;
-    element.textContent = "Estimated spend " + usdFormatter.format(value);
+    element.textContent = usdFormatter.format(value);
+    element.title = usdFormatter.format(value);
+  }
+
+  function updateInlineCost(selector, value) {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    element.textContent = usdFormatter.format(value) + " estimated";
     element.title = usdFormatter.format(value);
   }
 
@@ -410,5 +253,4 @@
 
   setInterval(refreshOverview, 15000);
 </script>
-<script src="/static/tables.js"></script>
 {% endblock %}

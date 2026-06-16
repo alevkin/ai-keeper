@@ -76,7 +76,14 @@ def _dashboard_candidates() -> list[str]:
 def _find_dashboard_url() -> str | None:
     for url in _dashboard_candidates():
         try:
-            response = httpx.get(f"{url}/api/overview", timeout=0.12)
+            response = httpx.get(f"{url}/api/ping", timeout=0.25)
+            data = response.json() if response.status_code == 200 else {}
+        except (httpx.HTTPError, ValueError):
+            data = {}
+        if isinstance(data, dict) and data.get("service") == "aikeeper":
+            return url
+        try:
+            response = httpx.get(f"{url}/api/overview", timeout=0.5)
             data = response.json() if response.status_code == 200 else {}
         except (httpx.HTTPError, ValueError):
             continue

@@ -125,6 +125,10 @@ def create_app(
     app = FastAPI(title="AI Keeper", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=str(PACKAGE_DIR / "static")), name="static")
 
+    @app.get("/api/ping")
+    def api_ping() -> dict:
+        return {"ok": True, "service": "aikeeper", "version": get_app_version()}
+
     @app.get("/api/overview")
     def api_overview() -> dict:
         data = overview(db, budget_path=budgets)

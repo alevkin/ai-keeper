@@ -221,11 +221,14 @@ def test_web_overview_api_and_pages_render_usage(tmp_path: Path) -> None:
     app = create_app(db_path=db_path)
     client = TestClient(app)
 
+    ping = client.get("/api/ping")
     overview = client.get("/api/overview").json()
     page = client.get("/")
     project_page = client.get("/projects/1")
     session_page = client.get("/sessions/1")
 
+    assert ping.status_code == 200
+    assert ping.json()["service"] == "aikeeper"
     assert overview["total_tokens"] == 300
     assert page.status_code == 200
     assert "AI Keeper" in page.text

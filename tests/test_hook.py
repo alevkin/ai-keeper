@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from aikeeper.db import connect, init_db
-from aikeeper.hooks import _summary, handle_codex_hook
+from aikeeper.hooks import _find_dashboard_url, _summary, handle_codex_hook
 
 
 def test_summary_is_markdown_and_groups_large_counts() -> None:
@@ -30,6 +30,26 @@ def test_summary_includes_dashboard_link_when_daemon_is_running() -> None:
     assert _summary(status, dashboard_url="http://127.0.0.1:8766").endswith(
         "| [dashboard](http://127.0.0.1:8766)"
     )
+
+
+def test_find_dashboard_url_uses_lightweight_ping(monkeypatch) -> None:
+    calls = []
+
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {"ok": True, "service": "aikeeper"}
+
+    def fake_get(url: str, timeout: float):
+        calls.append((url, timeout))
+        return Response()
+
+    monkeypatch.setenv("AIKEEPER_DASHBOARD_URL", "http://127.0.0.1:8766")
+    monkeypatch.setattr("aikeeper.hooks.httpx.get", fake_get)
+
+    assert _find_dashboard_url() == "http://127.0.0.1:8766"
+    assert calls == [("http://127.0.0.1:8766/api/ping", 0.25)]
 
 
 def test_summary_includes_estimated_cost_when_available() -> None:

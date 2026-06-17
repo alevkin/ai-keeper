@@ -1,6 +1,6 @@
 {
   "name": "AI Keeper",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "local_only": true,
   "metadata_only": true,
   "default_port": 8766,
@@ -8,6 +8,7 @@
     "install": "scripts/install.sh",
     "package": "scripts/package.sh",
     "publish": "scripts/publish.sh",
+    "release": "scripts/release.sh",
     "sign": "scripts/sign-release.sh",
     "upgrade": "scripts/upgrade.sh",
     "rollback": "scripts/rollback.sh"
@@ -23,6 +24,8 @@
     "homebrew_tap_formula": "dist/homebrew-tap/Formula/aikeeper.rb",
     "checksums": "dist/CHECKSUMS.txt",
     "ci_workflow": ".github/workflows/ci.yml",
+    "release_notes": "dist/release-notes.md",
+    "repo_settings_checklist": "docs/repo-settings-checklist.md",
     "macos_dmg_wrapper": "packaging/macos/dmg/Aikeeper Installer.command",
     "windows_service_prep": "packaging/windows/install-service.ps1"
   },
@@ -32,9 +35,9 @@
     "service_manager": "launchd"
   },
   "future_targets": [
-    "release-automation",
-    "repo-settings",
-    "update-channel",
-    "installer-preflight"
+    "repo-owner-actions",
+    "ci-follow-up",
+    "release-upload-design",
+    "public-launch-copy"
   ]
 }

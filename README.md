@@ -33,7 +33,7 @@ scripts/install.sh --port 8766
 Or build and install through the local Homebrew formula:
 
 ```bash
-scripts/package.sh --version v0.20.0 --output-dir dist
+scripts/package.sh --version v0.21.0 --output-dir dist
 brew install --formula dist/homebrew/aikeeper.rb
 aikeeper-install --port 8766
 ```
@@ -91,7 +91,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.20.0
+scripts/upgrade.sh --port 8766 --target v0.21.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -238,7 +238,7 @@ unchanged, and records `turn.completed.usage` as local token events.
 `scripts/package.sh` builds the current local release channel:
 
 ```bash
-scripts/package.sh --version v0.20.0 --output-dir dist
+scripts/package.sh --version v0.21.0 --output-dir dist
 ```
 
 It writes a source archive, sha256 file, `CHECKSUMS.txt`, release manifest,
@@ -261,6 +261,12 @@ scripts/sign-release.sh --dist-dir dist --signer none
 Optional signatures can be created with external `cosign` or `minisign` keys.
 Do not store signing keys in this repository. See
 [Release Verification](docs/release-verification.md).
+
+Run the local release automation without uploading anything to GitHub:
+
+```bash
+scripts/release.sh --version v0.21.0 --output-dir dist --signer none
+```
 
 Before publishing or sharing a package, run the distribution audit:
 
@@ -288,11 +294,14 @@ store SSH key material in the repository.
 Public release hygiene lives in [SECURITY.md](SECURITY.md),
 [PRIVACY.md](PRIVACY.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 [docs/public-release-checklist.md](docs/public-release-checklist.md).
+Owner-level GitHub settings are tracked in
+[docs/repo-settings-checklist.md](docs/repo-settings-checklist.md).
 
 Distribution preparation notes:
 
 - Homebrew tap layout: `dist/homebrew-tap/Formula/aikeeper.rb`
 - CI workflow: `.github/workflows/ci.yml`
+- Release automation: `scripts/release.sh`
 - macOS DMG spike: `packaging/macos/dmg/`
 - Windows service prep: `packaging/windows/`
 

@@ -14,6 +14,7 @@ Use this checklist before changing the repository from private to public.
 - Verify the archive excludes `.git`, `.venv`, `.vscode`, local databases,
   JSONL transcripts, logs, diagnostics bundles, and session directories.
 - Review `README.md`, `SECURITY.md`, `PRIVACY.md`, and `CONTRIBUTING.md`.
+- Review `docs/repo-settings-checklist.md`.
 - Confirm no private SSH key path, company marker, or adjacent project name is
   present in tracked files.
 

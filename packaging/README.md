@@ -9,18 +9,19 @@ Current supported installer scripts:
 - `scripts/rollback.sh`
 - `scripts/package.sh`
 - `scripts/publish.sh`
+- `scripts/release.sh`
 - `scripts/sign-release.sh`
 
 Build a local release:
 
 ```bash
-scripts/package.sh --version v0.20.0 --output-dir dist
+scripts/package.sh --version v0.21.0 --output-dir dist
 ```
 
 The package builder writes:
 
-- `dist/aikeeper-v0.20.0.tar.gz`
-- `dist/aikeeper-v0.20.0.tar.gz.sha256`
+- `dist/aikeeper-v0.21.0.tar.gz`
+- `dist/aikeeper-v0.21.0.tar.gz.sha256`
 - `dist/CHECKSUMS.txt`
 - `dist/release-manifest.json`
 - `dist/homebrew/aikeeper.rb`
@@ -55,6 +56,12 @@ scripts/sign-release.sh --dist-dir dist --signer none
 Optional signatures use external `cosign` or `minisign` keys. Signing keys must
 not be committed or packaged.
 
+Generate the local release bundle and notes:
+
+```bash
+scripts/release.sh --version v0.21.0 --output-dir dist --signer none
+```
+
 Publish to the private GitHub repository after tests and audit pass:
 
 ```bash
@@ -63,7 +70,7 @@ scripts/publish.sh --remote git@github.com:alevkin/ai-keeper.git --ssh-key ~/.ss
 
 Planned targets:
 
-- release automation from tags
-- repository settings checklist
-- dashboard update-channel UX
-- installer preflight hardening
+- repository owner actions
+- CI follow-up after the first GitHub Actions run
+- release upload design
+- public launch copy

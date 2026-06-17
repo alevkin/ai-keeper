@@ -49,6 +49,18 @@
 
 <section class="panel system-panel">
   <div class="panel-head">
+    <h2>Update Channel</h2>
+    <span>{% if system.update_channel.upgrade_available %}update available{% else %}current{% endif %}</span>
+  </div>
+  <ul class="system-facts">
+    <li><span>Installed</span><code>{{ system.update_channel.current.label }}{% if system.update_channel.current.commit %} ({{ system.update_channel.current.commit }}){% endif %}</code></li>
+    <li><span>Latest tag</span><code>{{ system.update_channel.latest_tag or "unknown" }}{% if system.update_channel.latest_commit %} ({{ system.update_channel.latest_commit }}){% endif %}</code></li>
+    <li><span>Upgrade command</span><code>{{ system.update_channel.upgrade_command or "none" }}</code></li>
+  </ul>
+</section>
+
+<section class="panel system-panel">
+  <div class="panel-head">
     <h2>Recovery Commands</h2>
     <span>copy & run</span>
   </div>

@@ -407,16 +407,80 @@ Acceptance:
 - CI builds package artifacts, refreshes verification materials, verifies
   checksums, and validates both Homebrew formula layouts.
 
+### AK-025 Release Automation
+
+Status: shipped in v0.21.0.
+
+Generate release notes and local artifacts from a tag without repository
+secrets.
+
+- Add `scripts/release.sh`.
+- Run tests, privacy audit, distribution audit, package build, and release
+  verification by default.
+- Write `dist/release-notes.md` from git history.
+- Avoid GitHub release upload until owner-level settings and tokens are ready.
+
+Acceptance:
+
+- `scripts/release.sh --dry-run` shows all release steps.
+- The script does not reference GitHub secrets or upload releases.
+- Release notes are generated locally.
+
+### AK-026 Repo Settings Checklist
+
+Status: shipped in v0.21.0.
+
+Document owner-level GitHub settings that should not be guessed by automation.
+
+- Add `docs/repo-settings-checklist.md`.
+- Cover default branch, branch protection, Actions permissions, visibility, and
+  secret management.
+- Mark these as owner actions before a public release.
+
+Acceptance:
+
+- Checklist exists and is linked from public-release docs.
+- Checklist calls out personal account ownership and owner action.
+
+### AK-027 Update Channel UX
+
+Status: shipped in v0.21.0.
+
+Show local update state on the System page.
+
+- Compare current git-described version to the latest local semver tag.
+- Show latest tag, commit, and upgrade command.
+- Keep this local-only; do not call GitHub from the dashboard.
+
+Acceptance:
+
+- `get_update_channel_status` reports current label, latest tag, and upgrade
+  availability.
+- System page renders an Update Channel panel.
+
+### AK-028 Installer Preflight Hardening
+
+Status: shipped in v0.21.0.
+
+Make installer diagnostics clearer before running mutating commands.
+
+- Show platform and tool checks in `scripts/install.sh`.
+- Keep dry-run output useful for support and diagnostics.
+
+Acceptance:
+
+- `scripts/install.sh --dry-run` reports `Preflight`, `Platform`, and tool
+  status before commands.
+
 ## Now
 
 Next distribution/operations wave:
 
-- AK-025 Release Automation: generate release notes and package artifacts from
-  a tag without using local secrets.
-- AK-026 Repo Settings Checklist: document private-to-public GitHub settings
-  that still require owner action, including default branch, Actions
-  permissions, branch protection, and secret management.
-- AK-027 Update Channel UX: show installed version, latest local tag, and
-  upgrade path in the System page.
-- AK-028 Installer Preflight Hardening: make install/package scripts report
-  missing tools and unsupported platforms more clearly.
+- AK-029 Repo Owner Actions: set GitHub default branch to `main`, review branch
+  protection, Actions permissions, and visibility in the personal GitHub UI.
+- AK-030 CI Follow-up: inspect first GitHub Actions run and fix any
+  runner-specific failures.
+- AK-031 Release Upload Design: decide whether releases should be GitHub
+  Releases, Homebrew tap only, PyPI, or a combination.
+- AK-032 Public Launch Copy: write concise README badges, project description,
+  and first public changelog.

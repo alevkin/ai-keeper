@@ -24,20 +24,27 @@ def test_public_release_hygiene_documents_are_present_and_metadata_first() -> No
 def test_packaging_manifest_tracks_distribution_prep_wave_targets() -> None:
     manifest = json.loads((REPO / "packaging" / "manifest.json").read_text(encoding="utf-8"))
 
-    assert manifest["version"] == "0.20.0"
+    assert manifest["version"] == "0.21.0"
     assert manifest["scripts"]["sign"] == "scripts/sign-release.sh"
     assert manifest["targets"]["checksums"] == "dist/CHECKSUMS.txt"
     assert manifest["targets"]["homebrew_tap_formula"] == "dist/homebrew-tap/Formula/aikeeper.rb"
     assert manifest["targets"]["ci_workflow"] == ".github/workflows/ci.yml"
+    assert manifest["targets"]["release_notes"] == "dist/release-notes.md"
+    assert manifest["targets"]["repo_settings_checklist"] == "docs/repo-settings-checklist.md"
     assert manifest["targets"]["macos_dmg_wrapper"] == "packaging/macos/dmg/Aikeeper Installer.command"
-    assert manifest["future_targets"] == ["release-automation", "repo-settings", "update-channel", "installer-preflight"]
+    assert manifest["future_targets"] == [
+        "repo-owner-actions",
+        "ci-follow-up",
+        "release-upload-design",
+        "public-launch-copy",
+    ]
 
 
 def test_package_script_writes_tap_formula_and_checksum_index(tmp_path: Path) -> None:
     output_dir = tmp_path / "dist"
 
     result = subprocess.run(
-        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.20.0", "--output-dir", str(output_dir)],
+        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.21.0", "--output-dir", str(output_dir)],
         cwd=REPO,
         capture_output=True,
         text=True,
@@ -45,7 +52,7 @@ def test_package_script_writes_tap_formula_and_checksum_index(tmp_path: Path) ->
     )
 
     assert result.returncode == 0, result.stderr
-    archive = output_dir / "aikeeper-v0.20.0.tar.gz"
+    archive = output_dir / "aikeeper-v0.21.0.tar.gz"
     checksums = output_dir / "CHECKSUMS.txt"
     tap_formula = output_dir / "homebrew-tap" / "Formula" / "aikeeper.rb"
     manifest = json.loads((output_dir / "release-manifest.json").read_text(encoding="utf-8"))
@@ -63,7 +70,7 @@ def test_package_script_writes_tap_formula_and_checksum_index(tmp_path: Path) ->
 def test_sign_release_script_generates_verification_materials(tmp_path: Path) -> None:
     output_dir = tmp_path / "dist"
     subprocess.run(
-        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.20.0", "--output-dir", str(output_dir)],
+        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.21.0", "--output-dir", str(output_dir)],
         cwd=REPO,
         capture_output=True,
         text=True,
@@ -89,7 +96,7 @@ def test_sign_release_script_generates_verification_materials(tmp_path: Path) ->
 def test_sign_release_dry_run_shows_optional_signature_command(tmp_path: Path) -> None:
     output_dir = tmp_path / "dist"
     output_dir.mkdir()
-    (output_dir / "aikeeper-v0.20.0.tar.gz").write_text("package", encoding="utf-8")
+    (output_dir / "aikeeper-v0.21.0.tar.gz").write_text("package", encoding="utf-8")
 
     result = subprocess.run(
         [

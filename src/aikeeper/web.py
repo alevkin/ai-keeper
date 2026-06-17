@@ -26,7 +26,7 @@ from aikeeper.settings import codex_home as default_codex_home
 from aikeeper.settings import default_db_path
 from aikeeper.system_jobs import create_system_job, list_system_jobs
 from aikeeper.timeutils import now_ms
-from aikeeper.version import get_app_version
+from aikeeper.version import get_app_version, get_update_channel_status
 
 
 PACKAGE_DIR = Path(__file__).parent
@@ -125,6 +125,7 @@ def _safe_launch_agent_status(*, host: str, port: int) -> dict:
 def _system_status(*, db: Path, home: Path, host: str, port: int) -> dict:
     service = _safe_launch_agent_status(host=host, port=port)
     app_dir = app_home()
+    root = project_root() or Path.cwd()
     hooks_ok = codex_hooks_installed(scope="user", codex_home=home, project_dir=Path.cwd())
     db_ok = db.exists()
     checks = [
@@ -142,6 +143,7 @@ def _system_status(*, db: Path, home: Path, host: str, port: int) -> dict:
         "status": status,
         "checks": checks,
         "service": service,
+        "update_channel": get_update_channel_status(root),
         "paths": {
             "app_home": str(app_dir),
             "database": str(db),

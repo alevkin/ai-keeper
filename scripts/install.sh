@@ -53,14 +53,28 @@ require_cmd() {
   fi
 }
 
+preflight_cmd() {
+  if command -v "$1" >/dev/null 2>&1; then
+    echo "$1: ok ($(command -v "$1"))"
+  else
+    echo "$1: missing"
+    exit 1
+  fi
+}
+
 echo "AI Keeper install"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN"
 fi
 
-require_cmd uv
-if [[ "$(uname -s)" == "Darwin" ]]; then
-  require_cmd launchctl
+PLATFORM="$(uname -s)"
+echo "Preflight"
+echo "Platform: $PLATFORM"
+preflight_cmd uv
+if [[ "$PLATFORM" == "Darwin" ]]; then
+  preflight_cmd launchctl
+else
+  echo "launchctl: skipped"
 fi
 
 run uv --directory "$REPO_ROOT" run aikeeper install all --port "$PORT"

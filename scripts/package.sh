@@ -162,11 +162,16 @@ formula_text = f'''class Aikeeper < Formula
       #!/usr/bin/env bash
       exec "#{{libexec}}/scripts/sign-release.sh" "$@"
     EOS
+    (bin/"aikeeper-release").write <<~EOS
+      #!/usr/bin/env bash
+      exec "#{{libexec}}/scripts/release.sh" "$@"
+    EOS
     chmod 0755, bin/"aikeeper-install"
     chmod 0755, bin/"aikeeper-upgrade"
     chmod 0755, bin/"aikeeper-rollback"
     chmod 0755, bin/"aikeeper-publish"
     chmod 0755, bin/"aikeeper-sign"
+    chmod 0755, bin/"aikeeper-release"
   end
 
   test do

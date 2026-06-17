@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}System - AI Keeper{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>System</h1>
+  <p>Daemon, hooks, local paths, and recovery commands for this AI Keeper install.</p>
+</section>
+
+<section class="ops-grid">
+  <div class="panel status-panel {{ system.status }}">
+    <div class="panel-head">
+      <h2>Doctor</h2>
+      <span>{{ system.status }}</span>
+    </div>
+    <div class="status-body">
+      <div class="system-checks">
+        {% for check in system.checks %}
+        <div class="system-check {{ check.status }}">
+          <strong>{{ check.name }}</strong>
+          <span>{{ check.status }}</span>
+          <small>{{ check.detail }}</small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="panel status-panel {% if system.service.loaded and system.service.ping.ok %}ok{% else %}warn{% endif %}">
+    <div class="panel-head">
+      <h2>LaunchAgent</h2>
+      <span>{% if system.service.loaded %}loaded{% else %}not loaded{% endif %}</span>
+    </div>
+    <div class="status-body">
+      <div class="status-stats">
+        <div><strong>{% if system.service.plist_exists %}yes{% else %}no{% endif %}</strong><small>plist</small></div>
+        <div><strong>{% if system.service.ping.ok %}ok{% else %}down{% endif %}</strong><small>dashboard</small></div>
+      </div>
+      <ul class="system-facts">
+        <li><span>URL</span><code>{{ system.service.url }}</code></li>
+        <li><span>Target</span><code>{{ system.service.service_target or "unknown" }}</code></li>
+        <li><span>Plist</span><code>{{ system.service.plist_path }}</code></li>
+        {% if system.service.ping.error %}
+        <li><span>Ping error</span><code>{{ system.service.ping.error }}</code></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="panel system-panel">
+  <div class="panel-head">
+    <h2>Recovery Commands</h2>
+    <span>copy & run</span>
+  </div>
+  <div class="command-grid">
+    <div>
+      <strong>Repair</strong>
+      <code>{{ system.commands.doctor_fix }}</code>
+    </div>
+    <div>
+      <strong>Reinstall</strong>
+      <code>{{ system.commands.install_all }}</code>
+    </div>
+    <div>
+      <strong>Status</strong>
+      <code>{{ system.commands.service_status }}</code>
+    </div>
+    <div>
+      <strong>Restart</strong>
+      <code>{{ system.commands.service_restart }}</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel system-panel">
+  <div class="panel-head">
+    <h2>Local Paths</h2>
+    <span>metadata only</span>
+  </div>
+  <ul class="system-facts path-facts">
+    <li><span>App home</span><code>{{ system.paths.app_home }}</code></li>
+    <li><span>Database</span><code>{{ system.paths.database }}</code></li>
+    <li><span>Codex home</span><code>{{ system.paths.codex_home }}</code></li>
+    <li><span>Hooks</span><code>{{ system.paths.hooks }}</code></li>
+    <li><span>Plist</span><code>{{ system.paths.plist }}</code></li>
+    <li><span>Stdout log</span><code>{{ system.paths.stdout_log }}</code></li>
+    <li><span>Stderr log</span><code>{{ system.paths.stderr_log }}</code></li>
+  </ul>
+</section>
+{% endblock %}

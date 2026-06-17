@@ -353,12 +353,15 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     client = TestClient(app)
 
     page = client.get("/")
+    favicon = client.get("/favicon.ico")
     usage_page = client.get("/usage")
     models_page = client.get("/models")
     budgets_page = client.get("/budgets")
     health_page = client.get("/health")
+    system_page = client.get("/system")
 
     assert "v9.9.9" in page.text
+    assert favicon.status_code == 204
     assert 'aria-current="page">Command' in page.text
     assert "Current activity" in page.text
     assert "$0.0038 estimated" in page.text
@@ -387,3 +390,10 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     assert health_page.status_code == 200
     assert "Privacy Audit" in health_page.text
     assert "Ingest Health" in health_page.text
+
+    assert system_page.status_code == 200
+    assert 'aria-current="page">System' in system_page.text
+    assert "System" in system_page.text
+    assert "Doctor" in system_page.text
+    assert "LaunchAgent" in system_page.text
+    assert "uv run aikeeper doctor --fix --port 8766" in system_page.text

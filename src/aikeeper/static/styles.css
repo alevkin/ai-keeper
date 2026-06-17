@@ -624,6 +624,89 @@ td small,
   padding: 5px 6px;
 }
 
+.system-panel {
+  margin-bottom: 18px;
+}
+
+.system-checks,
+.command-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.system-check,
+.command-grid > div {
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px 12px;
+}
+
+.system-check strong,
+.command-grid strong,
+.system-facts span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.system-check span {
+  color: var(--accent-strong);
+  font-size: 22px;
+  font-weight: 820;
+}
+
+.system-check.warn span,
+.system-check.fail span {
+  color: var(--amber);
+}
+
+.system-check small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.system-facts {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.system-facts li {
+  align-items: start;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 120px minmax(0, 1fr);
+  padding-top: 8px;
+}
+
+.system-facts code,
+.command-grid code {
+  background: #edf2f1;
+  border: 1px solid #dfe8e4;
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  padding: 5px 6px;
+}
+
+.path-facts {
+  margin: 0;
+  padding: 16px 18px 18px;
+}
+
 .source-state {
   color: var(--amber);
   font-size: 11px;
@@ -859,7 +942,13 @@ tbody tr:hover {
   .metric-row,
   .status-stats,
   .budget-input-grid,
-  .rail-stats {
+  .rail-stats,
+  .system-checks,
+  .command-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .system-facts li {
     grid-template-columns: 1fr;
   }
 

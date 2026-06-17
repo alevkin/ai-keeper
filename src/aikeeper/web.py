@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -15,7 +15,10 @@ from aikeeper.budgets import LIMIT_DEFINITIONS, load_budget_config_from_db, save
 from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
 from aikeeper.health import ingest_health
+from aikeeper.installer import codex_hooks_installed
+from aikeeper.launchd import default_launch_agent_path, launch_agent_status
 from aikeeper.service import overview, project_detail, session_detail, simulate_model_cost
+from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home
 from aikeeper.settings import codex_home as default_codex_home
 from aikeeper.settings import default_db_path
 from aikeeper.version import get_app_version
@@ -89,6 +92,63 @@ templates.env.filters["percent"] = percent
 templates.env.filters["signed_percent"] = signed_percent
 
 
+def _safe_launch_agent_status(*, host: str, port: int) -> dict:
+    try:
+        return launch_agent_status(host=host, port=port, plist_path=default_launch_agent_path())
+    except Exception as exc:
+        target = default_launch_agent_path()
+        return {
+            "label": "com.aikeeper.daemon",
+            "plist_path": str(target),
+            "plist_exists": target.exists(),
+            "loaded": False,
+            "service_target": None,
+            "url": f"http://{host}:{port}",
+            "ping": {"ok": False, "error": str(exc)},
+            "launchctl_returncode": None,
+            "launchctl_stdout": "",
+            "launchctl_stderr": str(exc),
+        }
+
+
+def _system_status(*, db: Path, home: Path, host: str, port: int) -> dict:
+    service = _safe_launch_agent_status(host=host, port=port)
+    app_dir = app_home()
+    hooks_ok = codex_hooks_installed(scope="user", codex_home=home, project_dir=Path.cwd())
+    db_ok = db.exists()
+    checks = [
+        {"name": "Database", "status": "ok" if db_ok else "warn", "detail": str(db)},
+        {"name": "Codex hooks", "status": "ok" if hooks_ok else "warn", "detail": str(home / "hooks.json")},
+        {
+            "name": "LaunchAgent",
+            "status": "ok" if service["plist_exists"] and service["loaded"] else "warn",
+            "detail": str(service["plist_path"]),
+        },
+        {"name": "Dashboard", "status": "ok" if service["ping"]["ok"] else "warn", "detail": service["url"]},
+    ]
+    status = "warn" if any(check["status"] == "warn" for check in checks) else "ok"
+    return {
+        "status": status,
+        "checks": checks,
+        "service": service,
+        "paths": {
+            "app_home": str(app_dir),
+            "database": str(db),
+            "codex_home": str(home),
+            "hooks": str(home / "hooks.json"),
+            "plist": str(service["plist_path"]),
+            "stdout_log": str(app_dir / "logs" / "daemon.stdout.log"),
+            "stderr_log": str(app_dir / "logs" / "daemon.stderr.log"),
+        },
+        "commands": {
+            "doctor_fix": f"uv run aikeeper doctor --fix --port {port}",
+            "install_all": f"uv run aikeeper install all --port {port}",
+            "service_status": f"uv run aikeeper service status --port {port} --json",
+            "service_restart": "uv run aikeeper service restart",
+        },
+    }
+
+
 def _run_polling_sync(db: Path, home: Path, stop: threading.Event, interval_seconds: int = 5) -> None:
     sync_codex_once(db_path=db, codex_home=home)
     while not stop.wait(interval_seconds):
@@ -125,6 +185,10 @@ def create_app(
     app = FastAPI(title="AI Keeper", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=str(PACKAGE_DIR / "static")), name="static")
 
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> Response:
+        return Response(status_code=204)
+
     @app.get("/api/ping")
     def api_ping() -> dict:
         return {"ok": True, "service": "aikeeper", "version": get_app_version()}
@@ -153,6 +217,13 @@ def create_app(
     @app.get("/api/health/ingest")
     def api_ingest_health() -> dict:
         return ingest_health(db)
+
+    @app.get("/api/system")
+    def api_system(request: Request) -> dict:
+        host, port = _request_host_port(request)
+        data = _system_status(db=db, home=home, host=host, port=port)
+        data["version"] = get_app_version()
+        return data
 
     @app.get("/api/audit/privacy")
     def api_privacy_audit() -> dict:
@@ -215,6 +286,19 @@ def create_app(
             {"overview": overview(db, budget_path=budgets), "version": get_app_version(), "active_page": "health"},
         )
 
+    @app.get("/system", response_class=HTMLResponse)
+    def system(request: Request) -> HTMLResponse:
+        host, port = _request_host_port(request)
+        return templates.TemplateResponse(
+            request,
+            "system.html",
+            {
+                "system": _system_status(db=db, home=home, host=host, port=port),
+                "version": get_app_version(),
+                "active_page": "system",
+            },
+        )
+
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
     def project(request: Request, project_id: int) -> HTMLResponse:
         try:
@@ -242,3 +326,10 @@ async def _read_form(request: Request) -> dict[str, str]:
     body = (await request.body()).decode("utf-8")
     parsed = parse_qs(body, keep_blank_values=True)
     return {key: values[-1] if values else "" for key, values in parsed.items()}
+
+
+def _request_host_port(request: Request) -> tuple[str, int]:
+    host = request.url.hostname or DEFAULT_HOST
+    if host == "testserver":
+        host = DEFAULT_HOST
+    return host, request.url.port or 8766

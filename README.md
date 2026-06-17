@@ -26,6 +26,8 @@ uv run aikeeper doctor --port 8766
 
 Open <http://127.0.0.1:8766> for the dashboard. After the hooks are installed,
 Codex turn summaries include a dashboard link when the daemon is reachable.
+Use <http://127.0.0.1:8766/system> for local service status, paths, logs, and
+recovery commands.
 
 For manual one-off use:
 
@@ -55,6 +57,14 @@ uv run aikeeper service stop
 uv run aikeeper service restart
 uv run aikeeper service uninstall
 uv run aikeeper service status --port 8766 --json
+```
+
+`doctor --fix` repairs the common local install drift: missing app home,
+uninitialized SQLite database, missing Codex hooks, and a missing or stopped
+LaunchAgent.
+
+```bash
+uv run aikeeper doctor --fix --port 8766
 ```
 
 Use `uv run aikeeper uninstall all` to remove the LaunchAgent and AI Keeper

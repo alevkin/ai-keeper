@@ -320,15 +320,12 @@ def _doctor_check(name: str, status: str, detail: str, fix: str | None = None) -
     return {"name": name, "status": status, "detail": detail, "fix": fix}
 
 
-@app.command("doctor")
-def doctor(
-    host: Annotated[str, typer.Option()] = DEFAULT_HOST,
-    port: Annotated[int, typer.Option()] = DEFAULT_PORT,
-    db_path: Annotated[Path | None, typer.Option()] = None,
-    scope: Annotated[str, typer.Option(help="user or project")] = "user",
-    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
-) -> None:
-    db = db_path or default_db_path()
+def _overall_status(checks: list[dict[str, str | None]]) -> str:
+    statuses = {check["status"] for check in checks}
+    return "fail" if "fail" in statuses else "warn" if "warn" in statuses else "ok"
+
+
+def _doctor_data(*, host: str, port: int, db: Path, scope: str) -> dict:
     home = app_home()
     checks: list[dict[str, str | None]] = []
 
@@ -369,15 +366,54 @@ def doctor(
     else:
         checks.append(_doctor_check("dashboard", "warn", f"{service['url']} is not responding", "Run `aikeeper service restart`."))
 
-    statuses = {check["status"] for check in checks}
-    overall = "fail" if "fail" in statuses else "warn" if "warn" in statuses else "ok"
-    data = {"status": overall, "checks": checks}
+    return {"status": _overall_status(checks), "checks": checks, "service": service}
+
+
+def _run_doctor_fixes(*, host: str, port: int, db: Path, scope: str) -> list[dict[str, str]]:
+    fixes: list[dict[str, str]] = []
+    home = app_home()
+    if not home.exists():
+        ensure_app_home()
+        fixes.append({"name": "app_home", "detail": str(home)})
+
+    if not db.exists():
+        with connect(db) as con:
+            init_db(con)
+        fixes.append({"name": "database", "detail": str(db)})
+
+    if not codex_hooks_installed(scope=scope, codex_home=codex_home(), project_dir=Path.cwd()):
+        target = install_codex_hooks(scope=scope, codex_home=codex_home(), project_dir=Path.cwd())
+        fixes.append({"name": "codex_hooks", "detail": str(target)})
+
+    service = launch_agent_status(host=host, port=port, plist_path=default_launch_agent_path())
+    if not service["plist_exists"] or not service["loaded"] or not service["ping"]["ok"]:
+        target = write_launch_agent_plist(host=host, port=port, db_path=db)
+        bootstrap_launch_agent(target)
+        fixes.append({"name": "launch_agent", "detail": str(target)})
+    return fixes
+
+
+@app.command("doctor")
+def doctor(
+    host: Annotated[str, typer.Option()] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option()] = DEFAULT_PORT,
+    db_path: Annotated[Path | None, typer.Option()] = None,
+    scope: Annotated[str, typer.Option(help="user or project")] = "user",
+    fix: Annotated[bool, typer.Option("--fix", help="Repair missing DB, Codex hooks, and LaunchAgent when possible.")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    db = db_path or default_db_path()
+    fixes = _run_doctor_fixes(host=host, port=port, db=db, scope=scope) if fix else []
+    data = _doctor_data(host=host, port=port, db=db, scope=scope)
+    data["fixes"] = fixes
     if as_json:
         sys.stdout.write(json.dumps(data, indent=2) + "\n")
         return
 
-    console.print(f"AI Keeper doctor: {overall}")
-    for check in checks:
+    console.print(f"AI Keeper doctor: {data['status']}")
+    for fix_item in fixes:
+        console.print(f"fixed {fix_item['name']}: {fix_item['detail']}")
+    for check in data["checks"]:
         line = f"- {check['name']}: {check['status']} - {check['detail']}"
         if check["fix"]:
             line += f" ({check['fix']})"

@@ -133,6 +133,54 @@ def test_cli_doctor_json_reports_installation_state(tmp_path: Path, monkeypatch)
     }
 
 
+def test_cli_doctor_fix_repairs_missing_installation_parts(tmp_path: Path, monkeypatch) -> None:
+    app_home = tmp_path / "home"
+    codex_home = tmp_path / "codex"
+    db_path = app_home / "aikeeper.sqlite"
+    plist_path = tmp_path / "service.plist"
+    monkeypatch.setenv("AIKEEPER_HOME", str(app_home))
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    state = {"plist_exists": False, "loaded": False, "ping": False}
+    calls: list[tuple[str, object]] = []
+
+    def fake_launch_agent_status(**kwargs):
+        return {
+            "loaded": state["loaded"],
+            "ping": {"ok": state["ping"]},
+            "url": "http://127.0.0.1:8766",
+            "plist_path": str(plist_path),
+            "plist_exists": state["plist_exists"],
+        }
+
+    def fake_write_launch_agent_plist(**kwargs):
+        calls.append(("write", kwargs))
+        state["plist_exists"] = True
+        return plist_path
+
+    def fake_bootstrap_launch_agent(path):
+        calls.append(("bootstrap", path))
+        state["loaded"] = True
+        state["ping"] = True
+
+    monkeypatch.setattr("aikeeper.cli.default_launch_agent_path", lambda: plist_path)
+    monkeypatch.setattr("aikeeper.cli.launch_agent_status", fake_launch_agent_status)
+    monkeypatch.setattr("aikeeper.cli.write_launch_agent_plist", fake_write_launch_agent_plist)
+    monkeypatch.setattr("aikeeper.cli.bootstrap_launch_agent", fake_bootstrap_launch_agent)
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["doctor", "--fix", "--port", "8766", "--json"])
+
+    assert result.exit_code == 0
+    assert db_path.exists()
+    assert (codex_home / "hooks.json").exists()
+    assert calls[0][0] == "write"
+    assert calls[0][1]["port"] == 8766
+    assert calls[1] == ("bootstrap", plist_path)
+    data = json.loads(result.stdout)
+    assert data["status"] == "ok"
+    assert {fix["name"] for fix in data["fixes"]} == {"app_home", "database", "codex_hooks", "launch_agent"}
+
+
 def test_cli_uninstall_all_removes_hooks_and_service_without_deleting_db(tmp_path: Path, monkeypatch) -> None:
     app_home = tmp_path / "home"
     codex_home = tmp_path / "codex"

@@ -140,6 +140,19 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert "aikeeper-install" in formula_text
     assert "aikeeper-install-git-hooks" in formula_text
     assert "aikeeper-upgrade" in formula_text
+
+    repeat_dir = tmp_path / "dist-repeat"
+    repeat = subprocess.run(
+        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.22.0", "--output-dir", str(repeat_dir)],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    repeat_manifest = json.loads((repeat_dir / "release-manifest.json").read_text(encoding="utf-8"))
+
+    assert repeat.returncode == 0, repeat.stderr
+    assert repeat_manifest["sha256"] == manifest["sha256"]
     assert "aikeeper-rollback" in formula_text
     assert "aikeeper-publish" in formula_text
     assert "aikeeper-sign" in formula_text

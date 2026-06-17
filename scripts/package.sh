@@ -56,6 +56,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 from __future__ import annotations
 
 import hashlib
+import gzip
 import json
 import os
 import stat
@@ -124,10 +125,12 @@ output_dir.mkdir(parents=True, exist_ok=True)
 formula_dir.mkdir(parents=True, exist_ok=True)
 tap_formula_dir.mkdir(parents=True, exist_ok=True)
 
-with tarfile.open(archive_path, "w:gz") as package:
-    for path in sorted(repo.rglob("*")):
-        if include(path):
-            package.add(path, arcname=f"{prefix}/{path.relative_to(repo)}", filter=archive_filter)
+with archive_path.open("wb") as raw_archive:
+    with gzip.GzipFile(filename="", mode="wb", fileobj=raw_archive, mtime=0) as gzip_archive:
+        with tarfile.open(fileobj=gzip_archive, mode="w") as package:
+            for path in sorted(repo.rglob("*")):
+                if include(path):
+                    package.add(path, arcname=f"{prefix}/{path.relative_to(repo)}", filter=archive_filter)
 
 sha256 = hashlib.sha256(archive_path.read_bytes()).hexdigest()
 checksum_path.write_text(f"{sha256}  {archive_name}\n", encoding="utf-8")

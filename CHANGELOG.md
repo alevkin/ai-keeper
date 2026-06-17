@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.27.1
+
+- fix: bust dashboard stylesheet cache
+
 ## v0.27.0
 
 - feat: redesign command dashboard

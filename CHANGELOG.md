@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.28.0
+
+- feat: add task economics efficiency dashboard
+
 ## v0.27.1
 
 - fix: bust dashboard stylesheet cache

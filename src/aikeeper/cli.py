@@ -19,6 +19,12 @@ from aikeeper.exports import export_usage
 from aikeeper.health import ingest_health
 from aikeeper.hooks import handle_codex_hook
 from aikeeper.installer import install_codex_hooks
+from aikeeper.launchd import bootstrap_launch_agent
+from aikeeper.launchd import default_launch_agent_path
+from aikeeper.launchd import launch_agent_status
+from aikeeper.launchd import stop_launch_agent
+from aikeeper.launchd import uninstall_launch_agent
+from aikeeper.launchd import write_launch_agent_plist
 from aikeeper.openai_costs import fetch_and_import_costs
 from aikeeper.service import status_for_cwd
 from aikeeper.service import simulate_model_cost
@@ -35,6 +41,7 @@ install_app = typer.Typer(help="Install AI Keeper integrations.")
 codex_app = typer.Typer(help="Codex wrapper commands.")
 audit_app = typer.Typer(help="Inspect AI Keeper privacy guarantees.")
 health_app = typer.Typer(help="Inspect AI Keeper ingest health.")
+service_app = typer.Typer(help="Install and control the macOS launchd service.")
 app.add_typer(daemon_app, name="daemon")
 app.add_typer(sync_app, name="sync")
 app.add_typer(hook_app, name="hook")
@@ -42,6 +49,7 @@ app.add_typer(install_app, name="install")
 app.add_typer(codex_app, name="codex")
 app.add_typer(audit_app, name="audit")
 app.add_typer(health_app, name="health")
+app.add_typer(service_app, name="service")
 
 
 @daemon_app.command("start")
@@ -126,6 +134,72 @@ def install_codex_hooks_cmd(
 ) -> None:
     target = install_codex_hooks(scope=scope, codex_home=codex_home(), project_dir=Path.cwd())
     console.print(f"Installed Codex hooks at {target}")
+
+
+@service_app.command("install")
+def service_install(
+    host: Annotated[str, typer.Option()] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option()] = DEFAULT_PORT,
+    db_path: Annotated[Path, typer.Option()] = default_db_path(),
+    plist_path: Annotated[Path | None, typer.Option()] = None,
+    start: Annotated[bool, typer.Option(help="Bootstrap and start the LaunchAgent after writing it.")] = True,
+) -> None:
+    target = write_launch_agent_plist(plist_path=plist_path, host=host, port=port, db_path=db_path)
+    if start:
+        bootstrap_launch_agent(target)
+        console.print(f"Installed and started AI Keeper LaunchAgent at {target}")
+    else:
+        console.print(f"Installed AI Keeper LaunchAgent at {target}")
+
+
+@service_app.command("start")
+def service_start() -> None:
+    target = default_launch_agent_path()
+    if not target.exists():
+        raise typer.BadParameter(f"LaunchAgent plist does not exist: {target}. Run `aikeeper service install` first.")
+    bootstrap_launch_agent(target)
+    console.print("Started AI Keeper LaunchAgent.")
+
+
+@service_app.command("stop")
+def service_stop() -> None:
+    result = stop_launch_agent()
+    if result.returncode == 0:
+        console.print("Stopped AI Keeper LaunchAgent.")
+    else:
+        console.print("AI Keeper LaunchAgent was not loaded.")
+
+
+@service_app.command("restart")
+def service_restart() -> None:
+    target = default_launch_agent_path()
+    if not target.exists():
+        raise typer.BadParameter(f"LaunchAgent plist does not exist: {target}. Run `aikeeper service install` first.")
+    bootstrap_launch_agent(target)
+    console.print("Restarted AI Keeper LaunchAgent.")
+
+
+@service_app.command("uninstall")
+def service_uninstall(plist_path: Annotated[Path | None, typer.Option()] = None) -> None:
+    target = uninstall_launch_agent(plist_path=plist_path)
+    console.print(f"Removed AI Keeper LaunchAgent at {target}")
+
+
+@service_app.command("status")
+def service_status(
+    host: Annotated[str, typer.Option()] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option()] = DEFAULT_PORT,
+    plist_path: Annotated[Path | None, typer.Option()] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    data = launch_agent_status(host=host, port=port, plist_path=plist_path)
+    if as_json:
+        sys.stdout.write(json.dumps(data, indent=2) + "\n")
+        return
+    state = "loaded" if data["loaded"] else "not loaded"
+    health = "healthy" if data["ping"]["ok"] else "not responding"
+    console.print(f"AI Keeper service: {state}, {health} at {data['url']}")
+    console.print(f"plist: {data['plist_path']}")
 
 
 @app.command("status")

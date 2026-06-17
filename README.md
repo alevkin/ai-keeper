@@ -24,6 +24,30 @@ uv run aikeeper daemon start
 Open <http://127.0.0.1:8765> for the dashboard. If that port is busy, run the
 daemon with `--port 8766`.
 
+## macOS Service
+
+For a persistent dashboard, install AI Keeper as a user LaunchAgent. `launchd`
+starts it at login and restarts it if the daemon exits.
+
+```bash
+uv run aikeeper service install --port 8766
+uv run aikeeper service status --port 8766
+```
+
+Useful service commands:
+
+```bash
+uv run aikeeper service start
+uv run aikeeper service stop
+uv run aikeeper service restart
+uv run aikeeper service uninstall
+uv run aikeeper service status --port 8766 --json
+```
+
+The installer writes `~/Library/LaunchAgents/com.aikeeper.daemon.plist`.
+Daemon logs go to `$AIKEEPER_HOME/logs/daemon.stdout.log` and
+`$AIKEEPER_HOME/logs/daemon.stderr.log`.
+
 ## Codex Hooks
 
 Install hooks globally:

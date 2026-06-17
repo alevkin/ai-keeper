@@ -1,19 +1,39 @@
 # AI Keeper Packaging
 
-This directory is a lightweight packaging contract, not a full installer build.
+This directory documents the supported local packaging surface.
 
-Current supported installer surface:
+Current supported installer scripts:
 
 - `scripts/install.sh`
 - `scripts/upgrade.sh`
 - `scripts/rollback.sh`
+- `scripts/package.sh`
 
-The manifest is intentionally local-only and metadata-only. Future packagers
-should preserve those defaults and avoid bundling the SQLite database, Codex
-transcripts, hook payloads, or daemon logs.
+Build a local release:
+
+```bash
+scripts/package.sh --version v0.16.0 --output-dir dist
+```
+
+The package builder writes:
+
+- `dist/aikeeper-v0.16.0.tar.gz`
+- `dist/aikeeper-v0.16.0.tar.gz.sha256`
+- `dist/release-manifest.json`
+- `dist/homebrew/aikeeper.rb`
+
+Install from the generated Homebrew formula:
+
+```bash
+brew install --formula dist/homebrew/aikeeper.rb
+aikeeper-install --port 8766
+```
+
+The package contract is intentionally local-only and metadata-only. Packages
+must not bundle the SQLite database, Codex transcripts, hook payloads, daemon
+logs, diagnostics bundles, `.venv`, `.git`, `dist`, or `output`.
 
 Planned targets:
 
 - macOS DMG
-- Homebrew tap
 - Windows service/installer

@@ -30,6 +30,14 @@ Or use the lightweight install script:
 scripts/install.sh --port 8766
 ```
 
+Or build and install through the local Homebrew formula:
+
+```bash
+scripts/package.sh --version v0.16.0 --output-dir dist
+brew install --formula dist/homebrew/aikeeper.rb
+aikeeper-install --port 8766
+```
+
 Open <http://127.0.0.1:8766> for the dashboard. After the hooks are installed,
 Codex turn summaries include a dashboard link when the daemon is reachable.
 Use <http://127.0.0.1:8766/system> for local service status, paths, logs, and
@@ -83,7 +91,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.15.0
+scripts/upgrade.sh --port 8766 --target v0.16.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -226,10 +234,20 @@ unchanged, and records `turn.completed.usage` as local token events.
 
 ## Packaging
 
-`packaging/manifest.json` defines the current lightweight packaging contract:
-local-only, metadata-only, script-driven install/upgrade/rollback. It is a base
-for future macOS DMG, Homebrew, and Windows packaging rather than a full binary
-installer today.
+`scripts/package.sh` builds the current local release channel:
+
+```bash
+scripts/package.sh --version v0.16.0 --output-dir dist
+```
+
+It writes a source archive, sha256 file, release manifest, and local Homebrew
+formula under `dist/`. The generated formula installs wrapper commands:
+`aikeeper-install`, `aikeeper-upgrade`, and `aikeeper-rollback`.
+
+The packaging contract remains local-only and metadata-only. Release archives
+exclude `.git`, `.venv`, `dist`, `output`, SQLite databases, JSONL transcripts,
+and Codex session directories. Future targets remain macOS DMG and Windows
+service/installer.
 
 ## Codex Data Sources
 

@@ -33,7 +33,7 @@ scripts/install.sh --port 8766
 Or build and install through the local Homebrew formula:
 
 ```bash
-scripts/package.sh --version v0.19.0 --output-dir dist
+scripts/package.sh --version v0.20.0 --output-dir dist
 brew install --formula dist/homebrew/aikeeper.rb
 aikeeper-install --port 8766
 ```
@@ -91,7 +91,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.19.0
+scripts/upgrade.sh --port 8766 --target v0.20.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -238,7 +238,7 @@ unchanged, and records `turn.completed.usage` as local token events.
 `scripts/package.sh` builds the current local release channel:
 
 ```bash
-scripts/package.sh --version v0.19.0 --output-dir dist
+scripts/package.sh --version v0.20.0 --output-dir dist
 ```
 
 It writes a source archive, sha256 file, `CHECKSUMS.txt`, release manifest,
@@ -292,6 +292,7 @@ Public release hygiene lives in [SECURITY.md](SECURITY.md),
 Distribution preparation notes:
 
 - Homebrew tap layout: `dist/homebrew-tap/Formula/aikeeper.rb`
+- CI workflow: `.github/workflows/ci.yml`
 - macOS DMG spike: `packaging/macos/dmg/`
 - Windows service prep: `packaging/windows/`
 

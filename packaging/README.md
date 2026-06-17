@@ -14,13 +14,13 @@ Current supported installer scripts:
 Build a local release:
 
 ```bash
-scripts/package.sh --version v0.19.0 --output-dir dist
+scripts/package.sh --version v0.20.0 --output-dir dist
 ```
 
 The package builder writes:
 
-- `dist/aikeeper-v0.19.0.tar.gz`
-- `dist/aikeeper-v0.19.0.tar.gz.sha256`
+- `dist/aikeeper-v0.20.0.tar.gz`
+- `dist/aikeeper-v0.20.0.tar.gz.sha256`
 - `dist/CHECKSUMS.txt`
 - `dist/release-manifest.json`
 - `dist/homebrew/aikeeper.rb`
@@ -63,7 +63,7 @@ scripts/publish.sh --remote git@github.com:alevkin/ai-keeper.git --ssh-key ~/.ss
 
 Planned targets:
 
-- signed release artifacts
-- Homebrew tap publication
-- macOS DMG
-- Windows service/installer
+- release automation from tags
+- repository settings checklist
+- dashboard update-channel UX
+- installer preflight hardening

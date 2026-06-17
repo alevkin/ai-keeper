@@ -40,6 +40,7 @@ REQUIRED_DISTRIBUTION_FILES = [
     "PRIVACY.md",
     "docs/public-release-checklist.md",
     "docs/release-verification.md",
+    ".github/workflows/ci.yml",
     "pyproject.toml",
     "uv.lock",
     "scripts/install.sh",

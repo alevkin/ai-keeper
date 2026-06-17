@@ -40,7 +40,7 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert manifest["name"] == "AI Keeper"
-    assert manifest["version"] == "0.19.0"
+    assert manifest["version"] == "0.20.0"
     assert manifest["local_only"] is True
     assert manifest["metadata_only"] is True
     assert manifest["scripts"]["install"] == "scripts/install.sh"
@@ -51,24 +51,25 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["targets"]["homebrew_formula"] == "dist/homebrew/aikeeper.rb"
     assert manifest["targets"]["homebrew_tap_formula"] == "dist/homebrew-tap/Formula/aikeeper.rb"
     assert manifest["targets"]["checksums"] == "dist/CHECKSUMS.txt"
+    assert manifest["targets"]["ci_workflow"] == ".github/workflows/ci.yml"
     assert manifest["repository"]["url"] == "git@github.com:alevkin/ai-keeper.git"
     assert manifest["repository"]["visibility"] == "private"
-    assert manifest["future_targets"] == ["signed-releases", "homebrew-tap", "macos-dmg", "windows"]
+    assert manifest["future_targets"] == ["release-automation", "repo-settings", "update-channel", "installer-preflight"]
 
 
 def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Path) -> None:
     output_dir = tmp_path / "dist"
 
     result = subprocess.run(
-        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.19.0", "--output-dir", str(output_dir)],
+        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.20.0", "--output-dir", str(output_dir)],
         cwd=REPO,
         capture_output=True,
         text=True,
         check=False,
     )
 
-    archive = output_dir / "aikeeper-v0.19.0.tar.gz"
-    checksum = output_dir / "aikeeper-v0.19.0.tar.gz.sha256"
+    archive = output_dir / "aikeeper-v0.20.0.tar.gz"
+    checksum = output_dir / "aikeeper-v0.20.0.tar.gz.sha256"
     checksums = output_dir / "CHECKSUMS.txt"
     manifest_path = output_dir / "release-manifest.json"
     formula = output_dir / "homebrew" / "aikeeper.rb"
@@ -78,7 +79,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert archive.exists()
     assert checksum.exists()
     assert formula.exists()
-    assert manifest["version"] == "v0.19.0"
+    assert manifest["version"] == "v0.20.0"
     assert manifest["archive"] == archive.name
     assert len(manifest["sha256"]) == 64
     assert manifest["metadata_only"] is True
@@ -97,8 +98,8 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     with tarfile.open(archive, "r:gz") as package:
         names = package.getnames()
 
-    assert "aikeeper-v0.19.0/scripts/install.sh" in names
-    assert "aikeeper-v0.19.0/scripts/sign-release.sh" in names
-    assert "aikeeper-v0.19.0/pyproject.toml" in names
+    assert "aikeeper-v0.20.0/scripts/install.sh" in names
+    assert "aikeeper-v0.20.0/scripts/sign-release.sh" in names
+    assert "aikeeper-v0.20.0/pyproject.toml" in names
     assert not any("/.git/" in name or "/.venv/" in name or "/.vscode/" in name for name in names)
     assert not any(name.endswith("aikeeper.sqlite") or "/sessions/" in name for name in names)

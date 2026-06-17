@@ -388,12 +388,29 @@ Acceptance:
 - `packaging/windows/install-service.ps1 -DryRun` sketches the daemon command.
 - Tests verify the docs and dry-run script surface.
 
+### AK-024 GitHub CI
+
+Status: shipped in v0.20.0.
+
+Run metadata-only release checks in GitHub Actions.
+
+- Add CI for tests, privacy audit, distribution audit, package build, checksum
+  verification, and Homebrew formula syntax.
+- Keep workflow permissions read-only and avoid repository secrets.
+- Keep Python version explicit.
+
+Acceptance:
+
+- `.github/workflows/ci.yml` runs on push, pull request, and manual dispatch.
+- CI runs `uv run pytest -q`, `aikeeper audit privacy`, and
+  `aikeeper audit distribution`.
+- CI builds package artifacts, refreshes verification materials, verifies
+  checksums, and validates both Homebrew formula layouts.
+
 ## Now
 
 Next distribution/operations wave:
 
-- AK-024 GitHub CI: add metadata-only CI for tests, distribution audit, package
-  build, checksum verification, and formula syntax.
 - AK-025 Release Automation: generate release notes and package artifacts from
   a tag without using local secrets.
 - AK-026 Repo Settings Checklist: document private-to-public GitHub settings

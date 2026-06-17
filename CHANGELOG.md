@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.26.3
+
+- fix: surface Claude providers on overview
+
 ## v0.26.2
 
 - fix: make release archives deterministic

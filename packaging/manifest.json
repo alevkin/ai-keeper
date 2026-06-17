@@ -1,6 +1,6 @@
 {
   "name": "AI Keeper",
-  "version": "0.26.2",
+  "version": "0.26.3",
   "local_only": true,
   "metadata_only": true,
   "default_port": 8766,

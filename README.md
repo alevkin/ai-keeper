@@ -284,12 +284,12 @@ Prepare the dedicated Homebrew tap checkout without pushing:
 scripts/publish-homebrew-tap.sh \
   --version v0.24.0 \
   --dist-dir dist \
-  --tap-dir output/homebrew-ai-keeper \
+  --tap-dir output/homebrew-tap \
   --no-push
 ```
 
-The tap repository name is `alevkin/homebrew-ai-keeper`, which gives users the
-short Homebrew install path `brew install alevkin/ai-keeper/aikeeper` once the
+The tap repository name is `alevkin/homebrew-tap`, which gives users the
+short Homebrew install path `brew install alevkin/tap/aikeeper` once the
 tap is published.
 
 GitHub auto-releases are handled by `.github/workflows/release.yml` on pushes to

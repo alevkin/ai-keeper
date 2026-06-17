@@ -75,9 +75,9 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["targets"]["public_release_gate"] == "scripts/public-release-gate.sh"
     assert manifest["repository"]["url"] == "git@github.com:alevkin/ai-keeper.git"
     assert manifest["repository"]["visibility"] == "private"
-    assert manifest["homebrew_tap"]["repository"] == "alevkin/homebrew-ai-keeper"
+    assert manifest["homebrew_tap"]["repository"] == "alevkin/homebrew-tap"
     assert manifest["homebrew_tap"]["formula"] == "Formula/aikeeper.rb"
-    assert manifest["homebrew_tap"]["install"] == "brew install alevkin/ai-keeper/aikeeper"
+    assert manifest["homebrew_tap"]["install"] == "brew install alevkin/tap/aikeeper"
     assert manifest["signing"]["default"] == "cosign-keyless"
     assert manifest["signing"]["issuer"] == "https://token.actions.githubusercontent.com"
     assert manifest["signing"]["identity"] == (
@@ -150,7 +150,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
 
 def test_publish_homebrew_tap_script_scaffolds_tap_without_push(tmp_path: Path) -> None:
     output_dir = tmp_path / "dist"
-    tap_dir = tmp_path / "homebrew-ai-keeper"
+    tap_dir = tmp_path / "homebrew-tap"
 
     subprocess.run(
         ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.24.0", "--output-dir", str(output_dir)],
@@ -183,6 +183,6 @@ def test_publish_homebrew_tap_script_scaffolds_tap_without_push(tmp_path: Path) 
     readme = tap_dir / "README.md"
     assert formula.exists()
     assert readme.exists()
-    assert "brew install alevkin/ai-keeper/aikeeper" in readme.read_text(encoding="utf-8")
+    assert "brew install alevkin/tap/aikeeper" in readme.read_text(encoding="utf-8")
     assert "https://github.com/alevkin/ai-keeper/releases/download/v0.24.0" in formula.read_text(encoding="utf-8")
     assert "Push: skipped" in result.stdout

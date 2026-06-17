@@ -217,9 +217,9 @@ manifest = {
     "homebrew_formula": str(formula_path),
     "homebrew_tap_formula": str(tap_formula_path),
     "homebrew_tap": {
-        "repository": "alevkin/homebrew-ai-keeper",
+        "repository": "alevkin/homebrew-tap",
         "formula": "Formula/aikeeper.rb",
-        "install": "brew install alevkin/ai-keeper/aikeeper",
+        "install": "brew install alevkin/tap/aikeeper",
     },
     "generated_at": datetime.now(tz=UTC).isoformat(),
     "local_only": True,

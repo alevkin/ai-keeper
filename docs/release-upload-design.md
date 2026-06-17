@@ -49,14 +49,14 @@ Prepare the dedicated tap checkout locally:
    scripts/publish-homebrew-tap.sh \
      --version v0.24.0 \
      --dist-dir dist \
-     --tap-dir output/homebrew-ai-keeper \
+     --tap-dir output/homebrew-tap \
      --no-push
    ```
 
 ## Deferred Decisions
 
-- When to publish `alevkin/homebrew-ai-keeper` publicly.
-- When to run the first `brew install alevkin/ai-keeper/aikeeper` smoke test.
+- When to publish `alevkin/homebrew-tap` publicly.
+- When to run the first `brew install alevkin/tap/aikeeper` smoke test.
 - Whether `minisign` is useful as a manual secondary signature.
 
 PyPI publishing is deferred because the MVP is a local daemon plus OS service

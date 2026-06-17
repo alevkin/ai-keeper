@@ -13,7 +13,7 @@ Use this checklist before changing the repository from private to public.
 - Run `scripts/public-release-gate.sh --version <tag> --output-dir dist --online`.
 - Confirm the GitHub Release includes keyless `cosign` Sigstore bundles for the
   archive, `CHECKSUMS.txt`, and `release-manifest.json`.
-- Run `scripts/publish-homebrew-tap.sh --version <tag> --dist-dir dist --tap-dir output/homebrew-ai-keeper --no-push`.
+- Run `scripts/publish-homebrew-tap.sh --version <tag> --dist-dir dist --tap-dir output/homebrew-tap --no-push`.
 - Verify the archive excludes `.git`, `.venv`, `.vscode`, local databases,
   JSONL transcripts, logs, diagnostics bundles, and session directories.
 - Review `README.md`, `SECURITY.md`, `PRIVACY.md`, and `CONTRIBUTING.md`.

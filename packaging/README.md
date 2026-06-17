@@ -73,12 +73,12 @@ Prepare a dedicated Homebrew tap checkout:
 scripts/publish-homebrew-tap.sh \
   --version v0.24.0 \
   --dist-dir dist \
-  --tap-dir output/homebrew-ai-keeper \
+  --tap-dir output/homebrew-tap \
   --no-push
 ```
 
-The dedicated tap repo is `alevkin/homebrew-ai-keeper`; Homebrew users install
-from it with `brew install alevkin/ai-keeper/aikeeper`.
+The dedicated tap repo is `alevkin/homebrew-tap`; Homebrew users install
+from it with `brew install alevkin/tap/aikeeper`.
 
 Publish to the private GitHub repository after tests and audit pass:
 

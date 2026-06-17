@@ -622,8 +622,8 @@ Status: shipped in v0.25.0.
 Prepare a dedicated Homebrew tap path without requiring a public visibility
 switch yet.
 
-- Use `alevkin/homebrew-ai-keeper` as the tap repository name so Homebrew users
-  can install with `brew install alevkin/ai-keeper/aikeeper`.
+- Use `alevkin/homebrew-tap` as the tap repository name so Homebrew users
+  can install with `brew install alevkin/tap/aikeeper`.
 - Generate tap formulae with GitHub Release URLs instead of local `file://`
   archive URLs.
 - Add `scripts/publish-homebrew-tap.sh` to scaffold `Formula/aikeeper.rb` and a
@@ -661,6 +661,6 @@ Acceptance:
 - AK-038 Public Visibility Switch: run the public gate, verify owner settings,
   and decide when to flip `alevkin/ai-keeper` from private to public.
 - AK-039 Brew Install Smoke Test: publish or dry-run the tap repository and
-  verify `brew install alevkin/ai-keeper/aikeeper` from a clean environment.
+  verify `brew install alevkin/tap/aikeeper` from a clean environment.
 - AK-040 Signed macOS Installer: decide whether DMG/notarization is needed for
   colleague onboarding beyond Homebrew and GitHub Release archives.

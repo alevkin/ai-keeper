@@ -46,10 +46,10 @@
     "windows_service_prep": "packaging/windows/install-service.ps1"
   },
   "homebrew_tap": {
-    "repository": "alevkin/homebrew-ai-keeper",
-    "remote": "git@github.com:alevkin/homebrew-ai-keeper.git",
+    "repository": "alevkin/homebrew-tap",
+    "remote": "git@github.com:alevkin/homebrew-tap.git",
     "formula": "Formula/aikeeper.rb",
-    "install": "brew install alevkin/ai-keeper/aikeeper"
+    "install": "brew install alevkin/tap/aikeeper"
   },
   "runtime": {
     "language": "Python",

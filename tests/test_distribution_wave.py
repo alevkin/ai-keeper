@@ -52,6 +52,8 @@ def test_packaging_manifest_tracks_distribution_prep_wave_targets() -> None:
     assert manifest["targets"]["bug_report_template"] == ".github/ISSUE_TEMPLATE/bug_report.yml"
     assert manifest["targets"]["feature_request_template"] == ".github/ISSUE_TEMPLATE/feature_request.yml"
     assert manifest["targets"]["macos_dmg_wrapper"] == "packaging/macos/dmg/Aikeeper Installer.command"
+    assert manifest["homebrew_tap"]["repository"] == "alevkin/homebrew-tap"
+    assert manifest["homebrew_tap"]["install"] == "brew install alevkin/tap/aikeeper"
     assert manifest["future_targets"] == [
         "public-visibility-switch",
         "brew-install-smoke-test",
@@ -85,6 +87,7 @@ def test_package_script_writes_tap_formula_and_checksum_index(tmp_path: Path) ->
     assert 'url "https://github.com/alevkin/ai-keeper/releases/download/v0.22.0/aikeeper-v0.22.0.tar.gz"' in tap_formula_text
     assert manifest["checksums"] == checksums.name
     assert manifest["homebrew_tap_formula"] == str(tap_formula)
+    assert manifest["homebrew_tap"]["install"] == "brew install alevkin/tap/aikeeper"
     assert manifest["signing"]["default"] == "cosign-keyless"
     assert manifest["signing"]["bundles"] == [
         f"{archive.name}.sigstore.json",

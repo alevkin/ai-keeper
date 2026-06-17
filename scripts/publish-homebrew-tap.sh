@@ -4,8 +4,8 @@ set -euo pipefail
 VERSION=""
 DIST_DIR="dist"
 TAP_DIR=""
-TAP_REPO="${AIKEEPER_HOMEBREW_TAP_REPO:-alevkin/homebrew-ai-keeper}"
-REMOTE="${AIKEEPER_HOMEBREW_TAP_REMOTE:-git@github.com:alevkin/homebrew-ai-keeper.git}"
+TAP_REPO="${AIKEEPER_HOMEBREW_TAP_REPO:-alevkin/homebrew-tap}"
+REMOTE="${AIKEEPER_HOMEBREW_TAP_REMOTE:-git@github.com:alevkin/homebrew-tap.git}"
 SSH_KEY="${AIKEEPER_GITHUB_SSH_KEY:-}"
 AUTHOR_NAME="${AIKEEPER_GIT_AUTHOR_NAME:-Andrei Levkin}"
 AUTHOR_EMAIL="${AIKEEPER_GIT_AUTHOR_EMAIL:-alevkin@gmail.com}"
@@ -96,7 +96,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$(cd "$(dirname "$DIST_DIR")" && pwd)/$(basename "$DIST_DIR")"
 if [[ -z "$TAP_DIR" ]]; then
-  TAP_DIR="$REPO_ROOT/output/homebrew-ai-keeper"
+  TAP_DIR="$REPO_ROOT/output/homebrew-tap"
 fi
 tap_parent="$(dirname "$TAP_DIR")"
 if [[ "$DRY_RUN" -eq 0 ]]; then

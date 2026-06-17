@@ -10,7 +10,7 @@ Future DMG work should:
 
 - package the source tree and wrapper together
 - run the same preflight checks as `scripts/install.sh`
-- keep SQLite databases, logs, diagnostics bundles, Codex sessions, and
-  transcripts outside the installer
+- keep SQLite databases, logs, diagnostics bundles, Codex sessions, Claude JSONL
+  files, and transcripts outside the installer
 - preserve the user LaunchAgent service path
 - keep rollback on `scripts/rollback.sh`

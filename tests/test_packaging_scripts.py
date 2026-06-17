@@ -129,6 +129,8 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert manifest["checksums"] == checksums.name
     formula_text = formula.read_text(encoding="utf-8")
     tap_formula_text = tap_formula.read_text(encoding="utf-8")
+    assert 'desc "Local-only AI token usage daemon and dashboard"' in formula_text
+    assert 'desc "Local-only AI token usage daemon and dashboard"' in tap_formula_text
     assert "file://" in formula_text
     assert 'homepage "https://github.com/alevkin/ai-keeper"' in formula_text
     assert 'url "https://github.com/alevkin/ai-keeper/releases/download/v0.22.0/aikeeper-v0.22.0.tar.gz"' in tap_formula_text

@@ -44,8 +44,9 @@ aikeeper-install --port 8766
 ```
 
 The package contract is intentionally local-only and metadata-only. Packages
-must not bundle the SQLite database, Codex transcripts, hook payloads, daemon
-logs, diagnostics bundles, `.venv`, `.vscode`, `.git`, `dist`, or `output`.
+must not bundle the SQLite database, Codex transcripts, Claude JSONL files, hook
+payloads, daemon logs, diagnostics bundles, `.venv`, `.vscode`, `.git`, `dist`,
+or `output`.
 
 Run the distribution audit before publishing:
 

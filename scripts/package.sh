@@ -134,7 +134,7 @@ checksum_path.write_text(f"{sha256}  {archive_name}\n", encoding="utf-8")
 release_url = f"https://github.com/alevkin/ai-keeper/releases/download/{version}/{archive_name}"
 
 formula_text = f'''class Aikeeper < Formula
-  desc "Local-only Codex token usage daemon and dashboard"
+  desc "Local-only AI token usage daemon and dashboard"
   homepage "https://github.com/alevkin/ai-keeper"
   url "file://{archive_path}"
   sha256 "{sha256}"

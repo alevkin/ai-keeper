@@ -46,6 +46,7 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["scripts"]["install"] == "scripts/install.sh"
     assert manifest["scripts"]["package"] == "scripts/package.sh"
     assert manifest["scripts"]["publish"] == "scripts/publish.sh"
+    assert manifest["scripts"]["public_release_gate"] == "scripts/public-release-gate.sh"
     assert manifest["scripts"]["release"] == "scripts/release.sh"
     assert manifest["scripts"]["sign"] == "scripts/sign-release.sh"
     assert manifest["targets"]["source_archive"] == "dist/aikeeper-<version>.tar.gz"
@@ -54,17 +55,19 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["targets"]["checksums"] == "dist/CHECKSUMS.txt"
     assert manifest["targets"]["ci_workflow"] == ".github/workflows/ci.yml"
     assert manifest["targets"]["release_workflow"] == ".github/workflows/release.yml"
+    assert manifest["targets"]["public_release_gate_workflow"] == ".github/workflows/public-release-gate.yml"
     assert manifest["targets"]["release_notes"] == "dist/release-notes.md"
     assert manifest["targets"]["changelog"] == "CHANGELOG.md"
     assert manifest["targets"]["github_ops_status"] == "docs/github-ops-status.md"
+    assert manifest["targets"]["public_release_gate_doc"] == "docs/public-release-gate.md"
     assert manifest["targets"]["release_upload_design"] == "docs/release-upload-design.md"
     assert manifest["targets"]["repo_settings_checklist"] == "docs/repo-settings-checklist.md"
     assert manifest["targets"]["version_updater"] == "scripts/update-version.py"
     assert manifest["targets"]["changelog_generator"] == "scripts/generate-changelog.py"
+    assert manifest["targets"]["public_release_gate"] == "scripts/public-release-gate.sh"
     assert manifest["repository"]["url"] == "git@github.com:alevkin/ai-keeper.git"
     assert manifest["repository"]["visibility"] == "private"
     assert manifest["future_targets"] == [
-        "public-release-gate",
         "release-signing-policy",
         "homebrew-tap-repository",
         "public-issue-templates",
@@ -109,11 +112,13 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert "aikeeper-publish" in formula_text
     assert "aikeeper-sign" in formula_text
     assert "aikeeper-release" in formula_text
+    assert "aikeeper-public-release-gate" in formula_text
 
     with tarfile.open(archive, "r:gz") as package:
         names = package.getnames()
 
     assert "aikeeper-v0.22.0/scripts/install.sh" in names
+    assert "aikeeper-v0.22.0/scripts/public-release-gate.sh" in names
     assert "aikeeper-v0.22.0/scripts/release.sh" in names
     assert "aikeeper-v0.22.0/scripts/sign-release.sh" in names
     assert "aikeeper-v0.22.0/pyproject.toml" in names

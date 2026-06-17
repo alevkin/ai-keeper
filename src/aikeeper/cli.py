@@ -32,6 +32,7 @@ from aikeeper.launchd import uninstall_launch_agent
 from aikeeper.launchd import uses_fallback_launch_agent_path
 from aikeeper.launchd import write_launch_agent_plist
 from aikeeper.openai_costs import fetch_and_import_costs
+from aikeeper.public_release import evaluate_public_release_gate
 from aikeeper.service import status_for_cwd
 from aikeeper.service import simulate_model_cost
 from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home, claude_home, codex_home, default_db_path, ensure_app_home
@@ -319,6 +320,36 @@ def audit_distribution_cmd(
         if "line" in finding:
             line += f" at line {finding['line']}"
         console.print(line)
+
+
+@audit_app.command("public-release")
+def audit_public_release_cmd(
+    repo_root: Annotated[Path, typer.Option()] = Path.cwd(),
+    db_path: Annotated[Path, typer.Option()] = default_db_path(),
+    dist_dir: Annotated[Path, typer.Option()] = Path("dist"),
+    tag: Annotated[str | None, typer.Option(help="Release tag to verify. Defaults to latest v* tag.")] = None,
+    github_repo: Annotated[str | None, typer.Option(help="GitHub repo in owner/name form.")] = None,
+    online: Annotated[bool, typer.Option("--online", help="Check GitHub repo, release, and CI state.")] = False,
+    allow_dirty: Annotated[bool, typer.Option("--allow-dirty", help="Allow a dirty local worktree.")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    data = evaluate_public_release_gate(
+        repo_root=repo_root,
+        db_path=db_path,
+        dist_dir=dist_dir,
+        tag=tag,
+        github_repo=github_repo,
+        online=online,
+        allow_dirty=allow_dirty,
+    )
+    if as_json:
+        sys.stdout.write(json.dumps(data, indent=2) + "\n")
+    else:
+        console.print(f"Public release gate: {data['status']} ({data['tag']})")
+        for check in data["checks"]:
+            console.print(f"- {check['name']}: {check['status']} · {check['detail']}")
+    if data["status"] != "pass":
+        raise typer.Exit(1)
 
 
 @health_app.command("ingest")

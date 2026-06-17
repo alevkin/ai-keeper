@@ -8,6 +8,7 @@
     "install": "scripts/install.sh",
     "package": "scripts/package.sh",
     "publish": "scripts/publish.sh",
+    "public_release_gate": "scripts/public-release-gate.sh",
     "release": "scripts/release.sh",
     "sign": "scripts/sign-release.sh",
     "upgrade": "scripts/upgrade.sh",
@@ -25,13 +26,16 @@
     "checksums": "dist/CHECKSUMS.txt",
     "ci_workflow": ".github/workflows/ci.yml",
     "release_workflow": ".github/workflows/release.yml",
+    "public_release_gate_workflow": ".github/workflows/public-release-gate.yml",
     "release_notes": "dist/release-notes.md",
     "changelog": "CHANGELOG.md",
     "github_ops_status": "docs/github-ops-status.md",
+    "public_release_gate_doc": "docs/public-release-gate.md",
     "release_upload_design": "docs/release-upload-design.md",
     "repo_settings_checklist": "docs/repo-settings-checklist.md",
     "version_updater": "scripts/update-version.py",
     "changelog_generator": "scripts/generate-changelog.py",
+    "public_release_gate": "scripts/public-release-gate.sh",
     "macos_dmg_wrapper": "packaging/macos/dmg/Aikeeper Installer.command",
     "windows_service_prep": "packaging/windows/install-service.ps1"
   },
@@ -41,7 +45,6 @@
     "service_manager": "launchd"
   },
   "future_targets": [
-    "public-release-gate",
     "release-signing-policy",
     "homebrew-tap-repository",
     "public-issue-templates"

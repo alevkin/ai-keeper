@@ -47,3 +47,17 @@ def test_github_release_workflow_autogenerates_changelog_and_release_artifacts()
     assert "dist/aikeeper-${TAG}.tar.gz" in text
     assert "TEAMS_WEBHOOK_URL" not in text
     assert "secrets." not in text
+
+
+def test_public_release_gate_workflow_runs_manually_with_read_only_permissions() -> None:
+    workflow = REPO / ".github" / "workflows" / "public-release-gate.yml"
+    text = workflow.read_text(encoding="utf-8")
+
+    assert "name: Public Release Gate" in text
+    assert "workflow_dispatch" in text
+    assert "contents: read" in text
+    assert "actions: read" in text
+    assert "fetch-depth: 0" in text
+    assert "scripts/public-release-gate.sh" in text
+    assert "--online" in text
+    assert "secrets." not in text

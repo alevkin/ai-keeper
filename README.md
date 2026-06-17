@@ -251,7 +251,7 @@ It writes a source archive, sha256 file, `CHECKSUMS.txt`, release manifest,
 local Homebrew formula, and tap-ready Homebrew formula under `dist/`. The
 generated formula installs wrapper commands: `aikeeper-install`,
 `aikeeper-upgrade`, `aikeeper-rollback`, `aikeeper-publish`, and
-`aikeeper-sign`.
+`aikeeper-sign`, `aikeeper-release`, and `aikeeper-public-release-gate`.
 
 The packaging contract remains local-only and metadata-only. Release archives
 exclude `.git`, `.venv`, `dist`, `output`, SQLite databases, JSONL transcripts,
@@ -278,6 +278,12 @@ GitHub auto-releases are handled by `.github/workflows/release.yml` on pushes to
 `main`. The workflow computes the next semver tag from Conventional Commit
 messages, updates release metadata, regenerates `CHANGELOG.md`, builds artifacts,
 and creates a GitHub Release with checksums.
+
+Before changing repository visibility, run the public release gate:
+
+```bash
+scripts/public-release-gate.sh --version v0.22.0 --output-dir dist --online
+```
 
 Before publishing or sharing a package, run the distribution audit:
 
@@ -313,6 +319,7 @@ Distribution preparation notes:
 - Homebrew tap layout: `dist/homebrew-tap/Formula/aikeeper.rb`
 - CI workflow: `.github/workflows/ci.yml`
 - Release automation: `scripts/release.sh`
+- Public release gate: `scripts/public-release-gate.sh`
 - macOS DMG spike: `packaging/macos/dmg/`
 - Windows service prep: `packaging/windows/`
 

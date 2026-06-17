@@ -28,8 +28,11 @@ def test_distribution_audit_passes_current_repo_without_company_or_project_coupl
     assert result["findings"] == []
     assert result["checks"]["tracked_files"] > 0
     assert "scripts/package.sh" in result["checks"]["required_files"]
+    assert "docs/public-release-gate.md" in result["checks"]["required_files"]
     assert ".github/workflows/release.yml" in result["checks"]["required_files"]
+    assert ".github/workflows/public-release-gate.yml" in result["checks"]["required_files"]
     assert "scripts/generate-changelog.py" in result["checks"]["required_files"]
+    assert "scripts/public-release-gate.sh" in result["checks"]["required_files"]
     assert "scripts/update-version.py" in result["checks"]["required_files"]
 
 

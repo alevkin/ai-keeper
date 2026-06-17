@@ -31,16 +31,18 @@ def test_packaging_manifest_tracks_distribution_prep_wave_targets() -> None:
     assert manifest["targets"]["homebrew_tap_formula"] == "dist/homebrew-tap/Formula/aikeeper.rb"
     assert manifest["targets"]["ci_workflow"] == ".github/workflows/ci.yml"
     assert manifest["targets"]["release_workflow"] == ".github/workflows/release.yml"
+    assert manifest["targets"]["public_release_gate_workflow"] == ".github/workflows/public-release-gate.yml"
     assert manifest["targets"]["release_notes"] == "dist/release-notes.md"
     assert manifest["targets"]["changelog"] == "CHANGELOG.md"
     assert manifest["targets"]["github_ops_status"] == "docs/github-ops-status.md"
+    assert manifest["targets"]["public_release_gate_doc"] == "docs/public-release-gate.md"
     assert manifest["targets"]["release_upload_design"] == "docs/release-upload-design.md"
     assert manifest["targets"]["repo_settings_checklist"] == "docs/repo-settings-checklist.md"
     assert manifest["targets"]["version_updater"] == "scripts/update-version.py"
     assert manifest["targets"]["changelog_generator"] == "scripts/generate-changelog.py"
+    assert manifest["targets"]["public_release_gate"] == "scripts/public-release-gate.sh"
     assert manifest["targets"]["macos_dmg_wrapper"] == "packaging/macos/dmg/Aikeeper Installer.command"
     assert manifest["future_targets"] == [
-        "public-release-gate",
         "release-signing-policy",
         "homebrew-tap-repository",
         "public-issue-templates",

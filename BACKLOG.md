@@ -570,11 +570,29 @@ Acceptance:
   history.
 - Workflow uses `contents: write` and `gh release create`.
 
+### AK-033 Public Release Gate
+
+Status: shipped in v0.23.0.
+
+Automate a final read-only gate before changing repository visibility.
+
+- Add `aikeeper audit public-release`.
+- Add `scripts/public-release-gate.sh`.
+- Add manual GitHub Actions workflow `Public Release Gate`.
+- Check privacy/distribution audits, clean git state, clean author history,
+  changelog/tag/version consistency, workflow readiness, release artifacts,
+  checksums, and optional online GitHub release state.
+- Keep the gate from changing repository visibility or writing secrets.
+
+Acceptance:
+
+- Local gate passes for the current release artifacts.
+- Manual GitHub workflow can verify an existing release with read-only
+  permissions.
+- Distribution audit requires the public release gate files.
+
 ## Next
 
-- AK-033 Public Release Gate: automate a read-only gate that checks docs,
-  changelog, tags, CI status, audits, package artifacts, and release workflow
-  readiness before making the repository public.
 - AK-035 Release Signing Policy: decide whether release artifacts should use
   `cosign`, `minisign`, both, or unsigned checksums for the private phase.
 - AK-036 Homebrew Tap Repository: decide and scaffold a separate tap repository

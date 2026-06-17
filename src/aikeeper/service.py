@@ -203,7 +203,7 @@ def _daily_tokens(con, now_ms: int, days: int = 7) -> list[dict]:
 def _current_activity(con) -> dict | None:
     session = con.execute(
         """
-        select s.id, s.session_id, s.cwd, s.model, s.updated_at_ms, s.total_tokens,
+        select s.id, s.provider, s.session_id, s.cwd, s.model, s.updated_at_ms, s.total_tokens,
                p.id as project_id, p.name as project_name, p.root_path,
                t.id as task_id, t.task_key, t.display_name as task_name,
                (

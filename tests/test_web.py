@@ -292,6 +292,7 @@ def test_overview_exposes_v2_dashboard_metadata(tmp_path: Path) -> None:
     data = build_overview(db_path, now_ms=now)
 
     assert data["current_activity"]["session_id"] == "session-1"
+    assert data["current_activity"]["provider"] == "codex"
     assert data["current_activity"]["project_name"] == "repo"
     assert data["current_activity"]["task_name"] == "AIK-7"
     assert data["current_activity"]["last_turn_tokens"] == 300
@@ -418,6 +419,7 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     assert "previous 5m" in page.text
     assert 'data-rate-trend-bars' in page.text
     assert "Operator alerts" in page.text
+    assert "Tracked providers" in page.text
     assert "Model Efficiency" not in page.text
 
     assert usage_page.status_code == 200

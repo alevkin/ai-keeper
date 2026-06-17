@@ -3,18 +3,24 @@
 {% block content %}
 {% set burn = overview.burn_rate.current %}
 {% set burn_trend = overview.burn_rate.trend %}
-<section class="hero-strip" aria-label="Operator summary">
+{% set providers = overview.provider_totals %}
+{% set alert_count = (1 if overview.budget_warnings else 0) + (1 if overview.ingest_health.issues else 0) + (1 if overview.privacy_audit.findings else 0) %}
+<section class="command-hero" aria-label="Operator summary">
   <div>
+    <span class="command-eyebrow">Local AI usage cockpit</span>
     <h1>Command</h1>
-    <p>Live AI coding usage, budget pressure, and data health in one operator view.</p>
+    <p>Track live spend, provider mix, budget pressure, and privacy-safe ingest health while Codex and Claude are doing the work.</p>
   </div>
-  <div class="hero-status">
+  <div class="hero-actions">
+    <a class="health-pill {{ overview.ingest_health.status }}" href="/health">
+      Health: {{ overview.ingest_health.status }}
+    </a>
     <span class="privacy-badge">metadata only</span>
-    <span data-last-sync>live</span>
+    <span class="sync-badge" data-last-sync>live</span>
   </div>
 </section>
 
-<section class="metric-row" aria-label="Key usage metrics">
+<section class="metric-row command-metrics" aria-label="Key usage metrics">
   <article class="metric-card primary">
     <span class="label">Today</span>
     <strong data-today-tokens title="{{ overview.today_tokens | tokens }}">{{ overview.today_tokens | compact_tokens }}</strong>
@@ -70,6 +76,48 @@
   </article>
 </section>
 
+<section class="panel provider-runway" aria-labelledby="providers-title">
+  <div class="provider-runway-head">
+    <div>
+      <span class="label">Tracked providers</span>
+      <h2 id="providers-title">Providers</h2>
+      <p>All-time usage mix across local adapters. Cost is estimated from model pricing; raw prompts and replies stay out of the database.</p>
+    </div>
+    <a href="/models">Model efficiency</a>
+  </div>
+  {% if providers %}
+  <div class="provider-meter" aria-label="Token share by provider">
+    {% for provider in providers %}
+    {% set provider_share = provider.token_share * 100 %}
+    <span
+      class="provider-meter-segment provider-{{ provider.provider | lower }}"
+      style="width: {{ provider_share if provider_share > 0.5 else 0.5 }}%"
+      title="{{ provider.provider }} · {{ provider.total_tokens | tokens }} tokens · {{ provider.estimated_cost_usd | usd }} est."
+    ></span>
+    {% endfor %}
+  </div>
+  <div class="provider-track">
+    {% for provider in providers %}
+    {% set provider_share = provider.token_share * 100 %}
+    <a class="provider-tile provider-{{ provider.provider | lower }}" href="/models">
+      <span class="provider-title">
+        <span class="provider-mark" aria-hidden="true"></span>
+        <strong>{{ provider.provider }}</strong>
+        <small>{{ provider.model_count }} models</small>
+      </span>
+      <span class="provider-stats">
+        <strong title="{{ provider.total_tokens | tokens }}">{{ provider.total_tokens | compact_tokens }}</strong>
+        <small>{{ provider.estimated_cost_usd | compact_usd }} est. · {{ provider.event_count | tokens }} turns</small>
+      </span>
+      <span class="provider-share">{{ provider_share | round(1) }}%</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-state">No providers imported yet.</p>
+  {% endif %}
+</section>
+
 <section class="command-layout">
   <div class="command-main">
     <section class="panel current-panel">
@@ -78,16 +126,21 @@
         {% if overview.current_activity %}<a href="/sessions/{{ overview.current_activity.id }}">Open session</a>{% endif %}
       </div>
       {% if overview.current_activity %}
-      <div class="activity-main">
+      <div class="activity-main activity-ledger">
         <div>
           <span class="label">Project</span>
           <a href="/projects/{{ overview.current_activity.project_id }}">{{ overview.current_activity.project_name }}</a>
           <small>{{ overview.current_activity.root_path }}</small>
         </div>
         <div>
+          <span class="label">Provider</span>
+          <strong class="provider-name">{{ overview.current_activity.provider }}</strong>
+          <small>{{ overview.current_activity.model or "unknown model" }}</small>
+        </div>
+        <div>
           <span class="label">Task</span>
           <strong>{{ overview.current_activity.task_name }}</strong>
-          <small>{{ overview.current_activity.model or "unknown model" }}</small>
+          <small>{{ overview.current_activity.task_key }}</small>
         </div>
         <div>
           <span class="label">Session</span>
@@ -98,7 +151,7 @@
         </div>
       </div>
       {% else %}
-      <p class="empty-state">No Codex activity imported yet.</p>
+      <p class="empty-state">No provider activity imported yet.</p>
       {% endif %}
     </section>
 
@@ -126,8 +179,9 @@
         <h2>Top projects</h2>
         <a href="/usage">View all</a>
       </div>
+      {% set top_projects = overview.projects | sort(attribute="today_tokens", reverse=true) %}
       <div class="digest-list">
-        {% for project in overview.projects[:4] %}
+        {% for project in top_projects[:4] %}
         <a class="digest-row" href="/projects/{{ project.id }}">
           <span>
             <strong>{{ project.name }}</strong>
@@ -136,7 +190,7 @@
           <span class="digest-number" title="{{ project.today_tokens | tokens }}">{{ project.today_tokens | compact_tokens }}</span>
         </a>
         {% endfor %}
-        {% if not overview.projects %}
+        {% if not top_projects %}
         <p class="empty-state">No projects imported yet.</p>
         {% endif %}
       </div>
@@ -147,7 +201,7 @@
     <section class="panel alert-panel">
       <div class="panel-head">
         <h2>Operator alerts</h2>
-        <span>{{ (overview.budget_warnings | length) + (overview.ingest_health.issues | length) + (overview.privacy_audit.findings | length) }}</span>
+        <span>{{ alert_count }}</span>
       </div>
       <div class="alert-list">
         {% if overview.budget_warnings %}
@@ -178,29 +232,6 @@
         {% endif %}
         {% if not overview.budget_warnings and not overview.ingest_health.issues and not overview.privacy_audit.findings %}
           <p class="empty-state">No active alerts.</p>
-        {% endif %}
-      </div>
-    </section>
-
-    <section class="panel provider-card">
-      <div class="panel-head">
-        <h2>Providers</h2>
-        <a href="/models">Models</a>
-      </div>
-      <div class="digest-list">
-        {% for provider in overview.provider_totals %}
-        <a class="digest-row" href="/models">
-          <span>
-            <strong>{{ provider.provider }}</strong>
-            <small>{{ provider.session_count | tokens }} sessions · {{ provider.event_count | tokens }} turns · {{ provider.model_count }} models</small>
-          </span>
-          <span class="digest-number" title="{{ provider.total_tokens | tokens }} / {{ provider.estimated_cost_usd | usd }}">
-            {{ provider.total_tokens | compact_tokens }}
-          </span>
-        </a>
-        {% endfor %}
-        {% if not overview.provider_totals %}
-        <p class="empty-state">No providers imported yet.</p>
         {% endif %}
       </div>
     </section>

@@ -42,3 +42,16 @@ def test_estimates_claude_sonnet_cache_read_and_write_cost() -> None:
 
     expected = ((3 * 3.00) + (17_946 * 0.30) + (7_000 * 3.75) + (241 * 6.00) + (8 * 15.00)) / 1_000_000
     assert cost == pytest.approx(expected)
+
+
+def test_estimates_bedrock_converse_claude_alias_cost() -> None:
+    cost = estimate_event_cost_usd(
+        "converse/us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        input_tokens=100,
+        cached_input_tokens=200,
+        cache_creation_input_tokens=300,
+        output_tokens=50,
+    )
+
+    expected = ((100 * 1.00) + (200 * 0.10) + (300 * 1.25) + (50 * 5.00)) / 1_000_000
+    assert cost == pytest.approx(expected)

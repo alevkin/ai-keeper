@@ -198,6 +198,7 @@ def _import_transcript(con: sqlite3.Connection, *, path: Path, claude_home: Path
 
     sessions_imported = 0
     events_imported = 0
+    session_by_id: dict[str, int] = {}
     sequence_by_session: dict[int, int] = {}
     running_by_session: dict[int, int] = {}
     fallback_session_id = path.stem
@@ -217,9 +218,12 @@ def _import_transcript(con: sqlite3.Connection, *, path: Path, claude_home: Path
                 fallback_session_id=fallback_session_id,
                 fallback_cwd=fallback_cwd,
             ):
-                session_pk, is_new = _session_pk_for_event(con, event, path)
-                if is_new:
-                    sessions_imported += 1
+                session_pk = session_by_id.get(event.session_id)
+                if session_pk is None:
+                    session_pk, is_new = _session_pk_for_event(con, event, path)
+                    session_by_id[event.session_id] = session_pk
+                    if is_new:
+                        sessions_imported += 1
                 sequence = sequence_by_session.get(session_pk)
                 if sequence is None:
                     sequence = _max_sequence(con, session_pk)

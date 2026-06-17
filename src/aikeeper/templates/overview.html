@@ -182,6 +182,29 @@
       </div>
     </section>
 
+    <section class="panel provider-card">
+      <div class="panel-head">
+        <h2>Providers</h2>
+        <a href="/models">Models</a>
+      </div>
+      <div class="digest-list">
+        {% for provider in overview.provider_totals %}
+        <a class="digest-row" href="/models">
+          <span>
+            <strong>{{ provider.provider }}</strong>
+            <small>{{ provider.session_count | tokens }} sessions · {{ provider.event_count | tokens }} turns · {{ provider.model_count }} models</small>
+          </span>
+          <span class="digest-number" title="{{ provider.total_tokens | tokens }} / {{ provider.estimated_cost_usd | usd }}">
+            {{ provider.total_tokens | compact_tokens }}
+          </span>
+        </a>
+        {% endfor %}
+        {% if not overview.provider_totals %}
+        <p class="empty-state">No providers imported yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
     <section class="panel health-card {{ overview.ingest_health.status }}">
       <div class="panel-head">
         <h2>Health</h2>

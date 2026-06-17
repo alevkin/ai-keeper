@@ -210,7 +210,16 @@ def test_api_sync_claude_imports_local_metadata(tmp_path: Path) -> None:
     assert response.json() == {"sessions_imported": 1, "token_events_imported": 1}
     with connect(db_path) as con:
         session = con.execute("select * from sessions where provider = 'claude'").fetchone()
+    overview = client.get("/api/overview").json()
+    page = client.get("/").text
+    providers = {row["provider"]: row for row in overview["provider_totals"]}
+
     assert session["model_provider"] == "anthropic"
+    assert providers["claude"]["session_count"] == 1
+    assert providers["claude"]["event_count"] == 1
+    assert providers["claude"]["total_tokens"] == 35
+    assert "Providers" in page
+    assert "claude" in page
     assert b"SECRET_CLAUDE_TEXT" not in db_path.read_bytes()
 
 

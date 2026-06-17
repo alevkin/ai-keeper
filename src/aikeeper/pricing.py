@@ -135,10 +135,24 @@ MODEL_ALIASES: dict[str, str] = {
 }
 
 
+def _normalize_model_key(model: str) -> str:
+    key = model
+    if key.startswith("converse/"):
+        key = key.removeprefix("converse/")
+    for prefix in ("us.", "eu.", "jp.", "global."):
+        if key.startswith(prefix):
+            key = key.removeprefix(prefix)
+            break
+    key = key.removeprefix("anthropic.")
+    if key.endswith("-v1:0"):
+        key = key.removesuffix("-v1:0")
+    return MODEL_ALIASES.get(key, key)
+
+
 def price_for_model(model: str | None) -> ModelPrice | None:
     if not model:
         return None
-    key = MODEL_ALIASES.get(model, model)
+    key = _normalize_model_key(model)
     return STANDARD_TOKEN_PRICES.get(key)
 
 

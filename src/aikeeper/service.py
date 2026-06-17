@@ -355,6 +355,43 @@ def _model_efficiency(con) -> list[dict]:
     return sorted(models, key=lambda item: (item["estimated_cost_usd"], item["total_tokens"]), reverse=True)
 
 
+def _provider_totals(model_rows: list[dict], total_tokens: int) -> list[dict]:
+    providers: dict[str, dict] = {}
+    for row in model_rows:
+        provider = str(row["provider"])
+        item = providers.setdefault(
+            provider,
+            {
+                "provider": provider,
+                "session_count": 0,
+                "event_count": 0,
+                "total_tokens": 0,
+                "estimated_cost_usd": 0.0,
+                "input_tokens": 0,
+                "cached_input_tokens": 0,
+                "cache_creation_input_tokens": 0,
+                "output_tokens": 0,
+                "model_count": 0,
+            },
+        )
+        item["session_count"] += int(row["session_count"])
+        item["event_count"] += int(row["event_count"])
+        item["total_tokens"] += int(row["total_tokens"])
+        item["estimated_cost_usd"] += float(row["estimated_cost_usd"])
+        item["input_tokens"] += int(row["input_tokens"])
+        item["cached_input_tokens"] += int(row["cached_input_tokens"])
+        item["cache_creation_input_tokens"] += int(row["cache_creation_input_tokens"])
+        item["output_tokens"] += int(row["output_tokens"])
+        item["model_count"] += 1
+
+    rows = []
+    for item in providers.values():
+        item["estimated_cost_usd"] = round(float(item["estimated_cost_usd"]), 6)
+        item["token_share"] = round(item["total_tokens"] / total_tokens, 6) if total_tokens else 0.0
+        rows.append(item)
+    return sorted(rows, key=lambda item: (item["estimated_cost_usd"], item["total_tokens"]), reverse=True)
+
+
 def _simulation_summaries(con) -> list[dict]:
     rows = con.execute(
         """
@@ -598,9 +635,11 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
         config = _budget_config(db_path, budget_path)
         budget, budget_warnings = _overview_budget(con, current_activity, day_start, config)
         current_task_key = current_activity["task_key"] if current_activity else None
+        model_efficiency = _model_efficiency(con)
+        total_token_count = int(total_tokens["tokens"])
         return {
             "generated_at_ms": now,
-            "total_tokens": int(total_tokens["tokens"]),
+            "total_tokens": total_token_count,
             "today_tokens": int(today_tokens["tokens"]),
             "week_tokens": int(week_tokens["tokens"]),
             "estimated_cost": {
@@ -620,7 +659,8 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
             "daily_tokens": _daily_tokens(con, now),
             "current_activity": current_activity,
             "burn_rate": _current_burn_rate(con, now),
-            "model_efficiency": _model_efficiency(con),
+            "model_efficiency": model_efficiency,
+            "provider_totals": _provider_totals(model_efficiency, total_token_count),
             "simulations": _simulation_summaries(con),
             "budget": budget,
             "budget_warnings": budget_warnings,

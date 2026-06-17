@@ -40,9 +40,43 @@ def _write_release_artifacts(dist: Path, tag: str) -> None:
 
 def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
     version = tag.removeprefix("v")
+    required_files = [
+        "README.md",
+        "BACKLOG.md",
+        "LICENSE",
+        "SECURITY.md",
+        "CONTRIBUTING.md",
+        "PRIVACY.md",
+        "docs/public-release-checklist.md",
+        "docs/repo-settings-checklist.md",
+        "docs/release-verification.md",
+        "docs/github-ops-status.md",
+        "docs/public-release-gate.md",
+        "docs/release-upload-design.md",
+        "uv.lock",
+        "scripts/generate-changelog.py",
+        "scripts/install.sh",
+        "scripts/package.sh",
+        "scripts/public-release-gate.sh",
+        "scripts/release.sh",
+        "scripts/sign-release.sh",
+        "scripts/update-version.py",
+        "scripts/upgrade.sh",
+        "scripts/rollback.sh",
+        "packaging/README.md",
+        "packaging/macos/README.md",
+        "packaging/macos/dmg/Aikeeper Installer.command",
+        "packaging/macos/dmg/README.md",
+        "packaging/windows/README.md",
+        "packaging/windows/install-service.ps1",
+    ]
     (repo / ".github" / "workflows").mkdir(parents=True)
     (repo / "packaging").mkdir()
     (repo / "scripts").mkdir()
+    for rel_path in required_files:
+        path = repo / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{rel_path}\n", encoding="utf-8")
     (repo / "pyproject.toml").write_text(
         f'[project]\nname = "aikeeper"\nversion = "{version}"\n',
         encoding="utf-8",
@@ -134,21 +168,9 @@ def test_public_release_gate_fails_when_changelog_is_missing_tag(tmp_path: Path)
 
 
 def test_cli_public_release_gate_emits_json_for_current_release(tmp_path: Path) -> None:
-    dist = tmp_path / "dist"
-    subprocess.run(
-        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.22.0", "--output-dir", str(dist)],
-        cwd=REPO,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    subprocess.run(
-        ["bash", str(REPO / "scripts" / "sign-release.sh"), "--dist-dir", str(dist), "--signer", "none"],
-        cwd=REPO,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _write_minimal_release_repo(repo, "v1.2.3")
 
     result = CliRunner().invoke(
         app,
@@ -156,13 +178,13 @@ def test_cli_public_release_gate_emits_json_for_current_release(tmp_path: Path) 
             "audit",
             "public-release",
             "--repo-root",
-            str(REPO),
+            str(repo),
             "--db-path",
             str(tmp_path / "keeper.sqlite"),
             "--dist-dir",
-            str(dist),
+            str(repo / "dist"),
             "--tag",
-            "v0.22.0",
+            "v1.2.3",
             "--allow-dirty",
             "--json",
         ],

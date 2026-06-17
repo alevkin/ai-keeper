@@ -1,9 +1,15 @@
 import json
 import subprocess
+import tomllib
 from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[1]
+
+
+def _project_version() -> str:
+    with (REPO / "pyproject.toml").open("rb") as handle:
+        return str(tomllib.load(handle)["project"]["version"])
 
 
 def test_public_release_hygiene_documents_are_present_and_metadata_first() -> None:
@@ -25,7 +31,7 @@ def test_public_release_hygiene_documents_are_present_and_metadata_first() -> No
 def test_packaging_manifest_tracks_distribution_prep_wave_targets() -> None:
     manifest = json.loads((REPO / "packaging" / "manifest.json").read_text(encoding="utf-8"))
 
-    assert manifest["version"] == "0.22.0"
+    assert manifest["version"] == _project_version()
     assert manifest["scripts"]["sign"] == "scripts/sign-release.sh"
     assert manifest["targets"]["checksums"] == "dist/CHECKSUMS.txt"
     assert manifest["targets"]["homebrew_tap_formula"] == "dist/homebrew-tap/Formula/aikeeper.rb"

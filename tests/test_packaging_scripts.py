@@ -2,10 +2,16 @@ import json
 import os
 import tarfile
 import subprocess
+import tomllib
 from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[1]
+
+
+def _project_version() -> str:
+    with (REPO / "pyproject.toml").open("rb") as handle:
+        return str(tomllib.load(handle)["project"]["version"])
 
 
 def test_install_upgrade_and_rollback_scripts_support_dry_run() -> None:
@@ -40,7 +46,7 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert manifest["name"] == "AI Keeper"
-    assert manifest["version"] == "0.22.0"
+    assert manifest["version"] == _project_version()
     assert manifest["local_only"] is True
     assert manifest["metadata_only"] is True
     assert manifest["scripts"]["install"] == "scripts/install.sh"

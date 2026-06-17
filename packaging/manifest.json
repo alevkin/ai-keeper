@@ -1,14 +1,20 @@
 {
   "name": "AI Keeper",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "local_only": true,
   "metadata_only": true,
   "default_port": 8766,
   "scripts": {
     "install": "scripts/install.sh",
     "package": "scripts/package.sh",
+    "publish": "scripts/publish.sh",
     "upgrade": "scripts/upgrade.sh",
     "rollback": "scripts/rollback.sh"
+  },
+  "repository": {
+    "url": "git@github.com:alevkin/ai-keeper.git",
+    "homepage": "https://github.com/alevkin/ai-keeper",
+    "visibility": "private"
   },
   "targets": {
     "source_archive": "dist/aikeeper-<version>.tar.gz",

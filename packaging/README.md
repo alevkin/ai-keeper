@@ -8,17 +8,18 @@ Current supported installer scripts:
 - `scripts/upgrade.sh`
 - `scripts/rollback.sh`
 - `scripts/package.sh`
+- `scripts/publish.sh`
 
 Build a local release:
 
 ```bash
-scripts/package.sh --version v0.17.0 --output-dir dist
+scripts/package.sh --version v0.18.0 --output-dir dist
 ```
 
 The package builder writes:
 
-- `dist/aikeeper-v0.17.0.tar.gz`
-- `dist/aikeeper-v0.17.0.tar.gz.sha256`
+- `dist/aikeeper-v0.18.0.tar.gz`
+- `dist/aikeeper-v0.18.0.tar.gz.sha256`
 - `dist/release-manifest.json`
 - `dist/homebrew/aikeeper.rb`
 
@@ -31,7 +32,7 @@ aikeeper-install --port 8766
 
 The package contract is intentionally local-only and metadata-only. Packages
 must not bundle the SQLite database, Codex transcripts, hook payloads, daemon
-logs, diagnostics bundles, `.venv`, `.git`, `dist`, or `output`.
+logs, diagnostics bundles, `.venv`, `.vscode`, `.git`, `dist`, or `output`.
 
 Run the distribution audit before publishing:
 
@@ -41,6 +42,12 @@ uv run aikeeper audit distribution --json
 
 The audit verifies that release files remain metadata-only and do not contain
 company-specific or private adjacent-project markers.
+
+Publish to the private GitHub repository after tests and audit pass:
+
+```bash
+scripts/publish.sh --remote git@github.com:alevkin/ai-keeper.git --ssh-key ~/.ssh/aikeeper_publish
+```
 
 Planned targets:
 

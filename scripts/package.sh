@@ -82,6 +82,7 @@ excluded_dirs = {
     ".pytest_cache",
     ".ruff_cache",
     ".venv",
+    ".vscode",
     "__pycache__",
     "dist",
     "output",
@@ -130,7 +131,7 @@ checksum_path.write_text(f"{sha256}  {archive_name}\n", encoding="utf-8")
 formula_path.write_text(
     f'''class Aikeeper < Formula
   desc "Local-only Codex token usage daemon and dashboard"
-  homepage "https://github.com/local/ai-keeper"
+  homepage "https://github.com/alevkin/ai-keeper"
   url "file://{archive_path}"
   sha256 "{sha256}"
 
@@ -150,9 +151,14 @@ formula_path.write_text(
       #!/usr/bin/env bash
       exec "#{{libexec}}/scripts/rollback.sh" "$@"
     EOS
+    (bin/"aikeeper-publish").write <<~EOS
+      #!/usr/bin/env bash
+      exec "#{{libexec}}/scripts/publish.sh" "$@"
+    EOS
     chmod 0755, bin/"aikeeper-install"
     chmod 0755, bin/"aikeeper-upgrade"
     chmod 0755, bin/"aikeeper-rollback"
+    chmod 0755, bin/"aikeeper-publish"
   end
 
   test do

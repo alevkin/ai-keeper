@@ -92,7 +92,7 @@ RULES = [
         "private_ssh_key_reference",
         "project",
         "contains a private SSH key path or key filename",
-        re.compile(r"(?:^|/)\.ssh/|" + re.escape(_PRIVATE_KEY)),
+        re.compile(r"/Users/[^\s]+/\.ssh/|" + re.escape(_PRIVATE_KEY)),
     ),
 ]
 

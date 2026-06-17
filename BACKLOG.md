@@ -255,7 +255,7 @@ Build a portable local release package.
   formula.
 - Install wrapper commands for install, upgrade, and rollback.
 - Exclude runtime state, local databases, transcripts, logs, `.git`, `.venv`,
-  `dist`, and `output`.
+  `.vscode`, `dist`, and `output`.
 
 Acceptance:
 
@@ -282,7 +282,37 @@ Acceptance:
   metadata-only.
 - Tests cover both passing repo state and synthetic private-marker failures.
 
+### AK-018 Private GitHub Publication Channel
+
+Status: shipped in v0.18.0.
+
+Publish the private repository without baking local secrets into the project.
+
+- Add a publish script that accepts an explicit SSH key path.
+- Configure local git author metadata for personal publishing.
+- Run distribution audit before push.
+- Set or update the `origin` remote and push current HEAD plus tags.
+- Document the private repository channel while keeping the repository
+  company-agnostic.
+
+Acceptance:
+
+- `scripts/publish.sh --dry-run` shows the remote, author, branch, audit, and
+  SSH-key scoped push commands.
+- Packaging manifest documents the private repository and publish script.
+- The source archive and Homebrew formula point at the GitHub project homepage.
+
 ## Now
 
-AK-018 should add a private GitHub publication channel for the newly created
-repository before the next distribution wave is planned.
+Next distribution wave:
+
+- AK-019 Public Release Hygiene: add license, security policy, contributing
+  guide, privacy statement, and public-readiness checklist.
+- AK-020 Signed Release Artifacts: produce checksums, optional cosign/minisign
+  signatures, and verification docs.
+- AK-021 Homebrew Tap Path: split generated formula into a tap-ready layout and
+  document the future public tap migration.
+- AK-022 macOS App/DMG Research Spike: prototype a thin installer wrapper around
+  the existing scripts without duplicating service logic.
+- AK-023 Windows Service Prep: document Windows service constraints and sketch
+  a future installer path for Codex-on-Windows users.

@@ -1,4 +1,6 @@
 import json
+import os
+import subprocess
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -61,3 +63,41 @@ def test_cli_distribution_audit_emits_json() -> None:
     payload = json.loads(result.stdout)
     assert payload["status"] == "pass"
     assert payload["company_agnostic"] is True
+
+
+def test_publish_script_supports_private_github_dry_run(tmp_path: Path) -> None:
+    ssh_key = tmp_path / "id_ed25519"
+    ssh_key.write_text("not-a-real-key\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(REPO / "scripts" / "publish.sh"),
+            "--dry-run",
+            "--remote",
+            "git@github.com:alevkin/ai-keeper.git",
+            "--ssh-key",
+            str(ssh_key),
+            "--branch",
+            "agent/ak-ops-wave",
+            "--author-name",
+            "Andrei Levkin",
+            "--author-email",
+            "alevkin@gmail.com",
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "AIKEEPER_PUBLISH_TEST_REF": "v0.18.0-test"},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "AI Keeper publish" in result.stdout
+    assert "DRY RUN" in result.stdout
+    assert "git@github.com:alevkin/ai-keeper.git" in result.stdout
+    assert "GIT_SSH_COMMAND=ssh -i" in result.stdout
+    assert "git push origin HEAD:refs/heads/agent/ak-ops-wave" in result.stdout
+    assert "git push origin --tags" in result.stdout
+    assert "alevkin@gmail.com" in result.stdout
+    assert ("private-company" + "private-company.com") not in result.stdout

@@ -33,7 +33,7 @@ scripts/install.sh --port 8766
 Or build and install through the local Homebrew formula:
 
 ```bash
-scripts/package.sh --version v0.17.0 --output-dir dist
+scripts/package.sh --version v0.18.0 --output-dir dist
 brew install --formula dist/homebrew/aikeeper.rb
 aikeeper-install --port 8766
 ```
@@ -91,7 +91,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.17.0
+scripts/upgrade.sh --port 8766 --target v0.18.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -238,7 +238,7 @@ unchanged, and records `turn.completed.usage` as local token events.
 `scripts/package.sh` builds the current local release channel:
 
 ```bash
-scripts/package.sh --version v0.17.0 --output-dir dist
+scripts/package.sh --version v0.18.0 --output-dir dist
 ```
 
 It writes a source archive, sha256 file, release manifest, and local Homebrew
@@ -247,8 +247,8 @@ formula under `dist/`. The generated formula installs wrapper commands:
 
 The packaging contract remains local-only and metadata-only. Release archives
 exclude `.git`, `.venv`, `dist`, `output`, SQLite databases, JSONL transcripts,
-and Codex session directories. Future targets remain macOS DMG and Windows
-service/installer.
+`.vscode`, and Codex session directories. Future targets remain macOS DMG and
+Windows service/installer.
 
 Before publishing or sharing a package, run the distribution audit:
 
@@ -259,6 +259,19 @@ uv run aikeeper audit distribution --json
 It checks that tracked release files stay local-only, metadata-only,
 project-agnostic, and company-agnostic. Findings report file paths and rule IDs
 without echoing private matched values.
+
+Publish the private GitHub repository through an explicit SSH-key path:
+
+```bash
+scripts/publish.sh \
+  --remote git@github.com:alevkin/ai-keeper.git \
+  --ssh-key ~/.ssh/aikeeper_publish \
+  --branch agent/ak-ops-wave
+```
+
+The publish script configures the local git author, runs the distribution audit,
+sets `origin` when needed, and pushes the current branch plus tags. It does not
+store SSH key material in the repository.
 
 ## Codex Data Sources
 

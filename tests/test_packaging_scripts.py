@@ -40,7 +40,7 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert manifest["name"] == "AI Keeper"
-    assert manifest["version"] == "0.16.0"
+    assert manifest["version"] == "0.17.0"
     assert manifest["local_only"] is True
     assert manifest["metadata_only"] is True
     assert manifest["scripts"]["install"] == "scripts/install.sh"
@@ -54,15 +54,15 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     output_dir = tmp_path / "dist"
 
     result = subprocess.run(
-        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.16.0", "--output-dir", str(output_dir)],
+        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.17.0", "--output-dir", str(output_dir)],
         cwd=REPO,
         capture_output=True,
         text=True,
         check=False,
     )
 
-    archive = output_dir / "aikeeper-v0.16.0.tar.gz"
-    checksum = output_dir / "aikeeper-v0.16.0.tar.gz.sha256"
+    archive = output_dir / "aikeeper-v0.17.0.tar.gz"
+    checksum = output_dir / "aikeeper-v0.17.0.tar.gz.sha256"
     manifest_path = output_dir / "release-manifest.json"
     formula = output_dir / "homebrew" / "aikeeper.rb"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -71,7 +71,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert archive.exists()
     assert checksum.exists()
     assert formula.exists()
-    assert manifest["version"] == "v0.16.0"
+    assert manifest["version"] == "v0.17.0"
     assert manifest["archive"] == archive.name
     assert len(manifest["sha256"]) == 64
     assert manifest["metadata_only"] is True
@@ -85,7 +85,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     with tarfile.open(archive, "r:gz") as package:
         names = package.getnames()
 
-    assert "aikeeper-v0.16.0/scripts/install.sh" in names
-    assert "aikeeper-v0.16.0/pyproject.toml" in names
+    assert "aikeeper-v0.17.0/scripts/install.sh" in names
+    assert "aikeeper-v0.17.0/pyproject.toml" in names
     assert not any("/.git/" in name or "/.venv/" in name for name in names)
     assert not any(name.endswith("aikeeper.sqlite") or "/sessions/" in name for name in names)

@@ -12,13 +12,13 @@ Current supported installer scripts:
 Build a local release:
 
 ```bash
-scripts/package.sh --version v0.16.0 --output-dir dist
+scripts/package.sh --version v0.17.0 --output-dir dist
 ```
 
 The package builder writes:
 
-- `dist/aikeeper-v0.16.0.tar.gz`
-- `dist/aikeeper-v0.16.0.tar.gz.sha256`
+- `dist/aikeeper-v0.17.0.tar.gz`
+- `dist/aikeeper-v0.17.0.tar.gz.sha256`
 - `dist/release-manifest.json`
 - `dist/homebrew/aikeeper.rb`
 
@@ -32,6 +32,15 @@ aikeeper-install --port 8766
 The package contract is intentionally local-only and metadata-only. Packages
 must not bundle the SQLite database, Codex transcripts, hook payloads, daemon
 logs, diagnostics bundles, `.venv`, `.git`, `dist`, or `output`.
+
+Run the distribution audit before publishing:
+
+```bash
+uv run aikeeper audit distribution --json
+```
+
+The audit verifies that release files remain metadata-only and do not contain
+company-specific or private adjacent-project markers.
 
 Planned targets:
 

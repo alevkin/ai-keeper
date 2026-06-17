@@ -16,6 +16,7 @@ from aikeeper.claude import sync_claude_once
 from aikeeper.codex import ExecIngestState, ingest_codex_exec_line, sync_codex_once
 from aikeeper.db import connect, init_db
 from aikeeper.diagnostics import create_diagnostics_bundle
+from aikeeper.distribution import audit_distribution_readiness
 from aikeeper.exports import export_usage
 from aikeeper.health import ingest_health
 from aikeeper.hooks import handle_codex_hook
@@ -296,6 +297,28 @@ def audit_privacy_cmd(
     console.print(f"Privacy audit failed: {len(data['findings'])} finding(s).")
     for finding in data["findings"]:
         console.print(f"- {finding['table']}.{finding['column']}: {finding['reason']}")
+
+
+@audit_app.command("distribution")
+def audit_distribution_cmd(
+    repo_root: Annotated[Path, typer.Option()] = Path.cwd(),
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    data = audit_distribution_readiness(repo_root)
+    if as_json:
+        sys.stdout.write(json.dumps(data, indent=2) + "\n")
+        return
+    console.print(f"Distribution audit: {data['status']}")
+    console.print(
+        f"project agnostic={data['project_agnostic']} · "
+        f"company agnostic={data['company_agnostic']} · "
+        f"metadata only={data['metadata_only']}"
+    )
+    for finding in data["findings"]:
+        line = f"- {finding['path']}: {finding['reason']} ({finding['rule']})"
+        if "line" in finding:
+            line += f" at line {finding['line']}"
+        console.print(line)
 
 
 @health_app.command("ingest")

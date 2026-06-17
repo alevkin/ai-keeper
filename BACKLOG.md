@@ -229,7 +229,60 @@ Acceptance:
 - Dashboard form updates default budgets and current task overrides.
 - `/api/budgets` exposes the stored DB config.
 
+### AK-015 Observable System Jobs
+
+Status: shipped in v0.15.0.
+
+Make local repair and diagnostic actions observable from the dashboard.
+
+- Store system jobs as metadata-only SQLite rows.
+- Track queued, running, ok, and fail states.
+- Keep command output bounded and scrubbed of chat content.
+
+Acceptance:
+
+- System actions can be queued and run through the CLI/server.
+- Diagnostics page shows recent jobs and result state.
+- Tests cover job persistence and output tail behavior.
+
+### AK-016 Local Packaging Channel
+
+Status: shipped in v0.16.0.
+
+Build a portable local release package.
+
+- Generate a source archive, sha256 file, release manifest, and local Homebrew
+  formula.
+- Install wrapper commands for install, upgrade, and rollback.
+- Exclude runtime state, local databases, transcripts, logs, `.git`, `.venv`,
+  `dist`, and `output`.
+
+Acceptance:
+
+- `scripts/package.sh --version <tag>` creates all release artifacts.
+- The generated Homebrew formula validates and points at the local archive.
+- Tests verify excluded paths and generated release metadata.
+
+### AK-017 Distribution Readiness Audit
+
+Status: shipped in v0.17.0.
+
+Verify that AI Keeper is project/company agnostic before publishing.
+
+- Add `.vscode/` to ignored local editor state.
+- Scan tracked release files for private machine paths, adjacent project names,
+  company markers, and private SSH key references.
+- Check the packaging contract still declares local-only and metadata-only.
+- Report findings without echoing matched private values.
+
+Acceptance:
+
+- `aikeeper audit distribution --json` reports pass/fail.
+- Current repo passes as project-agnostic, company-agnostic, local-only, and
+  metadata-only.
+- Tests cover both passing repo state and synthetic private-marker failures.
+
 ## Now
 
-All current backlog items are shipped. Next work should start from new feedback
-or hardening tasks found while using the dashboard.
+AK-018 should add a private GitHub publication channel for the newly created
+repository before the next distribution wave is planned.

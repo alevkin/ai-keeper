@@ -33,7 +33,7 @@ scripts/install.sh --port 8766
 Or build and install through the local Homebrew formula:
 
 ```bash
-scripts/package.sh --version v0.16.0 --output-dir dist
+scripts/package.sh --version v0.17.0 --output-dir dist
 brew install --formula dist/homebrew/aikeeper.rb
 aikeeper-install --port 8766
 ```
@@ -91,7 +91,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.16.0
+scripts/upgrade.sh --port 8766 --target v0.17.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -210,6 +210,7 @@ uv run aikeeper status --cwd "$PWD" --json
 uv run aikeeper sync codex --once
 uv run aikeeper sync claude
 uv run aikeeper audit privacy --json
+uv run aikeeper audit distribution --json
 uv run aikeeper health ingest --json
 uv run aikeeper diagnostics bundle --port 8766
 uv run aikeeper jobs run --job-id 1 --json
@@ -237,7 +238,7 @@ unchanged, and records `turn.completed.usage` as local token events.
 `scripts/package.sh` builds the current local release channel:
 
 ```bash
-scripts/package.sh --version v0.16.0 --output-dir dist
+scripts/package.sh --version v0.17.0 --output-dir dist
 ```
 
 It writes a source archive, sha256 file, release manifest, and local Homebrew
@@ -248,6 +249,16 @@ The packaging contract remains local-only and metadata-only. Release archives
 exclude `.git`, `.venv`, `dist`, `output`, SQLite databases, JSONL transcripts,
 and Codex session directories. Future targets remain macOS DMG and Windows
 service/installer.
+
+Before publishing or sharing a package, run the distribution audit:
+
+```bash
+uv run aikeeper audit distribution --json
+```
+
+It checks that tracked release files stay local-only, metadata-only,
+project-agnostic, and company-agnostic. Findings report file paths and rule IDs
+without echoing private matched values.
 
 ## Codex Data Sources
 

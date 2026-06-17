@@ -10,4 +10,5 @@ dist/
 build/
 *.egg-info/
 output/
+.vscode/
 .DS_Store

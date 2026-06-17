@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.25.2
+
+- fix: externalize private marker checks
+
 ## v0.25.1
 
 - fix: simplify Homebrew tap install path

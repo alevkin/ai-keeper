@@ -4,7 +4,10 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from aikeeper.cli import app
-from aikeeper.launchd import build_launch_agent_plist, launch_agent_status, write_launch_agent_plist
+from aikeeper.launchd import build_launch_agent_plist
+from aikeeper.launchd import default_launch_agent_path
+from aikeeper.launchd import launch_agent_status
+from aikeeper.launchd import write_launch_agent_plist
 
 
 def test_build_launch_agent_plist_uses_keepalive_and_repo_command(tmp_path: Path, monkeypatch) -> None:
@@ -64,6 +67,24 @@ def test_write_launch_agent_plist_outputs_valid_plist(tmp_path: Path, monkeypatc
     with target.open("rb") as handle:
         plist = plistlib.load(handle)
     assert plist["ProgramArguments"][9:11] == ["--port", "8766"]
+
+
+def test_default_launch_agent_path_falls_back_when_standard_dir_is_not_writable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    home = tmp_path / "user"
+    launch_agents = home / "Library" / "LaunchAgents"
+    launch_agents.mkdir(parents=True)
+    launch_agents.chmod(0o555)
+    monkeypatch.setattr(Path, "home", lambda: home)
+    monkeypatch.setenv("AIKEEPER_HOME", str(tmp_path / "aikeeper"))
+
+    try:
+        path = default_launch_agent_path()
+    finally:
+        launch_agents.chmod(0o755)
+
+    assert path == tmp_path / "aikeeper" / "LaunchAgents" / "com.aikeeper.daemon.plist"
 
 
 def test_cli_service_install_writes_plist_without_start(tmp_path: Path, monkeypatch) -> None:

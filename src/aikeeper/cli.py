@@ -22,8 +22,10 @@ from aikeeper.installer import install_codex_hooks
 from aikeeper.launchd import bootstrap_launch_agent
 from aikeeper.launchd import default_launch_agent_path
 from aikeeper.launchd import launch_agent_status
+from aikeeper.launchd import standard_launch_agent_path
 from aikeeper.launchd import stop_launch_agent
 from aikeeper.launchd import uninstall_launch_agent
+from aikeeper.launchd import uses_fallback_launch_agent_path
 from aikeeper.launchd import write_launch_agent_plist
 from aikeeper.openai_costs import fetch_and_import_costs
 from aikeeper.service import status_for_cwd
@@ -150,6 +152,10 @@ def service_install(
         console.print(f"Installed and started AI Keeper LaunchAgent at {target}")
     else:
         console.print(f"Installed AI Keeper LaunchAgent at {target}")
+    if uses_fallback_launch_agent_path(target):
+        console.print(
+            f"Note: {standard_launch_agent_path()} is not writable, so AI Keeper used a fallback plist path."
+        )
 
 
 @service_app.command("start")

@@ -32,7 +32,21 @@ def project_root() -> Path | None:
 
 
 def default_launch_agent_path(label: str = LAUNCHD_LABEL) -> Path:
+    standard = standard_launch_agent_path(label)
+    parent = standard.parent
+    if parent.exists() and os.access(parent, os.W_OK):
+        return standard
+    if not parent.exists() and os.access(parent.parent, os.W_OK):
+        return standard
+    return app_home() / "LaunchAgents" / f"{label}.plist"
+
+
+def standard_launch_agent_path(label: str = LAUNCHD_LABEL) -> Path:
     return Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
+
+
+def uses_fallback_launch_agent_path(path: Path, label: str = LAUNCHD_LABEL) -> bool:
+    return path.expanduser() != standard_launch_agent_path(label)
 
 
 def user_domain() -> str:

@@ -44,8 +44,10 @@ uv run aikeeper service uninstall
 uv run aikeeper service status --port 8766 --json
 ```
 
-The installer writes `~/Library/LaunchAgents/com.aikeeper.daemon.plist`.
-Daemon logs go to `$AIKEEPER_HOME/logs/daemon.stdout.log` and
+The installer writes `~/Library/LaunchAgents/com.aikeeper.daemon.plist` when
+that directory is writable. If it is not writable, AI Keeper falls back to
+`$AIKEEPER_HOME/LaunchAgents/com.aikeeper.daemon.plist` and bootstraps that file
+with `launchctl`. Daemon logs go to `$AIKEEPER_HOME/logs/daemon.stdout.log` and
 `$AIKEEPER_HOME/logs/daemon.stderr.log`.
 
 ## Codex Hooks

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.26.1
+
+- fix: update package metadata for AI providers
+
 ## v0.26.0
 
 - feat: add Claude metadata ingestion

@@ -52,15 +52,24 @@ def _sum_tokens_between(con, start_ms: int, end_ms: int) -> int:
     return int(row["tokens"])
 
 
+def _row_int(row, key: str) -> int:
+    try:
+        return int(row[key] or 0)
+    except (KeyError, TypeError, ValueError):
+        return 0
+
+
 def _estimate_rows_cost(rows) -> dict:
     total = 0.0
     unpriced: set[str] = set()
     for row in rows:
         cost = estimate_event_cost_usd(
             row["model"],
-            input_tokens=int(row["input_tokens"]),
-            cached_input_tokens=int(row["cached_input_tokens"]),
-            output_tokens=int(row["output_tokens"]),
+            input_tokens=_row_int(row, "input_tokens"),
+            cached_input_tokens=_row_int(row, "cached_input_tokens"),
+            cache_creation_input_tokens=_row_int(row, "cache_creation_input_tokens"),
+            cache_creation_1h_input_tokens=_row_int(row, "cache_creation_1h_input_tokens"),
+            output_tokens=_row_int(row, "output_tokens"),
         )
         if cost is None:
             unpriced.add(str(row["model"] or "unknown"))
@@ -148,7 +157,9 @@ def _estimate_cost(con, session_filter: str = "1 = 1", params: tuple = (), since
         query_params = (*params, since_ms)
     rows = con.execute(
         f"""
-        select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+        select s.model, te.input_tokens, te.cached_input_tokens,
+               te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
+               te.output_tokens
         from token_events te
         join sessions s on s.id = te.session_pk
         where {where}
@@ -161,7 +172,9 @@ def _estimate_cost(con, session_filter: str = "1 = 1", params: tuple = (), since
 def _estimate_cost_between(con, start_ms: int, end_ms: int) -> dict:
     rows = con.execute(
         """
-        select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+        select s.model, te.input_tokens, te.cached_input_tokens,
+               te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
+               te.output_tokens
         from token_events te
         join sessions s on s.id = te.session_pk
         where te.timestamp_ms >= ? and te.timestamp_ms < ?
@@ -217,7 +230,9 @@ def _current_activity(con) -> dict | None:
     data["estimated_cost_usd"] = session_cost["usd"]
     last_turn = con.execute(
         """
-        select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+        select s.model, te.input_tokens, te.cached_input_tokens,
+               te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
+               te.output_tokens
         from token_events te
         join sessions s on s.id = te.session_pk
         where te.session_pk = ?
@@ -251,6 +266,7 @@ def _current_burn_rate(con, now_ms: int) -> dict:
     rows = con.execute(
         """
         select s.model, te.timestamp_ms, te.input_tokens, te.cached_input_tokens,
+               te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
                te.output_tokens, te.total_tokens
         from token_events te
         join sessions s on s.id = te.session_pk
@@ -287,6 +303,7 @@ def _model_efficiency(con) -> list[dict]:
         """
         select s.provider, coalesce(s.model, 'unknown') as model, s.id as session_pk,
                te.timestamp_ms, te.input_tokens, te.cached_input_tokens,
+               te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
                te.output_tokens, te.total_tokens
         from token_events te
         join sessions s on s.id = te.session_pk
@@ -303,12 +320,19 @@ def _model_efficiency(con) -> list[dict]:
     models = []
     for (provider, model), model_rows in grouped.items():
         total_tokens = sum(int(row["total_tokens"]) for row in model_rows)
-        input_tokens = sum(int(row["input_tokens"]) for row in model_rows)
-        cached_input_tokens = sum(int(row["cached_input_tokens"]) for row in model_rows)
-        output_tokens = sum(int(row["output_tokens"]) for row in model_rows)
+        input_tokens = sum(_row_int(row, "input_tokens") for row in model_rows)
+        cached_input_tokens = sum(_row_int(row, "cached_input_tokens") for row in model_rows)
+        cache_creation_input_tokens = sum(
+            _row_int(row, "cache_creation_input_tokens") + _row_int(row, "cache_creation_1h_input_tokens")
+            for row in model_rows
+        )
+        output_tokens = sum(_row_int(row, "output_tokens") for row in model_rows)
         cost = _estimate_rows_cost(model_rows)["usd"]
         active = _active_ms(model_rows)
         event_count = len(model_rows)
+        cache_denominator = input_tokens + cache_creation_input_tokens
+        if cache_creation_input_tokens or cached_input_tokens > input_tokens:
+            cache_denominator += cached_input_tokens
         models.append(
             {
                 "provider": provider,
@@ -318,10 +342,11 @@ def _model_efficiency(con) -> list[dict]:
                 "total_tokens": total_tokens,
                 "input_tokens": input_tokens,
                 "cached_input_tokens": cached_input_tokens,
+                "cache_creation_input_tokens": cache_creation_input_tokens,
                 "output_tokens": output_tokens,
                 "estimated_cost_usd": cost,
                 "avg_cost_per_turn_usd": round(cost / event_count, 6) if event_count else 0.0,
-                "cached_input_ratio": round(cached_input_tokens / input_tokens, 6) if input_tokens else 0.0,
+                "cached_input_ratio": round(cached_input_tokens / cache_denominator, 6) if cache_denominator else 0.0,
                 "active_ms": active,
                 "tokens_per_minute": _per_minute(total_tokens, active),
                 "usd_per_minute": _per_minute(cost, active),
@@ -333,7 +358,9 @@ def _model_efficiency(con) -> list[dict]:
 def _simulation_summaries(con) -> list[dict]:
     rows = con.execute(
         """
-        select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+        select s.model, te.input_tokens, te.cached_input_tokens,
+               te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
+               te.output_tokens
         from token_events te
         join sessions s on s.id = te.session_pk
         order by te.timestamp_ms asc, te.sequence asc
@@ -450,7 +477,9 @@ def status_for_cwd(
 
         last_turn = con.execute(
             """
-            select te.total_tokens, s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+            select te.total_tokens, s.model, te.input_tokens, te.cached_input_tokens,
+                   te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
+                   te.output_tokens
             from token_events te
             join sessions s on s.id = te.session_pk
             where te.session_pk = ?
@@ -711,7 +740,9 @@ def simulate_model_cost(db_path: Path | str, target_model: str) -> dict:
         init_db(con)
         rows = con.execute(
             """
-            select s.model, te.input_tokens, te.cached_input_tokens, te.output_tokens
+            select s.model, te.input_tokens, te.cached_input_tokens,
+                   te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
+                   te.output_tokens
             from token_events te
             join sessions s on s.id = te.session_pk
             order by te.timestamp_ms asc, te.sequence asc

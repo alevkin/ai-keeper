@@ -13,7 +13,10 @@ def test_readme_is_product_focused_and_points_to_user_paths() -> None:
     assert "## What You Get" in text
     assert "## Install" in text
     assert "## Privacy Model" in text
+    assert "Codex and Claude usage" in text
+    assert "Claude metadata import" in text
     assert "brew install alevkin/tap/aikeeper" in text
+    assert "uv run aikeeper sync claude --once" in text
     assert "brew install alevkin/tap/aikeeper\naikeeper-install --port 8766" not in text
     assert "https://andrei.levk.in/ai-keeper/" in text
     assert "docs/user-guide.md" in text
@@ -33,7 +36,7 @@ def test_github_pages_landing_is_static_product_page() -> None:
     svg = preview.read_text(encoding="utf-8")
     hook_svg = hook_preview.read_text(encoding="utf-8")
 
-    assert "<title>AI Keeper" in html
+    assert "<title>AI Keeper - Local AI Token Tracker</title>" in html
     assert 'href="styles.css?v=' in html
     assert 'href="styles.css"' not in html
     assert 'src="assets/dashboard-preview.svg"' in html
@@ -44,6 +47,9 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert 'href="#install"' in html
     assert 'href="https://github.com/alevkin/ai-keeper"' in html
     assert "Understand your AI coding spend without giving up privacy." in html
+    assert "Track Codex and Claude tokens" in html
+    assert "Claude metadata import" in html
+    assert "cache read and cache write tokens" in html
     assert 'id="codex-hook"' in html
     assert "Codex gets the usage line too" in html
     assert "<strong>AI Keeper</strong> | turn 125,770 tokens" not in html
@@ -83,6 +89,8 @@ def test_markdown_user_guide_documents_primary_and_recovery_paths() -> None:
     assert "starts the local service" in text
     assert "installs the Codex hooks" in text
     assert "aikeeper-install --port 8766" in text
+    assert "uv run aikeeper sync claude --once" in text
+    assert "$CLAUDE_HOME/projects/**/*.jsonl" in text
     assert "does not store prompts" in text
 
 

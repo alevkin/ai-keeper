@@ -21,6 +21,10 @@
         <strong>{{ context_health.cached_input_tokens | compact_tokens }}</strong>
       </div>
       <div>
+        <span class="label">Cache write</span>
+        <strong>{{ context_health.cache_creation_input_tokens | compact_tokens }}</strong>
+      </div>
+      <div>
         <span class="label">Output</span>
         <strong>{{ context_health.output_tokens | compact_tokens }}</strong>
       </div>
@@ -52,13 +56,14 @@
     <span>{{ events | length }} turns</span>
   </div>
   <table data-sortable>
-    <thead><tr><th class="num">#</th><th class="num">Input</th><th class="num">Cached</th><th class="num">Output</th><th class="num">Reasoning</th><th class="num">Turn</th><th class="num">Running</th></tr></thead>
+    <thead><tr><th class="num">#</th><th class="num">Input</th><th class="num">Cache read</th><th class="num">Cache write</th><th class="num">Output</th><th class="num">Reasoning</th><th class="num">Turn</th><th class="num">Running</th></tr></thead>
     <tbody>
       {% for event in events %}
       <tr>
         <td class="num" data-sort-value="{{ event.sequence }}">{{ event.sequence }}</td>
         <td class="num" data-sort-value="{{ event.input_tokens }}">{{ event.input_tokens | tokens }}</td>
         <td class="num" data-sort-value="{{ event.cached_input_tokens }}">{{ event.cached_input_tokens | tokens }}</td>
+        <td class="num" data-sort-value="{{ event.cache_creation_input_tokens + event.cache_creation_1h_input_tokens }}">{{ (event.cache_creation_input_tokens + event.cache_creation_1h_input_tokens) | tokens }}</td>
         <td class="num" data-sort-value="{{ event.output_tokens }}">{{ event.output_tokens | tokens }}</td>
         <td class="num" data-sort-value="{{ event.reasoning_output_tokens }}">{{ event.reasoning_output_tokens | tokens }}</td>
         <td class="num" data-sort-value="{{ event.total_tokens }}">{{ event.total_tokens | tokens }}</td>

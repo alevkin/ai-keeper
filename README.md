@@ -6,9 +6,9 @@
 
 Understand your AI coding spend without giving up privacy.
 
-AI Keeper is a local dashboard for Codex usage. It shows token and estimated
-cost usage by project, task, session, and turn, then surfaces the latest totals
-back inside Codex after every turn.
+AI Keeper is a local dashboard for Codex and Claude usage. It shows token and
+estimated cost usage by project, task, session, and turn, then surfaces the
+latest totals back inside Codex after every turn.
 
 It is built for developers who want a simple answer to a surprisingly hard
 question: where did today's AI context and money go?
@@ -32,17 +32,18 @@ AI Keeper makes usage observable while keeping the sensitive parts local:
 
 ## What You Get
 
-- **Dashboard**: today, week, project, task, session, model, and turn views.
+- **Dashboard**: today, week, project, task, session, provider, model, and turn views.
 - **Codex hook summary**: after each turn, see current turn, session, task, and
   project totals with a dashboard link.
+- **Claude metadata import**: sync local Claude JSONL usage, including cache
+  read and cache write tokens, without storing message content.
 - **Cost estimates**: local USD estimates for stored token events.
 - **Active rate**: tokens/min and estimated USD/min during active agent work.
 - **Budgets**: soft warnings by project/task/session without blocking Codex.
 - **Health checks**: ingest health, missing source details, diagnostics bundles,
   and service status.
 - **Privacy audit**: checks that stored data remains metadata-only.
-- **Portable shape**: provider-neutral storage with Codex support today and
-  Claude metadata ingestion available for local experiments.
+- **Portable shape**: provider-neutral storage with Codex and Claude adapters.
 
 ## Install
 
@@ -129,6 +130,7 @@ repository in `$AIKEEPER_HOME/private-markers.toml` or the path pointed to by
 uv run aikeeper doctor --port 8766
 uv run aikeeper service status --port 8766
 uv run aikeeper sync codex --once
+uv run aikeeper sync claude --once
 uv run aikeeper audit distribution --json
 uv run aikeeper diagnostics bundle --port 8766
 uv run aikeeper export --format markdown
@@ -152,10 +154,14 @@ Codex support reads local metadata from:
 - `$CODEX_HOME/archived_sessions/*.jsonl`
 - `codex exec --json` streams when using the wrapper
 
-Claude metadata ingestion is available through:
+Claude support reads local metadata from:
+
+- `$CLAUDE_HOME/projects/**/*.jsonl`
+
+Claude sync is explicit:
 
 ```bash
-uv run aikeeper sync claude
+uv run aikeeper sync claude --once
 ```
 
 ## Release And Distribution

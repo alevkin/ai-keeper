@@ -3,12 +3,21 @@ from __future__ import annotations
 from aikeeper.pricing import estimate_event_cost_usd
 
 
+def _event_int(event, key: str) -> int:
+    try:
+        return int(event[key] or 0)
+    except (KeyError, TypeError, ValueError):
+        return 0
+
+
 def event_cost_usd(event, model: str | None) -> float | None:
     return estimate_event_cost_usd(
         model,
-        input_tokens=int(event["input_tokens"]),
-        cached_input_tokens=int(event["cached_input_tokens"]),
-        output_tokens=int(event["output_tokens"]),
+        input_tokens=_event_int(event, "input_tokens"),
+        cached_input_tokens=_event_int(event, "cached_input_tokens"),
+        cache_creation_input_tokens=_event_int(event, "cache_creation_input_tokens"),
+        cache_creation_1h_input_tokens=_event_int(event, "cache_creation_1h_input_tokens"),
+        output_tokens=_event_int(event, "output_tokens"),
     )
 
 
@@ -30,16 +39,30 @@ def context_health(events: list, model: str | None = None) -> dict:
             "recommendation": "No token events imported yet.",
         }
 
-    input_tokens = sum(int(event["input_tokens"]) for event in events)
-    cached = sum(int(event["cached_input_tokens"]) for event in events)
-    output = sum(int(event["output_tokens"]) for event in events)
-    first_input = max(int(events[0]["input_tokens"]), 1)
-    last_input = int(events[-1]["input_tokens"])
-    first_ratio = _ratio(int(events[0]["cached_input_tokens"]), int(events[0]["input_tokens"]))
-    last_ratio = _ratio(int(events[-1]["cached_input_tokens"]), int(events[-1]["input_tokens"]))
+    input_tokens = sum(_event_int(event, "input_tokens") for event in events)
+    cached = sum(_event_int(event, "cached_input_tokens") for event in events)
+    cache_creation = sum(
+        _event_int(event, "cache_creation_input_tokens") + _event_int(event, "cache_creation_1h_input_tokens")
+        for event in events
+    )
+    output = sum(_event_int(event, "output_tokens") for event in events)
+
+    def cache_denominator(event) -> int:
+        base = _event_int(event, "input_tokens")
+        read = _event_int(event, "cached_input_tokens")
+        write = _event_int(event, "cache_creation_input_tokens") + _event_int(event, "cache_creation_1h_input_tokens")
+        return base + write + read if write or read > base else base
+
+    first_input = max(cache_denominator(events[0]), 1)
+    last_input = cache_denominator(events[-1])
+    first_ratio = _ratio(_event_int(events[0], "cached_input_tokens"), cache_denominator(events[0]))
+    last_ratio = _ratio(_event_int(events[-1], "cached_input_tokens"), cache_denominator(events[-1]))
     growth = round(last_input / first_input, 6)
     cache_regression = first_ratio >= 0.2 and last_ratio < first_ratio * 0.5
-    cached_ratio = _ratio(cached, input_tokens)
+    cached_denominator = input_tokens + cache_creation
+    if cache_creation or cached > input_tokens:
+        cached_denominator += cached
+    cached_ratio = _ratio(cached, cached_denominator)
     if growth >= 4 or cached_ratio < 0.2 or cache_regression:
         recommendation = "Consider compaction or a fresh session; context is growing and cache health is weak."
     else:
@@ -48,9 +71,10 @@ def context_health(events: list, model: str | None = None) -> dict:
         "model": model,
         "input_tokens": input_tokens,
         "cached_input_tokens": cached,
+        "cache_creation_input_tokens": cache_creation,
         "output_tokens": output,
         "cached_input_ratio": cached_ratio,
-        "first_input_tokens": int(events[0]["input_tokens"]),
+        "first_input_tokens": first_input,
         "last_input_tokens": last_input,
         "input_growth_ratio": growth,
         "cache_regression": cache_regression,
@@ -65,8 +89,11 @@ def detect_session_anomalies(events: list, model: str | None) -> list[dict]:
     for event in events:
         sequence = int(event["sequence"])
         total_tokens = int(event["total_tokens"])
-        input_tokens = int(event["input_tokens"])
-        cache_ratio = _ratio(int(event["cached_input_tokens"]), input_tokens)
+        input_tokens = _event_int(event, "input_tokens")
+        cache_denominator = input_tokens + _event_int(event, "cache_creation_input_tokens") + _event_int(event, "cache_creation_1h_input_tokens")
+        if _event_int(event, "cached_input_tokens") > input_tokens:
+            cache_denominator += _event_int(event, "cached_input_tokens")
+        cache_ratio = _ratio(_event_int(event, "cached_input_tokens"), cache_denominator or input_tokens)
         cost = event_cost_usd(event, model)
 
         if total_tokens >= 100_000:

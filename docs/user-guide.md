@@ -1,8 +1,8 @@
 # AI Keeper User Guide
 
-AI Keeper is a local-only usage dashboard for Codex. It helps you answer where
-tokens and estimated cost go across projects, tasks, sessions, and turns without
-copying prompts or assistant messages into its database.
+AI Keeper is a local-only usage dashboard for Codex and Claude. It helps you
+answer where tokens and estimated cost go across projects, tasks, sessions, and
+turns without copying prompts or assistant messages into its database.
 
 ## Install
 
@@ -76,6 +76,7 @@ chat content.
 ```bash
 uv run aikeeper service status --port 8766
 uv run aikeeper sync codex --once
+uv run aikeeper sync claude --once
 uv run aikeeper diagnostics bundle --port 8766
 uv run aikeeper audit privacy --json
 uv run aikeeper audit distribution --json
@@ -87,3 +88,16 @@ After hooks are installed, Codex turns can include a compact AI Keeper line with
 turn, session, task, project, and dashboard totals. Hook output is metadata-only:
 `UserPromptSubmit` explicitly discards prompt text, and `Stop` syncs token
 events from local transcript metadata.
+
+## Claude Metadata Sync
+
+Claude support is an explicit local sync path:
+
+```bash
+uv run aikeeper sync claude --once
+```
+
+It reads usage metadata from `$CLAUDE_HOME/projects/**/*.jsonl`, including
+input, cache read, cache write, and output token counts. AI Keeper stores the
+session id, cwd, model, git branch, transcript path, ingest offset, timestamps,
+and token counts only. It does not persist Claude message content or raw JSONL.

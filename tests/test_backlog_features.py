@@ -230,7 +230,7 @@ def test_claude_jsonl_parser_and_sync_are_metadata_only(tmp_path: Path) -> None:
     parsed = list(parse_claude_token_events(transcript.read_text().splitlines()))
     result = sync_claude_once(db_path=db_path, claude_home=claude_home)
 
-    assert parsed[0].total_tokens == 150
+    assert parsed[0].total_tokens == 190
     assert parsed[0].cached_input_tokens == 40
     assert result.token_events_imported == 1
     with connect(db_path) as con:

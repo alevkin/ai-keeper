@@ -41,7 +41,7 @@ from aikeeper.web import create_app
 
 
 console = Console()
-app = typer.Typer(help="Local Codex token usage daemon and dashboard.")
+app = typer.Typer(help="Local AI token usage daemon and dashboard.")
 daemon_app = typer.Typer(help="Run the local web daemon.")
 sync_app = typer.Typer(help="Synchronize provider usage data.")
 hook_app = typer.Typer(help="Codex hook entrypoints.")
@@ -98,8 +98,11 @@ def sync_codex(
 
 @sync_app.command("claude")
 def sync_claude(
+    once: Annotated[bool, typer.Option(help="Run one sync pass and exit.")] = True,
     db_path: Annotated[Path, typer.Option()] = default_db_path(),
 ) -> None:
+    if not once:
+        raise typer.BadParameter("Only --once is supported.")
     result = sync_claude_once(db_path=db_path, claude_home=claude_home())
     sys.stdout.write(
         json.dumps(

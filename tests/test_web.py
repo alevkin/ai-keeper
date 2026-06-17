@@ -179,6 +179,41 @@ def test_overview_exposes_live_burn_rate_and_model_efficiency(tmp_path: Path) ->
     assert model_rows["gpt-5.3-codex"]["estimated_cost_usd"] > 0
 
 
+def test_api_sync_claude_imports_local_metadata(tmp_path: Path) -> None:
+    claude_home = tmp_path / "claude"
+    project_dir = claude_home / "projects" / "-tmp-repo"
+    project_dir.mkdir(parents=True)
+    transcript = project_dir / "session.jsonl"
+    transcript.write_text(
+        json.dumps(
+            {
+                "sessionId": "claude-session-1",
+                "cwd": str(tmp_path / "repo"),
+                "timestamp": "2026-06-12T16:34:53.333Z",
+                "message": {
+                    "model": "claude-sonnet-4-6",
+                    "usage": {"input_tokens": 10, "cache_read_input_tokens": 20, "output_tokens": 5},
+                    "content": "SECRET_CLAUDE_TEXT",
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "repo").mkdir()
+    db_path = tmp_path / "keeper.sqlite"
+    client = TestClient(create_app(db_path=db_path, claude_home=claude_home))
+
+    response = client.post("/api/sync/claude")
+
+    assert response.status_code == 200
+    assert response.json() == {"sessions_imported": 1, "token_events_imported": 1}
+    with connect(db_path) as con:
+        session = con.execute("select * from sessions where provider = 'claude'").fetchone()
+    assert session["model_provider"] == "anthropic"
+    assert b"SECRET_CLAUDE_TEXT" not in db_path.read_bytes()
+
+
 def test_overview_exposes_budget_warnings_from_config(tmp_path: Path) -> None:
     db_path = tmp_path / "keeper.sqlite"
     cwd = tmp_path / "repo"

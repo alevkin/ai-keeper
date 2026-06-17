@@ -55,6 +55,8 @@ create table if not exists token_events (
     timestamp_ms integer not null,
     input_tokens integer not null default 0,
     cached_input_tokens integer not null default 0,
+    cache_creation_input_tokens integer not null default 0,
+    cache_creation_1h_input_tokens integer not null default 0,
     output_tokens integer not null default 0,
     reasoning_output_tokens integer not null default 0,
     total_tokens integer not null default 0,
@@ -131,6 +133,15 @@ create index if not exists idx_system_jobs_status on system_jobs(status);
 """
 
 
+def _columns(con: sqlite3.Connection, table: str) -> set[str]:
+    return {str(row["name"]) for row in con.execute(f"pragma table_info({table})")}
+
+
+def _ensure_column(con: sqlite3.Connection, table: str, name: str, definition: str) -> None:
+    if name not in _columns(con, table):
+        con.execute(f"alter table {table} add column {name} {definition}")
+
+
 def connect(db_path: Path | str) -> sqlite3.Connection:
     path = Path(db_path).expanduser()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -143,4 +154,6 @@ def connect(db_path: Path | str) -> sqlite3.Connection:
 
 def init_db(con: sqlite3.Connection) -> None:
     con.executescript(SCHEMA)
+    _ensure_column(con, "token_events", "cache_creation_input_tokens", "integer not null default 0")
+    _ensure_column(con, "token_events", "cache_creation_1h_input_tokens", "integer not null default 0")
     con.commit()

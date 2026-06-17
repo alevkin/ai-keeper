@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from aikeeper.audit import audit_privacy
 from aikeeper.budgets import LIMIT_DEFINITIONS, load_budget_config_from_db, save_budget_settings
+from aikeeper.claude import sync_claude_once
 from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
 from aikeeper.diagnostics import append_system_action_log, create_diagnostics_bundle, diagnostics_overview, resolve_diagnostics_bundle
@@ -22,6 +23,7 @@ from aikeeper.installer import codex_hooks_installed
 from aikeeper.launchd import default_launch_agent_path, launch_agent_status, project_root
 from aikeeper.service import overview, project_detail, session_detail, simulate_model_cost
 from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home
+from aikeeper.settings import claude_home as default_claude_home
 from aikeeper.settings import codex_home as default_codex_home
 from aikeeper.settings import default_db_path
 from aikeeper.system_jobs import create_system_job, list_system_jobs
@@ -230,11 +232,13 @@ def create_app(
     *,
     db_path: Path | str | None = None,
     codex_home: Path | str | None = None,
+    claude_home: Path | str | None = None,
     budget_path: Path | str | None = None,
     auto_sync: bool = False,
 ) -> FastAPI:
     db = Path(db_path).expanduser() if db_path else default_db_path()
     home = Path(codex_home).expanduser() if codex_home else default_codex_home()
+    anthropic_home = Path(claude_home).expanduser() if claude_home else default_claude_home()
     budgets = Path(budget_path).expanduser() if budget_path else None
     with connect(db) as con:
         init_db(con)
@@ -307,6 +311,11 @@ def create_app(
     @app.post("/api/sync/codex")
     def api_sync_codex() -> dict:
         result = sync_codex_once(db_path=db, codex_home=home)
+        return {"sessions_imported": result.sessions_imported, "token_events_imported": result.token_events_imported}
+
+    @app.post("/api/sync/claude")
+    def api_sync_claude() -> dict:
+        result = sync_claude_once(db_path=db, claude_home=anthropic_home)
         return {"sessions_imported": result.sessions_imported, "token_events_imported": result.token_events_imported}
 
     @app.post("/budgets")

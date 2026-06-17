@@ -22,6 +22,8 @@ class TokenUsageEvent:
     reasoning_output_tokens: int
     total_tokens: int
     running_total_tokens: int
+    cache_creation_input_tokens: int = 0
+    cache_creation_1h_input_tokens: int = 0
 
 
 @dataclass(frozen=True)
@@ -187,9 +189,10 @@ def _import_transcript(con: sqlite3.Connection, *, session_pk: int, path: Path) 
                     """
                     insert or ignore into token_events(
                         session_pk, sequence, timestamp_ms, input_tokens, cached_input_tokens,
+                        cache_creation_input_tokens, cache_creation_1h_input_tokens,
                         output_tokens, reasoning_output_tokens, total_tokens,
                         running_total_tokens, source_path, source_offset
-                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         session_pk,
@@ -197,6 +200,8 @@ def _import_transcript(con: sqlite3.Connection, *, session_pk: int, path: Path) 
                         event.timestamp_ms,
                         event.input_tokens,
                         event.cached_input_tokens,
+                        event.cache_creation_input_tokens,
+                        event.cache_creation_1h_input_tokens,
                         event.output_tokens,
                         event.reasoning_output_tokens,
                         event.total_tokens,
@@ -374,9 +379,10 @@ def ingest_codex_exec_line(
                 """
                 insert or ignore into token_events(
                     session_pk, sequence, timestamp_ms, input_tokens, cached_input_tokens,
+                    cache_creation_input_tokens, cache_creation_1h_input_tokens,
                     output_tokens, reasoning_output_tokens, total_tokens,
                     running_total_tokens, source_path, source_offset
-                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_pk,
@@ -384,6 +390,8 @@ def ingest_codex_exec_line(
                     event.timestamp_ms,
                     event.input_tokens,
                     event.cached_input_tokens,
+                    event.cache_creation_input_tokens,
+                    event.cache_creation_1h_input_tokens,
                     event.output_tokens,
                     event.reasoning_output_tokens,
                     event.total_tokens,

@@ -151,7 +151,8 @@ Acceptance:
 
 ### AK-010 Claude Adapter
 
-Status: shipped in v0.6.0.
+Status: shipped in v0.6.0; hardened in v0.26.0 with offset ingest,
+cache-write accounting, CLI `--once`, and web sync API support.
 
 Add a second provider adapter after Codex MVP stabilizes.
 
@@ -160,7 +161,7 @@ Add a second provider adapter after Codex MVP stabilizes.
 
 Acceptance:
 
-- `aikeeper sync claude` imports local Claude JSONL metadata.
+- `aikeeper sync claude --once` imports local Claude JSONL metadata.
 - Parser stores token counts, model, cwd, session id, and path only.
 
 ### AK-011 Privacy Audit

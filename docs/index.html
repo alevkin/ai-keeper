@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI Keeper - Local Codex Token Tracker</title>
+    <title>AI Keeper - Local AI Token Tracker</title>
     <meta
       name="description"
-      content="AI Keeper is a local-only token and estimated cost dashboard for Codex projects, tasks, sessions, and turns."
+      content="AI Keeper is a local-only token and estimated cost dashboard for Codex and Claude projects, tasks, sessions, and turns."
     >
     <meta property="og:title" content="AI Keeper">
     <meta
@@ -14,6 +14,10 @@
       content="Understand your AI coding spend without giving up privacy."
     >
     <meta property="og:type" content="website">
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23157465'/%3E%3Ctext x='32' y='39' text-anchor='middle' font-family='Arial,sans-serif' font-size='23' font-weight='700' fill='white'%3EAI%3C/text%3E%3C/svg%3E"
+    >
     <link rel="stylesheet" href="styles.css?v=20260617-hook-preview">
   </head>
   <body>
@@ -38,9 +42,9 @@
             Understand your AI coding spend without giving up privacy.
           </p>
           <p>
-            Track Codex tokens and estimated cost by project, task, session, and
-            turn. Keep the useful numbers, leave prompts and assistant messages
-            out of AI Keeper's database.
+            Track Codex and Claude tokens and estimated cost by project, task,
+            session, and turn. Keep the useful numbers, leave prompts and
+            assistant messages out of AI Keeper's database.
           </p>
           <div class="hero-actions" aria-label="Primary actions">
             <a class="button primary" href="#install">Install</a>
@@ -75,8 +79,8 @@
         <div class="section-heading">
           <h2>Usage you can act on</h2>
           <p>
-            AI Keeper turns local Codex metadata into a calm operating view for
-            everyday AI-assisted engineering work.
+            AI Keeper turns local Codex and Claude metadata into a calm
+            operating view for everyday AI-assisted engineering work.
           </p>
         </div>
         <div class="feature-grid">
@@ -89,12 +93,12 @@
             <p>After each Codex turn, get current usage and a dashboard link directly in the chat.</p>
           </article>
           <article>
-            <h3>Burn-rate awareness</h3>
-            <p>Compare active tokens/min, estimated USD/min, cache ratio, and model efficiency.</p>
+            <h3>Claude metadata import</h3>
+            <p>Sync local Claude JSONL usage, including cache read and cache write tokens, without storing messages.</p>
           </article>
           <article>
-            <h3>Health and diagnostics</h3>
-            <p>Inspect ingest status, missing sources, service health, and metadata-only support bundles.</p>
+            <h3>Burn-rate awareness</h3>
+            <p>Compare active tokens/min, estimated USD/min, cache ratio, and model efficiency.</p>
           </article>
         </div>
       </section>
@@ -121,8 +125,8 @@
         <div>
           <h2>Install in one command</h2>
           <p>
-            Start the local daemon, install Codex hooks, and open the dashboard
-            on your machine.
+            Start the local daemon, install Codex hooks, sync Claude metadata,
+            and open the dashboard on your machine.
           </p>
         </div>
         <div class="command-card">

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.25.3
+
+- fix: auto-install Homebrew service
+- docs: add product landing page
+
 ## v0.25.2
 
 - fix: externalize private marker checks

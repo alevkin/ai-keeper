@@ -5,6 +5,7 @@ import os
 import plistlib
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home, codex_home, 
 
 
 LAUNCHD_LABEL = "com.aikeeper.daemon"
+BOOTSTRAP_RETRY_DELAYS_S = (0.5, 1.0, 1.5, 2.0)
 
 
 @dataclass(frozen=True)
@@ -173,9 +175,28 @@ def _run_launchctl(args: list[str], *, check: bool = False) -> LaunchdResult:
     return launchd_result
 
 
+def _raise_launchctl_error(result: LaunchdResult) -> None:
+    raise RuntimeError(
+        f"{' '.join(result.command)} failed: {result.stderr.strip() or result.stdout.strip()}"
+    )
+
+
+def _is_transient_bootstrap_error(result: LaunchdResult) -> bool:
+    output = f"{result.stderr}\n{result.stdout}"
+    return result.returncode == 5 or "Bootstrap failed: 5" in output
+
+
 def bootstrap_launch_agent(plist_path: Path, *, label: str = LAUNCHD_LABEL) -> None:
     _run_launchctl(["bootout", service_target(label)], check=False)
-    _run_launchctl(["bootstrap", user_domain(), str(plist_path)], check=True)
+    bootstrap_args = ["bootstrap", user_domain(), str(plist_path)]
+    bootstrap_result = _run_launchctl(bootstrap_args, check=False)
+    for delay_s in BOOTSTRAP_RETRY_DELAYS_S:
+        if bootstrap_result.returncode == 0 or not _is_transient_bootstrap_error(bootstrap_result):
+            break
+        time.sleep(delay_s)
+        bootstrap_result = _run_launchctl(bootstrap_args, check=False)
+    if bootstrap_result.returncode != 0:
+        _raise_launchctl_error(bootstrap_result)
     _run_launchctl(["enable", service_target(label)], check=False)
     _run_launchctl(["kickstart", "-k", service_target(label)], check=True)
 

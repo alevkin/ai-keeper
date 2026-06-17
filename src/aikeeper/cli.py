@@ -18,7 +18,9 @@ from aikeeper.db import connect, init_db
 from aikeeper.exports import export_usage
 from aikeeper.health import ingest_health
 from aikeeper.hooks import handle_codex_hook
+from aikeeper.installer import codex_hooks_installed
 from aikeeper.installer import install_codex_hooks
+from aikeeper.installer import uninstall_codex_hooks
 from aikeeper.launchd import bootstrap_launch_agent
 from aikeeper.launchd import default_launch_agent_path
 from aikeeper.launchd import launch_agent_status
@@ -30,7 +32,7 @@ from aikeeper.launchd import write_launch_agent_plist
 from aikeeper.openai_costs import fetch_and_import_costs
 from aikeeper.service import status_for_cwd
 from aikeeper.service import simulate_model_cost
-from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, claude_home, codex_home, default_db_path, ensure_app_home
+from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home, claude_home, codex_home, default_db_path, ensure_app_home
 from aikeeper.web import create_app
 
 
@@ -44,6 +46,7 @@ codex_app = typer.Typer(help="Codex wrapper commands.")
 audit_app = typer.Typer(help="Inspect AI Keeper privacy guarantees.")
 health_app = typer.Typer(help="Inspect AI Keeper ingest health.")
 service_app = typer.Typer(help="Install and control the macOS launchd service.")
+uninstall_app = typer.Typer(help="Remove AI Keeper integrations.")
 app.add_typer(daemon_app, name="daemon")
 app.add_typer(sync_app, name="sync")
 app.add_typer(hook_app, name="hook")
@@ -52,6 +55,7 @@ app.add_typer(codex_app, name="codex")
 app.add_typer(audit_app, name="audit")
 app.add_typer(health_app, name="health")
 app.add_typer(service_app, name="service")
+app.add_typer(uninstall_app, name="uninstall")
 
 
 @daemon_app.command("start")
@@ -136,6 +140,49 @@ def install_codex_hooks_cmd(
 ) -> None:
     target = install_codex_hooks(scope=scope, codex_home=codex_home(), project_dir=Path.cwd())
     console.print(f"Installed Codex hooks at {target}")
+
+
+@install_app.command("all")
+def install_all(
+    host: Annotated[str, typer.Option()] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option()] = DEFAULT_PORT,
+    db_path: Annotated[Path | None, typer.Option()] = None,
+    scope: Annotated[str, typer.Option(help="user or project")] = "user",
+    plist_path: Annotated[Path | None, typer.Option()] = None,
+    start: Annotated[bool, typer.Option(help="Bootstrap and start the LaunchAgent after writing it.")] = True,
+) -> None:
+    db = db_path or default_db_path()
+    ensure_app_home()
+    with connect(db) as con:
+        init_db(con)
+    hooks_target = install_codex_hooks(scope=scope, codex_home=codex_home(), project_dir=Path.cwd())
+    service_target = write_launch_agent_plist(plist_path=plist_path, host=host, port=port, db_path=db)
+    if start:
+        bootstrap_launch_agent(service_target)
+
+    console.print(f"Initialized AI Keeper database at {db}")
+    console.print(f"Installed Codex hooks at {hooks_target}")
+    if start:
+        console.print(f"Installed and started AI Keeper LaunchAgent at {service_target}")
+    else:
+        console.print(f"Installed AI Keeper LaunchAgent at {service_target}")
+    console.print(f"Dashboard: http://{host}:{port}")
+    if uses_fallback_launch_agent_path(service_target):
+        console.print(
+            f"Note: {standard_launch_agent_path()} is not writable, so AI Keeper used a fallback plist path."
+        )
+
+
+@uninstall_app.command("all")
+def uninstall_all(
+    scope: Annotated[str, typer.Option(help="user or project")] = "user",
+    plist_path: Annotated[Path | None, typer.Option()] = None,
+) -> None:
+    service_target = uninstall_launch_agent(plist_path=plist_path)
+    hooks_target = uninstall_codex_hooks(scope=scope, codex_home=codex_home(), project_dir=Path.cwd())
+    console.print(f"Removed AI Keeper LaunchAgent at {service_target}")
+    console.print(f"Removed AI Keeper Codex hooks from {hooks_target}")
+    console.print(f"Kept AI Keeper data at {default_db_path()}")
 
 
 @service_app.command("install")
@@ -267,6 +314,74 @@ def health_ingest_cmd(
     for source in data["ingest_state"]["problem_sources"][:5]:
         state = "missing" if source["exists"] is False else "lagging" if source["lagging"] else "ok"
         console.print(f"  {state} source: {source['path'] or source['source_key']}")
+
+
+def _doctor_check(name: str, status: str, detail: str, fix: str | None = None) -> dict[str, str | None]:
+    return {"name": name, "status": status, "detail": detail, "fix": fix}
+
+
+@app.command("doctor")
+def doctor(
+    host: Annotated[str, typer.Option()] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option()] = DEFAULT_PORT,
+    db_path: Annotated[Path | None, typer.Option()] = None,
+    scope: Annotated[str, typer.Option(help="user or project")] = "user",
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    db = db_path or default_db_path()
+    home = app_home()
+    checks: list[dict[str, str | None]] = []
+
+    if home.exists() and os.access(home, os.W_OK):
+        checks.append(_doctor_check("app_home", "ok", str(home)))
+    elif home.exists():
+        checks.append(_doctor_check("app_home", "fail", f"{home} is not writable", "Fix directory ownership/permissions."))
+    else:
+        checks.append(_doctor_check("app_home", "warn", f"{home} does not exist", "Run `aikeeper install all`."))
+
+    if db.exists():
+        try:
+            with connect(db) as con:
+                init_db(con)
+            checks.append(_doctor_check("database", "ok", str(db)))
+        except Exception as exc:
+            checks.append(_doctor_check("database", "fail", f"{db}: {exc}", "Check SQLite file permissions."))
+    else:
+        checks.append(_doctor_check("database", "warn", f"{db} does not exist", "Run `aikeeper install all`."))
+
+    if codex_hooks_installed(scope=scope, codex_home=codex_home(), project_dir=Path.cwd()):
+        checks.append(_doctor_check("codex_hooks", "ok", f"{scope} hooks installed"))
+    else:
+        checks.append(
+            _doctor_check("codex_hooks", "warn", f"{scope} hooks are missing", f"Run `aikeeper install codex-hooks --scope {scope}`.")
+        )
+
+    service = launch_agent_status(host=host, port=port, plist_path=default_launch_agent_path())
+    if service["plist_exists"] and service["loaded"]:
+        checks.append(_doctor_check("launch_agent", "ok", str(service["plist_path"])))
+    elif service["plist_exists"]:
+        checks.append(_doctor_check("launch_agent", "warn", "LaunchAgent exists but is not loaded", "Run `aikeeper service start`."))
+    else:
+        checks.append(_doctor_check("launch_agent", "warn", "LaunchAgent plist is missing", "Run `aikeeper service install`."))
+
+    if service["ping"]["ok"]:
+        checks.append(_doctor_check("dashboard", "ok", service["url"]))
+    else:
+        checks.append(_doctor_check("dashboard", "warn", f"{service['url']} is not responding", "Run `aikeeper service restart`."))
+
+    statuses = {check["status"] for check in checks}
+    overall = "fail" if "fail" in statuses else "warn" if "warn" in statuses else "ok"
+    data = {"status": overall, "checks": checks}
+    if as_json:
+        sys.stdout.write(json.dumps(data, indent=2) + "\n")
+        return
+
+    console.print(f"AI Keeper doctor: {overall}")
+    for check in checks:
+        line = f"- {check['name']}: {check['status']} - {check['detail']}"
+        if check["fix"]:
+            line += f" ({check['fix']})"
+        console.print(line)
 
 
 @app.command("simulate")

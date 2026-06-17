@@ -16,6 +16,19 @@ or raw transcript JSON into its own database.
 
 ## Quick Start
 
+Install everything needed for the local MVP: SQLite schema, Codex hooks, and the
+macOS LaunchAgent daemon.
+
+```bash
+uv run aikeeper install all --port 8766
+uv run aikeeper doctor --port 8766
+```
+
+Open <http://127.0.0.1:8766> for the dashboard. After the hooks are installed,
+Codex turn summaries include a dashboard link when the daemon is reachable.
+
+For manual one-off use:
+
 ```bash
 uv run aikeeper sync codex --once
 uv run aikeeper daemon start
@@ -43,6 +56,9 @@ uv run aikeeper service restart
 uv run aikeeper service uninstall
 uv run aikeeper service status --port 8766 --json
 ```
+
+Use `uv run aikeeper uninstall all` to remove the LaunchAgent and AI Keeper
+Codex hook entries together. It keeps the local SQLite database by default.
 
 The installer writes `~/Library/LaunchAgents/com.aikeeper.daemon.plist` when
 that directory is writable. If it is not writable, AI Keeper falls back to

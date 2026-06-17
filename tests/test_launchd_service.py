@@ -4,6 +4,8 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from aikeeper.cli import app
+from aikeeper.launchd import LaunchdResult
+from aikeeper.launchd import bootstrap_launch_agent
 from aikeeper.launchd import build_launch_agent_plist
 from aikeeper.launchd import default_launch_agent_path
 from aikeeper.launchd import launch_agent_status
@@ -132,3 +134,35 @@ def test_launch_agent_status_reports_ping(monkeypatch, tmp_path: Path) -> None:
     assert status["loaded"] is True
     assert status["ping"]["ok"] is True
     assert status["ping"]["version"]["label"] == "v-test"
+
+
+def test_bootstrap_launch_agent_retries_transient_bootstrap_io_error(monkeypatch, tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+    bootstrap_attempts = 0
+
+    def fake_run_launchctl(args: list[str], *, check: bool = False) -> LaunchdResult:
+        nonlocal bootstrap_attempts
+        calls.append(args)
+        if args[0] == "bootstrap":
+            bootstrap_attempts += 1
+            if bootstrap_attempts < 4:
+                result = LaunchdResult(["launchctl", *args], 5, "", "Bootstrap failed: 5: Input/output error")
+                if check:
+                    raise RuntimeError(result.stderr)
+                return result
+        return LaunchdResult(["launchctl", *args], 0, "", "")
+
+    monkeypatch.setattr("aikeeper.launchd._run_launchctl", fake_run_launchctl)
+    monkeypatch.setattr("aikeeper.launchd.time.sleep", lambda seconds: None)
+
+    bootstrap_launch_agent(tmp_path / "service.plist")
+
+    assert [call[0] for call in calls] == [
+        "bootout",
+        "bootstrap",
+        "bootstrap",
+        "bootstrap",
+        "bootstrap",
+        "enable",
+        "kickstart",
+    ]

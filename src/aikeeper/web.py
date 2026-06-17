@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -16,6 +16,7 @@ from aikeeper.audit import audit_privacy
 from aikeeper.budgets import LIMIT_DEFINITIONS, load_budget_config_from_db, save_budget_settings
 from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
+from aikeeper.diagnostics import append_system_action_log, create_diagnostics_bundle, diagnostics_overview, resolve_diagnostics_bundle
 from aikeeper.health import ingest_health
 from aikeeper.installer import codex_hooks_installed
 from aikeeper.launchd import default_launch_agent_path, launch_agent_status, project_root
@@ -263,6 +264,10 @@ def create_app(
         data["version"] = get_app_version()
         return data
 
+    @app.get("/api/diagnostics")
+    def api_diagnostics() -> dict:
+        return diagnostics_overview()
+
     @app.get("/api/audit/privacy")
     def api_privacy_audit() -> dict:
         return audit_privacy(db)
@@ -335,6 +340,39 @@ def create_app(
                 "version": get_app_version(),
                 "active_page": "system",
             },
+        )
+
+    @app.get("/diagnostics", response_class=HTMLResponse)
+    def diagnostics_page(request: Request) -> HTMLResponse:
+        created = request.query_params.get("created", "")
+        return templates.TemplateResponse(
+            request,
+            "diagnostics.html",
+            {
+                "diagnostics": diagnostics_overview(),
+                "created": created,
+                "version": get_app_version(),
+                "active_page": "diagnostics",
+            },
+        )
+
+    @app.post("/diagnostics/bundles")
+    def create_diagnostics_page_bundle(request: Request) -> RedirectResponse:
+        host, port = _request_host_port(request)
+        archive = create_diagnostics_bundle(db_path=db, host=host, port=port)
+        append_system_action_log(f"Created AI Keeper diagnostics bundle: {archive}")
+        return RedirectResponse(f"/diagnostics?created={archive.name}", status_code=303)
+
+    @app.get("/diagnostics/bundles/{filename}")
+    def download_diagnostics_bundle(filename: str) -> FileResponse:
+        try:
+            bundle = resolve_diagnostics_bundle(filename)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="diagnostics bundle not found") from exc
+        return FileResponse(
+            bundle,
+            media_type="application/zip",
+            filename=bundle.name,
         )
 
     @app.post("/system/actions/{action}")

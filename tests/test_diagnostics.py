@@ -7,6 +7,7 @@ from typer.testing import CliRunner
 from aikeeper.cli import app
 from aikeeper.db import connect, init_db
 from aikeeper.diagnostics import create_diagnostics_bundle
+from aikeeper.diagnostics import list_system_action_log
 
 
 def test_create_diagnostics_bundle_writes_metadata_only_archive(tmp_path: Path, monkeypatch) -> None:
@@ -84,3 +85,21 @@ def test_cli_diagnostics_bundle_outputs_archive_path(tmp_path: Path, monkeypatch
     payload = json.loads(result.stdout)
     assert Path(payload["archive_path"]).exists()
     assert payload["metadata_only"] is True
+
+
+def test_system_action_log_collapses_wrapped_bundle_paths(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    log_dir = home / "logs"
+    log_dir.mkdir(parents=True)
+    log_dir.joinpath("system-actions.log").write_text(
+        "Created AI Keeper diagnostics bundle: \n"
+        "/Users/example/.aikeeper/diagnostics/aikeeper-diagnostics-1781710942290.zi\n"
+        "p\n",
+        encoding="utf-8",
+    )
+
+    lines = list_system_action_log(home=home)
+
+    assert lines == [
+        "Created AI Keeper diagnostics bundle: /Users/example/.aikeeper/diagnostics/aikeeper-diagnostics-1781710942290.zip"
+    ]

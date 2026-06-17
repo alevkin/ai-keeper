@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Diagnostics - AI Keeper{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>Diagnostics</h1>
+    <p>Create metadata-only troubleshooting bundles, download recent archives, and review the latest system actions.</p>
+  </div>
+  <form method="post" action="/diagnostics/bundles" class="page-action">
+    <button type="submit">Create Bundle</button>
+  </form>
+</section>
+
+{% if created %}
+<section class="notice-card">
+  <strong>Bundle created</strong>
+  <span>{{ created }}</span>
+</section>
+{% endif %}
+
+<section class="ops-grid diagnostics-grid">
+  <div class="panel system-panel">
+    <div class="panel-head">
+      <h2>Diagnostics Bundles</h2>
+      <span>{{ diagnostics.bundles|length }} recent</span>
+    </div>
+    {% if diagnostics.bundles %}
+    <div class="diagnostics-list">
+      {% for bundle in diagnostics.bundles %}
+      <a class="diagnostics-row" href="/diagnostics/bundles/{{ bundle.filename }}">
+        <div>
+          <strong>{{ bundle.filename }}</strong>
+          <small>{{ bundle.created_at }} · {{ bundle.size_bytes }} bytes</small>
+        </div>
+        <span>Download</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <strong>No bundles yet</strong>
+      <span>Create the first metadata-only diagnostics bundle.</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="panel system-panel">
+    <div class="panel-head">
+      <h2>Action Log</h2>
+      <span>latest tail</span>
+    </div>
+    {% if diagnostics.action_log %}
+    <ol class="action-log">
+      {% for line in diagnostics.action_log %}
+      <li>{{ line }}</li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="empty-state">
+      <strong>No actions recorded</strong>
+      <span>Repair, reinstall, restart, and diagnostics jobs will appear here.</span>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel system-panel">
+  <div class="panel-head">
+    <h2>Local Paths</h2>
+    <span>metadata only</span>
+  </div>
+  <ul class="system-facts path-facts">
+    <li><span>Bundles</span><code>{{ diagnostics.paths.diagnostics_dir }}</code></li>
+    <li><span>Action log</span><code>{{ diagnostics.paths.action_log }}</code></li>
+  </ul>
+</section>
+{% endblock %}

@@ -39,7 +39,7 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert manifest["name"] == "AI Keeper"
-    assert manifest["version"] == "0.13.0"
+    assert manifest["version"] == "0.14.0"
     assert manifest["local_only"] is True
     assert manifest["metadata_only"] is True
     assert manifest["scripts"]["install"] == "scripts/install.sh"

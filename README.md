@@ -35,6 +35,8 @@ Codex turn summaries include a dashboard link when the daemon is reachable.
 Use <http://127.0.0.1:8766/system> for local service status, paths, logs, and
 recovery commands. The System page can queue confirmed background actions for
 repair, reinstall, restart, and metadata-only diagnostics.
+Use <http://127.0.0.1:8766/diagnostics> to create metadata-only diagnostics
+bundles, download recent archives, and inspect the latest system action log.
 
 For manual one-off use:
 
@@ -80,7 +82,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.13.0
+scripts/upgrade.sh --port 8766 --target v0.14.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -210,6 +212,8 @@ Diagnostics bundles are written under `$AIKEEPER_HOME/diagnostics` by default.
 They contain doctor/system status, privacy/ingest health, service metadata, and
 tail logs. They do not include prompts, assistant messages, raw transcripts, or
 the SQLite database file.
+The dashboard Diagnostics page can create these bundles directly and download
+recent archives without exposing raw chat content.
 
 `aikeeper codex exec -- ...` wraps `codex exec --json`, streams Codex output
 unchanged, and records `turn.completed.usage` as local token events.

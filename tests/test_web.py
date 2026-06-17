@@ -359,6 +359,7 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     budgets_page = client.get("/budgets")
     health_page = client.get("/health")
     system_page = client.get("/system")
+    diagnostics_page = client.get("/diagnostics")
 
     assert "v9.9.9" in page.text
     assert favicon.status_code == 204
@@ -391,6 +392,10 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     assert "Privacy Audit" in health_page.text
     assert "Ingest Health" in health_page.text
 
+    assert diagnostics_page.status_code == 200
+    assert 'aria-current="page">Diagnostics' in diagnostics_page.text
+    assert "Diagnostics Bundles" in diagnostics_page.text
+
     assert system_page.status_code == 200
     assert 'aria-current="page">System' in system_page.text
     assert "System" in system_page.text
@@ -422,3 +427,68 @@ def test_system_actions_require_confirmation_and_queue_background_command(tmp_pa
     assert accepted.headers["location"] == "/system?action=repair"
     assert invalid.status_code == 404
     assert calls == [("repair", 8766)]
+
+
+def test_diagnostics_page_lists_bundles_actions_and_downloads_archive(tmp_path: Path, monkeypatch) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    app_home = tmp_path / "home"
+    bundle_dir = app_home / "diagnostics"
+    log_dir = app_home / "logs"
+    cwd.mkdir()
+    bundle_dir.mkdir(parents=True)
+    log_dir.mkdir()
+    seed_usage(db_path, cwd)
+    bundle = bundle_dir / "aikeeper-diagnostics-1781000000000.zip"
+    bundle.write_bytes(b"diagnostics zip")
+    (log_dir / "system-actions.log").write_text("repair queued\nCreated AI Keeper diagnostics bundle\n", encoding="utf-8")
+    monkeypatch.setenv("AIKEEPER_HOME", str(app_home))
+    app = create_app(db_path=db_path)
+    client = TestClient(app)
+
+    page = client.get("/diagnostics")
+    api = client.get("/api/diagnostics").json()
+    download = client.get(f"/diagnostics/bundles/{bundle.name}")
+    missing = client.get("/diagnostics/bundles/../aikeeper.sqlite")
+
+    assert page.status_code == 200
+    assert "Diagnostics Bundles" in page.text
+    assert bundle.name in page.text
+    assert "repair queued" in page.text
+    assert f'href="/diagnostics/bundles/{bundle.name}"' in page.text
+    assert api["bundles"][0]["filename"] == bundle.name
+    assert api["action_log"][-1] == "Created AI Keeper diagnostics bundle"
+    assert download.status_code == 200
+    assert download.content == b"diagnostics zip"
+    assert download.headers["content-type"] == "application/zip"
+    assert missing.status_code == 404
+
+
+def test_diagnostics_post_creates_bundle_and_redirects_to_page(tmp_path: Path, monkeypatch) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    app_home = tmp_path / "home"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    monkeypatch.setenv("AIKEEPER_HOME", str(app_home))
+    monkeypatch.setattr(
+        "aikeeper.diagnostics.launch_agent_status",
+        lambda **kwargs: {
+            "loaded": True,
+            "ping": {"ok": True},
+            "url": "http://127.0.0.1:8766",
+            "plist_path": str(tmp_path / "service.plist"),
+            "plist_exists": True,
+        },
+    )
+    app = create_app(db_path=db_path)
+    client = TestClient(app)
+
+    response = client.post("/diagnostics/bundles", follow_redirects=False)
+
+    bundles = list((app_home / "diagnostics").glob("aikeeper-diagnostics-*.zip"))
+    action_log = app_home / "logs" / "system-actions.log"
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/diagnostics?created=aikeeper-diagnostics-")
+    assert len(bundles) == 1
+    assert bundles[0].name in action_log.read_text(encoding="utf-8")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,8 @@ from aikeeper.version import get_app_version
 
 
 TAIL_BYTES = 64_000
+BUNDLE_PREFIX = "aikeeper-diagnostics-"
+BUNDLE_SUFFIX = ".zip"
 
 
 def _read_tail(path: Path, limit: int = TAIL_BYTES) -> str:
@@ -28,6 +31,98 @@ def _read_tail(path: Path, limit: int = TAIL_BYTES) -> str:
 
 def _write_json(package: zipfile.ZipFile, name: str, data: dict[str, Any]) -> None:
     package.writestr(name, json.dumps(data, indent=2, sort_keys=True) + "\n")
+
+
+def _diagnostics_dir(home: Path | None = None) -> Path:
+    return (home or app_home()) / "diagnostics"
+
+
+def _bundle_timestamp_ms(path: Path) -> int:
+    stem = path.name.removeprefix(BUNDLE_PREFIX).removesuffix(BUNDLE_SUFFIX)
+    try:
+        return int(stem)
+    except ValueError:
+        return int(path.stat().st_mtime * 1000)
+
+
+def _display_time(timestamp_ms: int) -> str:
+    return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def list_diagnostics_bundles(*, limit: int = 10, home: Path | None = None) -> list[dict[str, Any]]:
+    directory = _diagnostics_dir(home)
+    if not directory.exists():
+        return []
+    bundles: list[dict[str, Any]] = []
+    for path in directory.glob(f"{BUNDLE_PREFIX}*{BUNDLE_SUFFIX}"):
+        if not path.is_file():
+            continue
+        timestamp_ms = _bundle_timestamp_ms(path)
+        bundles.append(
+            {
+                "filename": path.name,
+                "path": str(path),
+                "size_bytes": path.stat().st_size,
+                "created_at_ms": timestamp_ms,
+                "created_at": _display_time(timestamp_ms),
+            }
+        )
+    return sorted(bundles, key=lambda item: item["created_at_ms"], reverse=True)[:limit]
+
+
+def list_system_action_log(*, limit: int = 20, home: Path | None = None) -> list[str]:
+    path = (home or app_home()) / "logs" / "system-actions.log"
+    lines: list[str] = []
+    for raw_line in _read_tail(path).splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if lines and lines[-1].endswith(":") and line.startswith("/"):
+            lines[-1] = f"{lines[-1]} {line}"
+            continue
+        if lines and lines[-1].endswith(".zi") and line == "p":
+            lines[-1] = f"{lines[-1]}p"
+            continue
+        lines.append(line)
+    return lines[-limit:]
+
+
+def append_system_action_log(message: str, *, home: Path | None = None) -> Path:
+    root = home or app_home()
+    log_dir = root / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    path = log_dir / "system-actions.log"
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(message.rstrip() + "\n")
+    return path
+
+
+def diagnostics_overview(*, limit: int = 10, home: Path | None = None) -> dict[str, Any]:
+    root = home or app_home()
+    return {
+        "bundles": list_diagnostics_bundles(limit=limit, home=root),
+        "action_log": list_system_action_log(limit=20, home=root),
+        "paths": {
+            "diagnostics_dir": str(_diagnostics_dir(root)),
+            "action_log": str(root / "logs" / "system-actions.log"),
+        },
+    }
+
+
+def resolve_diagnostics_bundle(filename: str, *, home: Path | None = None) -> Path:
+    if Path(filename).name != filename:
+        raise FileNotFoundError(filename)
+    if not filename.startswith(BUNDLE_PREFIX) or not filename.endswith(BUNDLE_SUFFIX):
+        raise FileNotFoundError(filename)
+    directory = _diagnostics_dir(home)
+    target = directory / filename
+    try:
+        target.resolve().relative_to(directory.resolve())
+    except ValueError as exc:
+        raise FileNotFoundError(filename) from exc
+    if not target.is_file():
+        raise FileNotFoundError(filename)
+    return target
 
 
 def _summary_markdown(*, db_path: Path, service: dict, privacy: dict, health: dict, archive_name: str) -> str:
@@ -59,7 +154,7 @@ def create_diagnostics_bundle(
     port: int = DEFAULT_PORT,
 ) -> Path:
     db = Path(db_path).expanduser()
-    out = Path(output_dir).expanduser() if output_dir else app_home() / "diagnostics"
+    out = Path(output_dir).expanduser() if output_dir else _diagnostics_dir()
     out.mkdir(parents=True, exist_ok=True)
     generated_at_ms = now_ms()
     archive = out / f"aikeeper-diagnostics-{generated_at_ms}.zip"

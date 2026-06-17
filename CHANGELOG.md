@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.25.1
+
+- fix: simplify Homebrew tap install path
+
 ## v0.25.0
 
 - feat: add Homebrew tap and public issue prep

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">AI Keeper Codex hook summary preview</title>
+  <desc id="desc">A polished dark Codex-style chat preview showing an AI Keeper usage line, dashboard link, web preview card, and follow-up composer.</desc>
+  <defs>
+    <filter id="window-shadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#0f172a" flood-opacity="0.20"/>
+    </filter>
+    <linearGradient id="window-bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#171a1f"/>
+      <stop offset="1" stop-color="#101317"/>
+    </linearGradient>
+    <linearGradient id="composer-bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#2b2d31"/>
+      <stop offset="1" stop-color="#24262a"/>
+    </linearGradient>
+    <linearGradient id="preview-card-bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#26282c"/>
+      <stop offset="1" stop-color="#202226"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="760" fill="#ffffff"/>
+  <rect x="48" y="42" width="1104" height="676" rx="24" fill="url(#window-bg)" stroke="#2d333a" filter="url(#window-shadow)"/>
+  <rect x="48" y="42" width="1104" height="72" rx="24" fill="#1c2026" stroke="#2d333a"/>
+  <rect x="49" y="82" width="1102" height="32" fill="#1c2026"/>
+
+  <circle cx="88" cy="78" r="7" fill="#626b75"/>
+  <circle cx="112" cy="78" r="7" fill="#626b75"/>
+  <circle cx="136" cy="78" r="7" fill="#626b75"/>
+  <text x="172" y="85" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="650" fill="#f8fafc">AI coding session</text>
+  <text x="960" y="85" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="16" font-weight="650" fill="#cbd5e1">5.5 Extra High</text>
+  <path d="M987 76l8 8 8-8" fill="none" stroke="#8b949e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g transform="translate(112 150)">
+    <rect x="0" y="2" width="7" height="100" rx="3.5" fill="#2f343a"/>
+    <text x="36" y="34" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="760" fill="#ffffff">AI Keeper</text>
+    <text x="168" y="34" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" fill="#ffffff">| turn 125,770 tokens ($0.08 est.) | session 237,711,203 tokens ($204.80 est.)</text>
+    <text x="36" y="76" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" fill="#ffffff">| task today 20,409,269 tokens | project today 20,409,269 tokens |</text>
+    <text x="838" y="76" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="700" fill="#8bc5ff">dashboard</text>
+    <path d="M814 60a13 13 0 1 0 0.2 0M801 73h26M814 60c4 4.8 6 9 6 13s-2 8.2-6 13M814 60c-4 4.8-6 9-6 13s2 8.2 6 13" fill="none" stroke="#8bc5ff" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(112 296)">
+    <rect width="976" height="138" rx="18" fill="url(#preview-card-bg)" stroke="#383f46"/>
+    <rect x="34" y="34" width="70" height="70" rx="16" fill="#13161a"/>
+    <circle cx="69" cy="69" r="24" fill="#11161b" stroke="#6cd3ff" stroke-width="3"/>
+    <path d="M45 69h48M69 45c7 8 10 16 10 24s-3 16-10 24M69 45c-7 8-10 16-10 24s3 16 10 24" fill="none" stroke="#6cd3ff" stroke-width="3" stroke-linecap="round"/>
+    <text x="128" y="67" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="28" font-weight="760" fill="#f8fafc">Web preview</text>
+    <text x="128" y="98" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" fill="#aeb6c1">Website</text>
+    <rect x="800" y="42" width="132" height="54" rx="14" fill="#25272b" stroke="#3f464e"/>
+    <text x="840" y="76" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" font-weight="650" fill="#f8fafc">Open in</text>
+    <path d="M906 65l8 8 8-8" fill="none" stroke="#cbd5e1" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g transform="translate(112 506)">
+    <rect width="976" height="132" rx="30" fill="url(#composer-bg)" stroke="#333940"/>
+    <text x="34" y="58" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" fill="#8d939b">Ask for follow-up changes</text>
+    <path d="M37 96h24M49 84v24" stroke="#b0b5bc" stroke-width="2.6" stroke-linecap="round"/>
+    <rect x="82" y="78" width="168" height="42" rx="12" fill="#2f3338"/>
+    <path d="M106 92c7-8 20-8 27 0 7 8 7 17 0 25M120 86v26M103 106h34" fill="none" stroke="#b8bec6" stroke-width="2.2" stroke-linecap="round"/>
+    <text x="146" y="105" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="650" fill="#d8dde3">Ask first</text>
+    <path d="M224 97l6 6 6-6" fill="none" stroke="#b8bec6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="760" y="106" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="720" fill="#f8fafc">5.5</text>
+    <text x="808" y="106" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" fill="#aab1ba">Extra High</text>
+    <path d="M942 86v17c0 13-10 23-23 23s-23-10-23-23V86" fill="none" stroke="#aab1ba" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M919 76v38M908 94c0-8 5-14 11-14s11 6 11 14v8c0 8-5 14-11 14s-11-6-11-14z" fill="none" stroke="#aab1ba" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(112 662)">
+    <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" font-weight="650" fill="#6f7782">After each turn, the hook writes metadata-only usage and links back to the local dashboard.</text>
+  </g>
+</svg>

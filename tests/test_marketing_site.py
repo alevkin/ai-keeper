@@ -26,14 +26,19 @@ def test_github_pages_landing_is_static_product_page() -> None:
     index = REPO / "docs" / "index.html"
     styles = REPO / "docs" / "styles.css"
     preview = REPO / "docs" / "assets" / "dashboard-preview.svg"
+    hook_preview = REPO / "docs" / "assets" / "codex-hook-preview.svg"
 
     html = index.read_text(encoding="utf-8")
     css = styles.read_text(encoding="utf-8")
     svg = preview.read_text(encoding="utf-8")
+    hook_svg = hook_preview.read_text(encoding="utf-8")
 
     assert "<title>AI Keeper" in html
-    assert 'href="styles.css"' in html
+    assert 'href="styles.css?v=' in html
+    assert 'href="styles.css"' not in html
     assert 'src="assets/dashboard-preview.svg"' in html
+    assert 'src="assets/codex-hook-preview.svg"' in html
+    assert 'AI Keeper Codex hook summary preview' in html
     assert 'href="#features"' in html
     assert 'href="#privacy"' in html
     assert 'href="#install"' in html
@@ -41,12 +46,10 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert "Understand your AI coding spend without giving up privacy." in html
     assert 'id="codex-hook"' in html
     assert "Codex gets the usage line too" in html
-    assert "<strong>AI Keeper</strong> | turn 125,770 tokens" in html
+    assert "<strong>AI Keeper</strong> | turn 125,770 tokens" not in html
     assert "session 237,711,203 tokens" in html
     assert "task today 20,409,269 tokens" in html
     assert "project today 20,409,269 tokens" in html
-    assert "Web preview" in html
-    assert "Open in" in html
     assert "Install in one command" in html
     assert "brew install alevkin/tap/aikeeper" in html
     assert "aikeeper-install --port 8766" not in html
@@ -57,10 +60,16 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert "AI Keeper dashboard preview" in svg
     assert "Active rate" in svg
     assert "This week" in svg
+    assert "AI Keeper Codex hook summary preview" in hook_svg
+    assert "AI Keeper" in hook_svg
+    assert "turn 125,770 tokens" in hook_svg
+    assert "session 237,711,203 tokens" in hook_svg
+    assert "Web preview" in hook_svg
+    assert "Ask for follow-up changes" in hook_svg
     assert ".copy-command" in css
     assert ".hook-preview" in css
-    assert ".hook-message" in css
-    assert ".web-preview-card" in css
+    assert ".hook-figure" in css
+    assert ".codex-window" not in css
     assert "display: grid" in css
     assert "@media (max-width: 760px)" in css
 

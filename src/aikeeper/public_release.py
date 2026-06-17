@@ -10,15 +10,10 @@ from typing import Any, Callable
 
 from aikeeper.audit import audit_privacy
 from aikeeper.distribution import audit_distribution_readiness
+from aikeeper.private_markers import load_private_marker_rules
 
 
 CommandRunner = Callable[[list[str], Path], tuple[int, str, str]]
-
-FORBIDDEN_AUTHOR_PATTERNS = (
-    re.compile("private-company" + "private-company", re.IGNORECASE),
-    re.compile(r"andrei\.levkin@", re.IGNORECASE),
-)
-
 
 def _sigstore_bundle_assets(tag: str) -> set[str]:
     archive_name = f"aikeeper-{tag}.tar.gz"
@@ -255,6 +250,7 @@ def evaluate_public_release_gate(
     online: bool = False,
     github_repo: str | None = None,
     allow_dirty: bool = False,
+    private_markers_path: Path | str | None = None,
     privacy_result: dict[str, Any] | None = None,
     distribution_result: dict[str, Any] | None = None,
     runner: CommandRunner = _run_command,
@@ -294,13 +290,28 @@ def evaluate_public_release_gate(
     _check(checks, "git_worktree_clean", worktree_ok, "dirty allowed" if allow_dirty else "worktree must be clean")
 
     ok, authors = _git_output(root, runner, "log", "--format=%an <%ae>")
-    author_ok = ok and not any(pattern.search(authors) for pattern in FORBIDDEN_AUTHOR_PATTERNS)
-    _check(checks, "git_author_history", author_ok, "no forbidden author markers found")
+    private_rules = load_private_marker_rules(private_markers_path)
+    author_marker_ids = [rule.rule_id for rule in private_rules if rule.pattern.search(authors)]
+    author_ok = ok and not author_marker_ids
+    if not ok:
+        author_detail = authors or "could not read git author history"
+    elif author_marker_ids:
+        author_detail = "private author marker found"
+    else:
+        author_detail = "no private author markers found"
+    _check(
+        checks,
+        "git_author_history",
+        author_ok,
+        author_detail,
+        private_marker_rules=len(private_rules),
+        matched_rule_ids=author_marker_ids,
+    )
 
     privacy = privacy_result or audit_privacy(db)
     _check(checks, "privacy_audit", privacy.get("status") == "pass", f"status={privacy.get('status')}", result=privacy)
 
-    distribution = distribution_result or audit_distribution_readiness(root)
+    distribution = distribution_result or audit_distribution_readiness(root, private_markers_path=private_markers_path)
     _check(
         checks,
         "distribution_audit",

@@ -20,7 +20,7 @@ The gate verifies:
 - privacy audit status
 - distribution audit status
 - clean git worktree
-- clean git author history
+- clean git author history using locally configured private marker rules
 - latest release tag and metadata versions
 - `CHANGELOG.md` contains the release section
 - CI, release, and public gate workflows are present
@@ -31,3 +31,6 @@ The gate verifies:
 
 It does not change repository visibility, publish a tap repository, or write
 release signing secrets.
+
+Private marker rules are loaded from `AIKEEPER_PRIVATE_MARKERS` or
+`$AIKEEPER_HOME/private-markers.toml`. See `docs/private-markers.md`.

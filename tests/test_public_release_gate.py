@@ -65,6 +65,7 @@ def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
         "uv.lock",
         "scripts/generate-changelog.py",
         "scripts/install.sh",
+        "scripts/install-git-hooks.sh",
         "scripts/package.sh",
         "scripts/publish-homebrew-tap.sh",
         "scripts/public-release-gate.sh",
@@ -261,3 +262,49 @@ def test_online_public_release_gate_requires_sigstore_release_assets(tmp_path: P
         and "sigstore" in check["detail"]
         for check in result["checks"]
     )
+
+
+def test_public_release_gate_uses_external_private_author_markers(tmp_path: Path) -> None:
+    _write_minimal_release_repo(tmp_path)
+    marker_path = tmp_path / "private-markers.toml"
+    marker_path.write_text(
+        """
+[[rules]]
+id = "private-author-email"
+scope = "company"
+regex = "person[.]name@company[.]example"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def runner(command: list[str], cwd: Path) -> tuple[int, str, str]:
+        if command[:3] == ["git", "log", "--format=%an <%ae>"]:
+            return 0, "Dev User <person.name@company.example>", ""
+        result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False)
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+    result = evaluate_public_release_gate(
+        repo_root=tmp_path,
+        db_path=tmp_path / "keeper.sqlite",
+        dist_dir=tmp_path / "dist",
+        tag="v1.2.3",
+        allow_dirty=True,
+        private_markers_path=marker_path,
+        privacy_result={"status": "pass", "metadata_only": True, "findings": []},
+        distribution_result={
+            "status": "pass",
+            "project_agnostic": True,
+            "company_agnostic": True,
+            "metadata_only": True,
+            "local_only": True,
+            "findings": [],
+        },
+        runner=runner,
+    )
+
+    author_check = next(check for check in result["checks"] if check["name"] == "git_author_history")
+    assert result["status"] == "fail"
+    assert author_check["status"] == "fail"
+    assert author_check["detail"] == "private author marker found"
+    assert "company.example" not in json.dumps(result)

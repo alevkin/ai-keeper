@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from aikeeper.private_markers import PrivateMarkerRule, load_private_marker_rules
+
 
 IGNORED_DIRS = {
     ".git",
@@ -58,6 +60,7 @@ REQUIRED_DISTRIBUTION_FILES = [
     "scripts/install.sh",
     "scripts/package.sh",
     "scripts/publish-homebrew-tap.sh",
+    "scripts/install-git-hooks.sh",
     "scripts/public-release-gate.sh",
     "scripts/release.sh",
     "scripts/sign-release.sh",
@@ -73,12 +76,6 @@ REQUIRED_DISTRIBUTION_FILES = [
     "packaging/windows/install-service.ps1",
 ]
 
-_PRIVATE_USER = "Andrei" + "_Levkin"
-_PRIVATE_WORKSPACE = "ng-" + "workspace"
-_PRIVATE_WORKROOT = "/w/" + "tfs/"
-_PRIVATE_COMPANY = "private-company" + "private-company"
-_PRIVATE_KEY = "pers_" + "alevkin_260617"
-
 
 @dataclass(frozen=True)
 class DistributionRule:
@@ -88,39 +85,12 @@ class DistributionRule:
     pattern: re.Pattern[str]
 
 
-RULES = [
-    DistributionRule(
-        "private_user_path",
-        "project",
-        "contains a machine-specific absolute user path",
-        re.compile(r"/Users/" + re.escape(_PRIVATE_USER) + r"\b"),
-    ),
-    DistributionRule(
-        "private_workspace_name",
-        "project",
-        "contains a private workspace or adjacent project name",
-        re.compile(r"(?:\b" + re.escape(_PRIVATE_WORKSPACE) + r"\b|" + re.escape(_PRIVATE_WORKROOT) + r")"),
-    ),
-    DistributionRule(
-        "company_marker",
-        "company",
-        "contains a company-specific marker",
-        re.compile(
-            r"\b(?:"
-            + re.escape(_PRIVATE_COMPANY)
-            + r"|"
-            + re.escape(_PRIVATE_COMPANY[:6] + " " + _PRIVATE_COMPANY[6:])
-            + r"|"
-            + re.escape(_PRIVATE_COMPANY + ".com")
-            + r")\b",
-            re.IGNORECASE,
-        ),
-    ),
+BUILTIN_RULES: list[DistributionRule] = [
     DistributionRule(
         "private_ssh_key_reference",
         "project",
-        "contains a private SSH key path or key filename",
-        re.compile(r"/Users/[^\s]+/\.ssh/|" + re.escape(_PRIVATE_KEY)),
+        "contains a private SSH key path",
+        re.compile(r"(?:/Users|/home)/[^\s]+/\.ssh/|[A-Za-z]:\\Users\\[^\s]+\\.ssh\\", re.IGNORECASE),
     ),
 ]
 
@@ -165,14 +135,18 @@ def _relative(repo_root: Path, path: Path) -> str:
     return path.relative_to(repo_root).as_posix()
 
 
-def _scan_file(repo_root: Path, path: Path) -> list[dict[str, Any]]:
+def _all_rules(private_markers_path: Path | str | None) -> list[DistributionRule | PrivateMarkerRule]:
+    return [*BUILTIN_RULES, *load_private_marker_rules(private_markers_path)]
+
+
+def _scan_file(repo_root: Path, path: Path, rules: list[DistributionRule | PrivateMarkerRule]) -> list[dict[str, Any]]:
     try:
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return []
     findings: list[dict[str, Any]] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
-        for rule in RULES:
+        for rule in rules:
             if rule.pattern.search(line):
                 findings.append(
                     {
@@ -237,13 +211,17 @@ def _required_file_findings(repo_root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-def audit_distribution_readiness(repo_root: Path | str) -> dict[str, Any]:
+def audit_distribution_readiness(
+    repo_root: Path | str,
+    private_markers_path: Path | str | None = None,
+) -> dict[str, Any]:
     root = Path(repo_root).expanduser().resolve()
     files = _candidate_files(root)
+    rules = _all_rules(private_markers_path)
     findings: list[dict[str, Any]] = []
 
     for path in files:
-        findings.extend(_scan_file(root, path))
+        findings.extend(_scan_file(root, path, rules))
     findings.extend(_manifest_findings(root))
     findings.extend(_required_file_findings(root))
 
@@ -260,7 +238,8 @@ def audit_distribution_readiness(repo_root: Path | str) -> dict[str, Any]:
         "checks": {
             "repo_name": root.name,
             "tracked_files": len(files),
-            "rules": [rule.rule_id for rule in RULES],
+            "rules": [rule.rule_id for rule in rules],
+            "private_marker_rules": len(rules) - len(BUILTIN_RULES),
             "required_files": REQUIRED_DISTRIBUTION_FILES,
         },
         "findings": findings,

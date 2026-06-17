@@ -50,6 +50,7 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["local_only"] is True
     assert manifest["metadata_only"] is True
     assert manifest["scripts"]["install"] == "scripts/install.sh"
+    assert manifest["scripts"]["install_git_hooks"] == "scripts/install-git-hooks.sh"
     assert manifest["scripts"]["package"] == "scripts/package.sh"
     assert manifest["scripts"]["publish"] == "scripts/publish.sh"
     assert manifest["scripts"]["publish_homebrew_tap"] == "scripts/publish-homebrew-tap.sh"
@@ -73,6 +74,7 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["targets"]["version_updater"] == "scripts/update-version.py"
     assert manifest["targets"]["changelog_generator"] == "scripts/generate-changelog.py"
     assert manifest["targets"]["public_release_gate"] == "scripts/public-release-gate.sh"
+    assert manifest["targets"]["local_git_hooks"] == "scripts/install-git-hooks.sh"
     assert manifest["repository"]["url"] == "git@github.com:alevkin/ai-keeper.git"
     assert manifest["repository"]["visibility"] == "private"
     assert manifest["homebrew_tap"]["repository"] == "alevkin/homebrew-tap"
@@ -129,6 +131,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert manifest["sha256"] in formula_text
     assert manifest["sha256"] in tap_formula_text
     assert "aikeeper-install" in formula_text
+    assert "aikeeper-install-git-hooks" in formula_text
     assert "aikeeper-upgrade" in formula_text
     assert "aikeeper-rollback" in formula_text
     assert "aikeeper-publish" in formula_text
@@ -140,6 +143,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
         names = package.getnames()
 
     assert "aikeeper-v0.22.0/scripts/install.sh" in names
+    assert "aikeeper-v0.22.0/scripts/install-git-hooks.sh" in names
     assert "aikeeper-v0.22.0/scripts/public-release-gate.sh" in names
     assert "aikeeper-v0.22.0/scripts/release.sh" in names
     assert "aikeeper-v0.22.0/scripts/sign-release.sh" in names

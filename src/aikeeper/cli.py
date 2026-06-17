@@ -303,9 +303,16 @@ def audit_privacy_cmd(
 @audit_app.command("distribution")
 def audit_distribution_cmd(
     repo_root: Annotated[Path, typer.Option()] = Path.cwd(),
+    private_markers: Annotated[
+        Path | None,
+        typer.Option(
+            "--private-markers",
+            help="Path to a local private marker TOML file. Defaults to $AIKEEPER_PRIVATE_MARKERS or $AIKEEPER_HOME/private-markers.toml.",
+        ),
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
 ) -> None:
-    data = audit_distribution_readiness(repo_root)
+    data = audit_distribution_readiness(repo_root, private_markers_path=private_markers)
     if as_json:
         sys.stdout.write(json.dumps(data, indent=2) + "\n")
         return
@@ -331,6 +338,13 @@ def audit_public_release_cmd(
     github_repo: Annotated[str | None, typer.Option(help="GitHub repo in owner/name form.")] = None,
     online: Annotated[bool, typer.Option("--online", help="Check GitHub repo, release, and CI state.")] = False,
     allow_dirty: Annotated[bool, typer.Option("--allow-dirty", help="Allow a dirty local worktree.")] = False,
+    private_markers: Annotated[
+        Path | None,
+        typer.Option(
+            "--private-markers",
+            help="Path to a local private marker TOML file. Defaults to $AIKEEPER_PRIVATE_MARKERS or $AIKEEPER_HOME/private-markers.toml.",
+        ),
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
 ) -> None:
     data = evaluate_public_release_gate(
@@ -341,6 +355,7 @@ def audit_public_release_cmd(
         github_repo=github_repo,
         online=online,
         allow_dirty=allow_dirty,
+        private_markers_path=private_markers,
     )
     if as_json:
         sys.stdout.write(json.dumps(data, indent=2) + "\n")

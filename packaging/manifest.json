@@ -6,6 +6,7 @@
   "default_port": 8766,
   "scripts": {
     "install": "scripts/install.sh",
+    "install_git_hooks": "scripts/install-git-hooks.sh",
     "package": "scripts/package.sh",
     "publish": "scripts/publish.sh",
     "publish_homebrew_tap": "scripts/publish-homebrew-tap.sh",
@@ -38,6 +39,7 @@
     "version_updater": "scripts/update-version.py",
     "changelog_generator": "scripts/generate-changelog.py",
     "public_release_gate": "scripts/public-release-gate.sh",
+    "local_git_hooks": "scripts/install-git-hooks.sh",
     "issue_template_config": ".github/ISSUE_TEMPLATE/config.yml",
     "bug_report_template": ".github/ISSUE_TEMPLATE/bug_report.yml",
     "feature_request_template": ".github/ISSUE_TEMPLATE/feature_request.yml",

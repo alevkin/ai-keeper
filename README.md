@@ -250,7 +250,7 @@ scripts/package.sh --version v0.22.0 --output-dir dist
 It writes a source archive, sha256 file, `CHECKSUMS.txt`, release manifest,
 local Homebrew formula, and tap-ready Homebrew formula under `dist/`. The local
 formula installs wrapper commands: `aikeeper-install`,
-`aikeeper-upgrade`, `aikeeper-rollback`, `aikeeper-publish`, and
+`aikeeper-install-git-hooks`, `aikeeper-upgrade`, `aikeeper-rollback`, `aikeeper-publish`, and
 `aikeeper-sign`, `aikeeper-release`, and `aikeeper-public-release-gate`.
 
 The packaging contract remains local-only and metadata-only. Release archives
@@ -313,6 +313,19 @@ uv run aikeeper audit distribution --json
 It checks that tracked release files stay local-only, metadata-only,
 project-agnostic, and company-agnostic. Findings report file paths and rule IDs
 without echoing private matched values.
+
+Private company, project, path, and author markers are configured outside the
+repository in `$AIKEEPER_HOME/private-markers.toml` or the path pointed to by
+`AIKEEPER_PRIVATE_MARKERS`. See [Private Markers](docs/private-markers.md).
+
+Install local developer git hooks:
+
+```bash
+scripts/install-git-hooks.sh
+```
+
+The hooks run the distribution audit before commit and a private author-history
+check before push.
 
 Publish the private GitHub repository through an explicit SSH-key path:
 

@@ -147,6 +147,10 @@ formula_text = f'''class Aikeeper < Formula
       #!/usr/bin/env bash
       exec "#{{libexec}}/scripts/install.sh" "$@"
     EOS
+    (bin/"aikeeper-install-git-hooks").write <<~EOS
+      #!/usr/bin/env bash
+      exec "#{{libexec}}/scripts/install-git-hooks.sh" "$@"
+    EOS
     (bin/"aikeeper-upgrade").write <<~EOS
       #!/usr/bin/env bash
       exec "#{{libexec}}/scripts/upgrade.sh" "$@"
@@ -172,6 +176,7 @@ formula_text = f'''class Aikeeper < Formula
       exec "#{{libexec}}/scripts/public-release-gate.sh" "$@"
     EOS
     chmod 0755, bin/"aikeeper-install"
+    chmod 0755, bin/"aikeeper-install-git-hooks"
     chmod 0755, bin/"aikeeper-upgrade"
     chmod 0755, bin/"aikeeper-rollback"
     chmod 0755, bin/"aikeeper-publish"

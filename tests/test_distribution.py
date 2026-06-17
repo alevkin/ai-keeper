@@ -44,15 +44,30 @@ def test_distribution_audit_passes_current_repo_without_company_or_project_coupl
 def test_distribution_audit_flags_private_project_and_company_markers(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
-    private_user = "Andrei" + "_Levkin"
-    private_path = "/Users/" + private_user + "/w/" + "tfs/" + "ng-" + "workspace"
-    company_marker = "private-company" + "private-company.com"
-    key_marker = "pers_" + "alevkin_260617"
+    private_path = "/Users/" + "dev/" + ".ssh/internal_publish_key"
+    company_marker = "company.example"
+    project_marker = "internal-workspace"
+    marker_path = tmp_path / "private-markers.toml"
+    marker_path.write_text(
+        """
+[[rules]]
+id = "company-domain"
+scope = "company"
+literal = "company.example"
+
+[[rules]]
+id = "project-code"
+scope = "project"
+literal = "internal-workspace"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
     (repo / "pyproject.toml").write_text("[project]\nname = 'aikeeper'\n", encoding="utf-8")
     (repo / "README.md").write_text(f"Project path {private_path}\n", encoding="utf-8")
-    (repo / "notes.md").write_text(f"{company_marker} and {key_marker}\n", encoding="utf-8")
+    (repo / "notes.md").write_text(f"{company_marker} and {project_marker}\n", encoding="utf-8")
 
-    result = audit_distribution_readiness(repo)
+    result = audit_distribution_readiness(repo, private_markers_path=marker_path)
     serialized = json.dumps(result)
 
     assert result["status"] == "fail"
@@ -60,9 +75,8 @@ def test_distribution_audit_flags_private_project_and_company_markers(tmp_path: 
     assert result["company_agnostic"] is False
     assert "README.md" in serialized
     assert "notes.md" in serialized
-    assert private_user not in serialized
     assert company_marker not in serialized
-    assert key_marker not in serialized
+    assert project_marker not in serialized
 
 
 def test_cli_distribution_audit_emits_json() -> None:
@@ -111,4 +125,4 @@ def test_publish_script_supports_private_github_dry_run(tmp_path: Path) -> None:
     assert "git push origin HEAD:refs/heads/agent/ak-ops-wave" in result.stdout
     assert "git push origin --tags" in result.stdout
     assert "alevkin@gmail.com" in result.stdout
-    assert ("private-company" + "private-company.com") not in result.stdout
+    assert "company.example" not in result.stdout

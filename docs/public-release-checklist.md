@@ -8,6 +8,9 @@ Use this checklist before changing the repository from private to public.
 - Run `uv run pytest -q`.
 - Run `uv run aikeeper audit privacy --json`.
 - Run `uv run aikeeper audit distribution --json`.
+- Confirm local private marker rules live outside the repository. See
+  `docs/private-markers.md`.
+- Install or refresh local developer hooks with `scripts/install-git-hooks.sh`.
 - Build a package with `scripts/package.sh --version <tag> --output-dir dist`.
 - Generate checksums with `scripts/sign-release.sh --dist-dir dist --signer none`.
 - Run `scripts/public-release-gate.sh --version <tag> --output-dir dist --online`.
@@ -24,7 +27,7 @@ Use this checklist before changing the repository from private to public.
 - Review `docs/release-upload-design.md`.
 - Review `docs/public-release-gate.md`.
 - Review `CHANGELOG.md`.
-- Confirm no private SSH key path, company marker, or adjacent project name is
-  present in tracked files.
+- Confirm no private SSH key path, company marker, adjacent project name, or
+  private author marker is present in tracked files or git history.
 
 The repository can stay private until these checks are complete.

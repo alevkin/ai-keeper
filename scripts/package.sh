@@ -185,6 +185,12 @@ formula_text = f'''class Aikeeper < Formula
     chmod 0755, bin/"aikeeper-public-release-gate"
   end
 
+  def post_install
+    return if ENV["AIKEEPER_SKIP_AUTO_INSTALL"] == "1"
+
+    system bin/"aikeeper-install", "--port", ENV.fetch("AIKEEPER_PORT", "8766")
+  end
+
   test do
     system bin/"aikeeper-install", "--help"
   end
@@ -192,8 +198,11 @@ formula_text = f'''class Aikeeper < Formula
   def caveats
     <<~EOS
       AI Keeper is local-only and metadata-only.
-      Run: aikeeper-install --port 8766
+      Local setup runs automatically after install.
       Dashboard: http://127.0.0.1:8766
+      Repair setup: aikeeper-install --port 8766
+      Custom port: AIKEEPER_PORT=8770 brew install alevkin/tap/aikeeper
+      Skip setup: AIKEEPER_SKIP_AUTO_INSTALL=1 brew install alevkin/tap/aikeeper
     EOS
   end
 end

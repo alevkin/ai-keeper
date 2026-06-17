@@ -34,6 +34,7 @@
     "landing_page": "docs/index.html",
     "landing_styles": "docs/styles.css",
     "landing_dashboard_preview": "docs/assets/dashboard-preview.svg",
+    "user_guide": "docs/user-guide.md",
     "release_notes": "dist/release-notes.md",
     "changelog": "CHANGELOG.md",
     "github_ops_status": "docs/github-ops-status.md",

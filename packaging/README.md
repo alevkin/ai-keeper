@@ -32,6 +32,14 @@ Install from the generated Homebrew formula:
 
 ```bash
 brew install --formula dist/homebrew/aikeeper.rb
+```
+
+Homebrew runs local setup during `post_install`: it starts the user LaunchAgent,
+installs Codex hooks, and prepares the dashboard on `127.0.0.1:8766`.
+
+Repair an existing setup when needed:
+
+```bash
 aikeeper-install --port 8766
 ```
 

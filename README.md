@@ -13,7 +13,8 @@ back inside Codex after every turn.
 It is built for developers who want a simple answer to a surprisingly hard
 question: where did today's AI context and money go?
 
-Product page: [docs/index.html](docs/index.html)
+Product page: [andrei.levk.in/ai-keeper](https://andrei.levk.in/ai-keeper/)
+User guide: [docs/user-guide.md](docs/user-guide.md)
 
 ## Why AI Keeper
 
@@ -49,6 +50,15 @@ Homebrew tap:
 
 ```bash
 brew install alevkin/tap/aikeeper
+```
+
+The Homebrew formula runs the local installer after download. It starts the
+user LaunchAgent, installs Codex hooks, and prepares the dashboard on port
+`8766`.
+
+If you need to repair the local setup later:
+
+```bash
 aikeeper-install --port 8766
 ```
 

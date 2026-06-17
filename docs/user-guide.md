@@ -1,0 +1,89 @@
+# AI Keeper User Guide
+
+AI Keeper is a local-only usage dashboard for Codex. It helps you answer where
+tokens and estimated cost go across projects, tasks, sessions, and turns without
+copying prompts or assistant messages into its database.
+
+## Install
+
+Homebrew is the primary macOS install path:
+
+```bash
+brew install alevkin/tap/aikeeper
+```
+
+The formula runs the local installer during Homebrew `post_install`. That step:
+
+- starts the local service on `127.0.0.1:8766`
+- installs the Codex hooks
+- creates the local SQLite database under `~/.aikeeper`
+- runs a quick doctor check
+
+Open the dashboard:
+
+```text
+http://127.0.0.1:8766
+```
+
+## Custom Port
+
+To install on a different port:
+
+```bash
+AIKEEPER_PORT=8770 brew install alevkin/tap/aikeeper
+```
+
+If AI Keeper is already installed, rerun the local installer:
+
+```bash
+aikeeper-install --port 8766
+```
+
+## Recovery
+
+Use these when the service or hooks need a refresh:
+
+```bash
+aikeeper-install --port 8766
+aikeeper-upgrade --port 8766
+aikeeper-rollback --target v0.25.2 --port 8766
+uv run aikeeper doctor --port 8766
+```
+
+To skip automatic setup during Homebrew install:
+
+```bash
+AIKEEPER_SKIP_AUTO_INSTALL=1 brew install alevkin/tap/aikeeper
+```
+
+## What It Stores
+
+AI Keeper stores metadata that is useful for operations:
+
+- token counts
+- timestamps
+- model labels
+- cwd and git metadata
+- session ids
+- transcript paths and ingest offsets
+- pricing and budget metadata
+
+It does not store prompts, assistant messages, raw transcript JSONL, or copied
+chat content.
+
+## Daily Commands
+
+```bash
+uv run aikeeper service status --port 8766
+uv run aikeeper sync codex --once
+uv run aikeeper diagnostics bundle --port 8766
+uv run aikeeper audit privacy --json
+uv run aikeeper audit distribution --json
+```
+
+## Codex Hooks
+
+After hooks are installed, Codex turns can include a compact AI Keeper line with
+turn, session, task, project, and dashboard totals. Hook output is metadata-only:
+`UserPromptSubmit` explicitly discards prompt text, and `Stop` syncs token
+events from local transcript metadata.

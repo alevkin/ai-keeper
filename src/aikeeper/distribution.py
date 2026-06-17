@@ -48,6 +48,7 @@ REQUIRED_DISTRIBUTION_FILES = [
     "docs/release-upload-design.md",
     "docs/index.html",
     "docs/styles.css",
+    "docs/user-guide.md",
     "docs/assets/dashboard-preview.svg",
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",

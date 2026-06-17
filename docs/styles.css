@@ -204,7 +204,7 @@ h2 {
 
 .feature-grid article,
 .privacy-panel,
-pre {
+.command-card {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
@@ -251,12 +251,62 @@ h3 {
   align-items: center;
 }
 
+.command-card {
+  overflow: hidden;
+}
+
+.command-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 58px;
+  padding: 0 18px 0 24px;
+  border-bottom: 1px solid rgba(220, 228, 234, 0.18);
+  background: #101820;
+  color: #afbec8;
+  font-size: 13px;
+  font-weight: 720;
+  text-transform: uppercase;
+}
+
+.copy-command {
+  min-width: 86px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(248, 250, 252, 0.28);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.08);
+  color: #ffffff;
+  font: inherit;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.copy-command:hover {
+  border-color: rgba(248, 250, 252, 0.52);
+  background: rgba(248, 250, 252, 0.14);
+}
+
 pre {
   margin: 0;
   padding: 28px;
   overflow-x: auto;
   background: #101820;
   color: #f8fafc;
+}
+
+.install-note {
+  margin: 0;
+  padding: 18px 24px 22px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.install-note a {
+  color: var(--accent-dark);
+  font-weight: 720;
 }
 
 code {
@@ -338,5 +388,13 @@ code {
 
   pre {
     padding: 22px;
+  }
+
+  .command-bar {
+    padding-left: 18px;
+  }
+
+  .copy-command {
+    min-width: 82px;
   }
 }

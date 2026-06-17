@@ -64,6 +64,7 @@ def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
         "docs/release-upload-design.md",
         "docs/index.html",
         "docs/styles.css",
+        "docs/user-guide.md",
         "docs/assets/dashboard-preview.svg",
         "uv.lock",
         "scripts/generate-changelog.py",

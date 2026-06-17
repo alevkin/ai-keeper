@@ -69,6 +69,7 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["targets"]["landing_page"] == "docs/index.html"
     assert manifest["targets"]["landing_styles"] == "docs/styles.css"
     assert manifest["targets"]["landing_dashboard_preview"] == "docs/assets/dashboard-preview.svg"
+    assert manifest["targets"]["user_guide"] == "docs/user-guide.md"
     assert manifest["targets"]["release_notes"] == "dist/release-notes.md"
     assert manifest["targets"]["changelog"] == "CHANGELOG.md"
     assert manifest["targets"]["github_ops_status"] == "docs/github-ops-status.md"
@@ -142,10 +143,16 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert "aikeeper-sign" in formula_text
     assert "aikeeper-release" in formula_text
     assert "aikeeper-public-release-gate" in formula_text
+    assert "def post_install" in formula_text
+    assert 'ENV["AIKEEPER_SKIP_AUTO_INSTALL"]' in formula_text
+    assert 'ENV.fetch("AIKEEPER_PORT", "8766")' in formula_text
+    assert 'system bin/"aikeeper-install", "--port", ENV.fetch("AIKEEPER_PORT", "8766")' in formula_text
+    assert "Run: aikeeper-install --port 8766" not in formula_text
 
     with tarfile.open(archive, "r:gz") as package:
         names = package.getnames()
 
+    assert "aikeeper-v0.22.0/docs/user-guide.md" in names
     assert "aikeeper-v0.22.0/scripts/install.sh" in names
     assert "aikeeper-v0.22.0/scripts/install-git-hooks.sh" in names
     assert "aikeeper-v0.22.0/scripts/public-release-gate.sh" in names

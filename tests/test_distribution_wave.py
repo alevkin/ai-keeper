@@ -43,6 +43,7 @@ def test_packaging_manifest_tracks_distribution_prep_wave_targets() -> None:
     assert manifest["targets"]["landing_page"] == "docs/index.html"
     assert manifest["targets"]["landing_styles"] == "docs/styles.css"
     assert manifest["targets"]["landing_dashboard_preview"] == "docs/assets/dashboard-preview.svg"
+    assert manifest["targets"]["user_guide"] == "docs/user-guide.md"
     assert manifest["targets"]["release_notes"] == "dist/release-notes.md"
     assert manifest["targets"]["changelog"] == "CHANGELOG.md"
     assert manifest["targets"]["github_ops_status"] == "docs/github-ops-status.md"

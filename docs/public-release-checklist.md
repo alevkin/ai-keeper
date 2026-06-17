@@ -26,6 +26,7 @@ Use this checklist before changing the repository from private to public.
 - Review `docs/github-ops-status.md`.
 - Review `docs/release-upload-design.md`.
 - Review `docs/public-release-gate.md`.
+- Review the GitHub Pages landing page in `docs/index.html`.
 - Review `CHANGELOG.md`.
 - Confirm no private SSH key path, company marker, adjacent project name, or
   private author marker is present in tracked files or git history.

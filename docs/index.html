@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Keeper - Local Codex Token Tracker</title>
+    <meta
+      name="description"
+      content="AI Keeper is a local-only token and estimated cost dashboard for Codex projects, tasks, sessions, and turns."
+    >
+    <meta property="og:title" content="AI Keeper">
+    <meta
+      property="og:description"
+      content="Understand your AI coding spend without giving up privacy."
+    >
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#">
+        <span class="brand-mark" aria-hidden="true">AI</span>
+        <span>AI Keeper</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#features">Features</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/alevkin/ai-keeper">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <h1>AI Keeper</h1>
+          <p class="hero-lede">
+            Understand your AI coding spend without giving up privacy.
+          </p>
+          <p>
+            Track Codex tokens and estimated cost by project, task, session, and
+            turn. Keep the useful numbers, leave prompts and assistant messages
+            out of AI Keeper's database.
+          </p>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="button primary" href="#install">Install</a>
+            <a class="button secondary" href="https://github.com/alevkin/ai-keeper">View on GitHub</a>
+          </div>
+        </div>
+        <figure class="product-frame">
+          <img src="assets/dashboard-preview.svg" alt="AI Keeper dashboard preview">
+        </figure>
+      </section>
+
+      <section id="features" class="section">
+        <div class="section-heading">
+          <h2>Usage you can act on</h2>
+          <p>
+            AI Keeper turns local Codex metadata into a calm operating view for
+            everyday AI-assisted engineering work.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Project and task totals</h3>
+            <p>See where tokens go across repositories, branches, tasks, sessions, and turns.</p>
+          </article>
+          <article>
+            <h3>Live hook summaries</h3>
+            <p>After each Codex turn, get current usage and a dashboard link directly in the chat.</p>
+          </article>
+          <article>
+            <h3>Burn-rate awareness</h3>
+            <p>Compare active tokens/min, estimated USD/min, cache ratio, and model efficiency.</p>
+          </article>
+          <article>
+            <h3>Health and diagnostics</h3>
+            <p>Inspect ingest status, missing sources, service health, and metadata-only support bundles.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="privacy" class="section split">
+        <div>
+          <h2>Local by design</h2>
+          <p>
+            AI Keeper stores operational metadata: token counts, timestamps,
+            model labels, cwd, git metadata, session ids, transcript paths, and
+            ingest offsets.
+          </p>
+        </div>
+        <div class="privacy-panel">
+          <p>No prompts. No assistant messages. No raw transcript copies.</p>
+          <p>
+            Run a privacy audit any time and keep private markers in your local
+            home directory, not in the repository.
+          </p>
+        </div>
+      </section>
+
+      <section id="install" class="section install">
+        <div>
+          <h2>Install in two commands</h2>
+          <p>
+            Start the local daemon, install Codex hooks, and open the dashboard
+            on your machine.
+          </p>
+        </div>
+        <pre><code>brew install alevkin/tap/aikeeper
+aikeeper-install --port 8766</code></pre>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>AI Keeper is a local-only, metadata-only utility for AI-assisted development.</p>
+      <a href="https://github.com/alevkin/ai-keeper">GitHub repository</a>
+    </footer>
+  </body>
+</html>

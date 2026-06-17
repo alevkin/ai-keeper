@@ -62,6 +62,9 @@ def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
         "docs/github-ops-status.md",
         "docs/public-release-gate.md",
         "docs/release-upload-design.md",
+        "docs/index.html",
+        "docs/styles.css",
+        "docs/assets/dashboard-preview.svg",
         "uv.lock",
         "scripts/generate-changelog.py",
         "scripts/install.sh",
@@ -117,6 +120,13 @@ def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
         "name: Public Release Gate\nworkflow_dispatch:\npermissions:\n  contents: read\n  actions: read\n"
         "steps:\n  - uses: sigstore/cosign-installer@v4.1.0\n"
         "  - run: bash scripts/public-release-gate.sh --version v1.2.3 --online\n",
+        encoding="utf-8",
+    )
+    (repo / ".github" / "workflows" / "pages.yml").write_text(
+        "name: GitHub Pages\non:\n  push:\n    branches: [main]\npermissions:\n"
+        "  contents: read\n  pages: write\n  id-token: write\nsteps:\n"
+        "  - uses: actions/upload-pages-artifact@v3\n    with:\n      path: docs\n"
+        "  - uses: actions/deploy-pages@v4\n",
         encoding="utf-8",
     )
     _write_release_artifacts(repo / "dist", tag)

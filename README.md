@@ -4,377 +4,178 @@
 [![Privacy](https://img.shields.io/badge/privacy-metadata--only-2f6f5e)](PRIVACY.md)
 [![Local only](https://img.shields.io/badge/runtime-local--only-334155)](README.md)
 
-AI Keeper is a local-only token usage daemon and dashboard for Codex. It helps
-track token and estimated cost usage by project, task, session, and turn without
-copying chat text into its own database.
+Understand your AI coding spend without giving up privacy.
 
-AI Keeper stores metadata only: token counts, model, cwd, git metadata, session ids,
-transcript paths and ingest offsets. It does not copy prompts, assistant messages,
-or raw transcript JSON into its own database.
+AI Keeper is a local dashboard for Codex usage. It shows token and estimated
+cost usage by project, task, session, and turn, then surfaces the latest totals
+back inside Codex after every turn.
 
-## Stack
+It is built for developers who want a simple answer to a surprisingly hard
+question: where did today's AI context and money go?
 
-- Python 3.13
-- FastAPI + Uvicorn
-- Typer + Rich CLI
-- SQLite storage at `$AIKEEPER_HOME/aikeeper.sqlite`
-- Server-rendered Jinja pages with a small CSS layer
+Product page: [docs/index.html](docs/index.html)
 
-## Quick Start
+## Why AI Keeper
 
-Install everything needed for the local MVP: SQLite schema, Codex hooks, and the
-macOS LaunchAgent daemon.
+AI coding tools are becoming part of daily engineering work, but usage often
+stays invisible until a bill, a quota, or a slow session surprises you.
+
+AI Keeper makes usage observable while keeping the sensitive parts local:
+
+- See which projects and tasks consume the most tokens.
+- Compare session and turn-level usage while you work.
+- Estimate cost from local token events and bundled pricing data.
+- Spot active burn rate, cache behavior, large turns, and model switches.
+- Keep prompts, assistant messages, and raw transcripts out of AI Keeper's
+  database.
+
+## What You Get
+
+- **Dashboard**: today, week, project, task, session, model, and turn views.
+- **Codex hook summary**: after each turn, see current turn, session, task, and
+  project totals with a dashboard link.
+- **Cost estimates**: local USD estimates for stored token events.
+- **Active rate**: tokens/min and estimated USD/min during active agent work.
+- **Budgets**: soft warnings by project/task/session without blocking Codex.
+- **Health checks**: ingest health, missing source details, diagnostics bundles,
+  and service status.
+- **Privacy audit**: checks that stored data remains metadata-only.
+- **Portable shape**: provider-neutral storage with Codex support today and
+  Claude metadata ingestion available for local experiments.
+
+## Install
+
+Homebrew tap:
+
+```bash
+brew install alevkin/tap/aikeeper
+aikeeper-install --port 8766
+```
+
+From a checkout:
 
 ```bash
 uv run aikeeper install all --port 8766
 uv run aikeeper doctor --port 8766
 ```
 
-Or use the lightweight install script:
+Open the dashboard:
 
-```bash
-scripts/install.sh --port 8766
+```text
+http://127.0.0.1:8766
 ```
 
-Or build and install through the local Homebrew formula:
+Install or refresh local developer git hooks:
 
 ```bash
-scripts/package.sh --version v0.22.0 --output-dir dist
-brew install --formula dist/homebrew/aikeeper.rb
-aikeeper-install --port 8766
+scripts/install-git-hooks.sh
 ```
 
-Open <http://127.0.0.1:8766> for the dashboard. After the hooks are installed,
-Codex turn summaries include a dashboard link when the daemon is reachable.
-Use <http://127.0.0.1:8766/system> for local service status, paths, logs, and
-recovery commands. The System page can queue confirmed background actions for
-repair, reinstall, restart, and metadata-only diagnostics, then track them as
-observable jobs with queued, running, ok, or fail status.
-Use <http://127.0.0.1:8766/diagnostics> to create metadata-only diagnostics
-bundles, download recent archives, and inspect recent system jobs.
+## How It Feels
 
-For manual one-off use:
+After Codex hooks are installed, each turn can include a short usage line:
 
-```bash
-uv run aikeeper sync codex --once
-uv run aikeeper daemon start
+```text
+AI Keeper | turn 85,673 tokens ($0.07 est.) | session 14,195,171 tokens ($12.40 est.) | task today 5,697,011 tokens | project today 5,697,011 tokens | dashboard
 ```
 
-Open <http://127.0.0.1:8765> for the dashboard. If that port is busy, run the
-daemon with `--port 8766`.
+The dashboard gives the bigger picture: active burn rate, trend, task totals,
+project totals, model efficiency, ingest health, and recent sessions.
 
-## macOS Service
+## Privacy Model
 
-For a persistent dashboard, install AI Keeper as a user LaunchAgent. `launchd`
-starts it at login and restarts it if the daemon exits.
+AI Keeper is local-only and metadata-only by default.
+
+It stores:
+
+- token counts
+- timestamps
+- model labels
+- cwd and git metadata
+- session ids
+- transcript paths and ingest offsets
+- pricing and budget metadata
+
+It does not store:
+
+- prompts
+- assistant messages
+- raw transcript JSONL
+- copied chat content
+
+Run a privacy check:
 
 ```bash
-uv run aikeeper service install --port 8766
+uv run aikeeper audit privacy --json
+```
+
+Private company, project, path, and author markers are configured outside the
+repository in `$AIKEEPER_HOME/private-markers.toml` or the path pointed to by
+`AIKEEPER_PRIVATE_MARKERS`. See [Private Markers](docs/private-markers.md).
+
+## Commands You Will Actually Use
+
+```bash
+uv run aikeeper doctor --port 8766
 uv run aikeeper service status --port 8766
+uv run aikeeper sync codex --once
+uv run aikeeper audit distribution --json
+uv run aikeeper diagnostics bundle --port 8766
+uv run aikeeper export --format markdown
 ```
 
-Useful service commands:
+Service controls:
 
 ```bash
 uv run aikeeper service start
 uv run aikeeper service stop
 uv run aikeeper service restart
 uv run aikeeper service uninstall
-uv run aikeeper service status --port 8766 --json
 ```
 
-`doctor --fix` repairs the common local install drift: missing app home,
-uninitialized SQLite database, missing Codex hooks, and a missing or stopped
-LaunchAgent.
+## Data Sources
 
-```bash
-uv run aikeeper doctor --fix --port 8766
-```
+Codex support reads local metadata from:
 
-Use `uv run aikeeper uninstall all` to remove the LaunchAgent and AI Keeper
-Codex hook entries together. It keeps the local SQLite database by default.
-
-Upgrade and rollback helpers:
-
-```bash
-scripts/upgrade.sh --port 8766 --target v0.22.0
-scripts/rollback.sh --port 8766 --target v0.12.0
-```
-
-The installer writes `~/Library/LaunchAgents/com.aikeeper.daemon.plist` when
-that directory is writable. If it is not writable, AI Keeper falls back to
-`$AIKEEPER_HOME/LaunchAgents/com.aikeeper.daemon.plist` and bootstraps that file
-with `launchctl`. Daemon logs go to `$AIKEEPER_HOME/logs/daemon.stdout.log` and
-`$AIKEEPER_HOME/logs/daemon.stderr.log`.
-
-## Codex Hooks
-
-Install hooks globally:
-
-```bash
-uv run aikeeper install codex-hooks --scope user
-```
-
-Or install them for only the current project:
-
-```bash
-uv run aikeeper install codex-hooks --scope project
-```
-
-The installer writes or merges a `hooks.json` with `SessionStart`,
-`UserPromptSubmit`, and `Stop` handlers. If a hooks file already exists, AI Keeper
-creates a `.bak` copy first. The hooks emit a short summary after each turn:
-
-```text
-AI Keeper | turn X tokens ($A est.) | session Y tokens ($B est.) | task today Z tokens | project today W tokens | dashboard
-```
-
-## Cost Estimates
-
-AI Keeper estimates USD spend locally from stored token events and the bundled
-OpenAI API pricing catalog. Estimates use Standard token prices from the
-official OpenAI pricing page, retrieved on 2026-06-13, and are labeled as
-estimates in the UI.
-
-The official OpenAI Admin Costs API reports real organization-level billing
-costs, but it requires an admin key and does not automatically map costs to
-AI Keeper's local Codex project/task/session attribution.
-
-## Dashboard Metrics
-
-The overview dashboard includes:
-
-- Active burn rate for the current session, shown as tokens/min and USD/min.
-- Model efficiency by provider/model, including total tokens, total estimated
-  spend, active speed, spend rate, and cached input ratio.
-- Project, task, session, and turn token totals.
-
-Burn-rate windows exclude long idle gaps, so the rate is about active agent work
-rather than the total time a session stayed open.
-
-## Budget Guards
-
-Budget guards are soft warnings. They never block Codex. Configure them in the
-dashboard; AI Keeper stores budget settings in the local SQLite database.
-
-The overview page supports default budgets and an override for the current task.
-The API exposes the stored configuration at `/api/budgets`.
-
-Warnings appear in the dashboard and in the Codex hook summary when usage
-crosses `warn_at * limit`.
-
-`budgets.toml` is still supported as an explicit legacy override for commands
-that accept `--budget-path`, but it is no longer the default configuration path.
-
-## Analysis Features
-
-AI Keeper also tracks:
-
-- Privacy audits that check the local database schema and sampled text columns
-  for prompt, assistant, or raw transcript storage.
-- Ingest health for sessions, token events, transcript paths, ingest offsets,
-  lagging sources, and unpriced model labels.
-- Ingest health details for missing transcript paths and source offset lag,
-  shown without transcript contents.
-- Context health on session pages, including cache ratio, input growth, and
-  compaction guidance.
-- Anomalies such as large turns, cost jumps, cache regressions, and project model
-  switches.
-- Savings simulations that reprice stored token events against another model.
-- Metadata-only exports in Markdown, CSV, and JSON.
-
-## OpenAI Costs Import
-
-Estimated local spend is still the primary project/task/session attribution
-source. You can additionally import official organization-level OpenAI Admin
-Costs API buckets when you have an admin key:
-
-```bash
-OPENAI_ADMIN_KEY=... uv run aikeeper sync openai-costs --start-time 1730419200
-```
-
-Imported costs are aggregate billing buckets. They are stored separately from
-local Codex attribution because the OpenAI Costs API does not automatically map
-organization spend to local AI Keeper tasks.
-
-## Claude Adapter
-
-Claude support imports local JSONL metadata from `$CLAUDE_HOME/projects`,
-defaulting to `~/.claude/projects`.
-
-```bash
-uv run aikeeper sync claude
-```
-
-Like Codex ingestion, Claude ingestion stores token counts, timestamps, model,
-cwd, session id, transcript path, and offsets only.
-
-## CLI
-
-```bash
-uv run aikeeper status --cwd "$PWD" --json
-uv run aikeeper sync codex --once
-uv run aikeeper sync claude
-uv run aikeeper audit privacy --json
-uv run aikeeper audit distribution --json
-uv run aikeeper health ingest --json
-uv run aikeeper diagnostics bundle --port 8766
-uv run aikeeper jobs run --job-id 1 --json
-uv run aikeeper simulate --target-model gpt-5.4-mini
-uv run aikeeper export --format markdown
-uv run aikeeper codex exec -- "summarize this repository"
-```
-
-Diagnostics bundles are written under `$AIKEEPER_HOME/diagnostics` by default.
-They contain doctor/system status, privacy/ingest health, service metadata, and
-tail logs. They do not include prompts, assistant messages, raw transcripts, or
-the SQLite database file.
-The dashboard Diagnostics page can create these bundles directly and download
-recent archives without exposing raw chat content.
-
-System actions are stored as metadata-only jobs in SQLite. Each job records the
-action name, command, cwd, status, timestamps, exit code, log path, and output
-tail. It does not store prompts, assistant messages, or raw transcripts.
-
-`aikeeper codex exec -- ...` wraps `codex exec --json`, streams Codex output
-unchanged, and records `turn.completed.usage` as local token events.
-
-## Packaging
-
-`scripts/package.sh` builds the current local release channel:
-
-```bash
-scripts/package.sh --version v0.22.0 --output-dir dist
-```
-
-It writes a source archive, sha256 file, `CHECKSUMS.txt`, release manifest,
-local Homebrew formula, and tap-ready Homebrew formula under `dist/`. The local
-formula installs wrapper commands: `aikeeper-install`,
-`aikeeper-install-git-hooks`, `aikeeper-upgrade`, `aikeeper-rollback`, `aikeeper-publish`, and
-`aikeeper-sign`, `aikeeper-release`, and `aikeeper-public-release-gate`.
-
-The packaging contract remains local-only and metadata-only. Release archives
-exclude `.git`, `.venv`, `dist`, `output`, SQLite databases, JSONL transcripts,
-`.vscode`, and Codex session directories. Future targets remain macOS DMG and
-Windows service/installer.
-
-Generate or refresh release verification materials:
-
-```bash
-scripts/sign-release.sh --dist-dir dist --signer none
-```
-
-GitHub Releases are signed by the release workflow with keyless `cosign` and
-include Sigstore bundle files for the source archive, `CHECKSUMS.txt`, and
-`release-manifest.json`. No signing keys are stored in this repository. See
-[Release Verification](docs/release-verification.md).
-
-Run the local release automation without uploading anything to GitHub:
-
-```bash
-scripts/release.sh --version v0.22.0 --output-dir dist --signer none
-```
-
-Use `--signer cosign` in GitHub Actions or another OIDC-capable environment to
-write `.sigstore.json` bundles.
-
-Prepare the dedicated Homebrew tap checkout without pushing:
-
-```bash
-scripts/publish-homebrew-tap.sh \
-  --version v0.24.0 \
-  --dist-dir dist \
-  --tap-dir output/homebrew-tap \
-  --no-push
-```
-
-The tap repository name is `alevkin/homebrew-tap`, which gives users the
-short Homebrew install path `brew install alevkin/tap/aikeeper` once the
-tap is published.
-
-GitHub auto-releases are handled by `.github/workflows/release.yml` on pushes to
-`main`. The workflow computes the next semver tag from Conventional Commit
-messages, updates release metadata, regenerates `CHANGELOG.md`, builds artifacts,
-signs artifacts with keyless `cosign`, and creates a GitHub Release with
-checksums and Sigstore bundles.
-
-Before changing repository visibility, run the public release gate:
-
-```bash
-scripts/public-release-gate.sh --version v0.22.0 --output-dir dist --online
-```
-
-Before publishing or sharing a package, run the distribution audit:
-
-```bash
-uv run aikeeper audit distribution --json
-```
-
-It checks that tracked release files stay local-only, metadata-only,
-project-agnostic, and company-agnostic. Findings report file paths and rule IDs
-without echoing private matched values.
-
-Private company, project, path, and author markers are configured outside the
-repository in `$AIKEEPER_HOME/private-markers.toml` or the path pointed to by
-`AIKEEPER_PRIVATE_MARKERS`. See [Private Markers](docs/private-markers.md).
-
-Install local developer git hooks:
-
-```bash
-scripts/install-git-hooks.sh
-```
-
-The hooks run the distribution audit before commit and a private author-history
-check before push.
-
-Publish the private GitHub repository through an explicit SSH-key path:
-
-```bash
-scripts/publish.sh \
-  --remote git@github.com:alevkin/ai-keeper.git \
-  --ssh-key ~/.ssh/aikeeper_publish \
-  --branch agent/ak-ops-wave
-```
-
-The publish script configures the local git author, runs the distribution audit,
-sets `origin` when needed, and pushes the current branch plus tags. It does not
-store SSH key material in the repository.
-
-Public release hygiene lives in [SECURITY.md](SECURITY.md),
-[PRIVACY.md](PRIVACY.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
-[docs/public-release-checklist.md](docs/public-release-checklist.md). Public
-issue forms are in `.github/ISSUE_TEMPLATE/` and require metadata-only reports.
-Owner-level GitHub settings are tracked in
-[docs/repo-settings-checklist.md](docs/repo-settings-checklist.md).
-
-Distribution preparation notes:
-
-- Homebrew tap layout: `dist/homebrew-tap/Formula/aikeeper.rb`
-- Homebrew tap publisher: `scripts/publish-homebrew-tap.sh`
-- CI workflow: `.github/workflows/ci.yml`
-- Release automation: `scripts/release.sh`
-- Public release gate: `scripts/public-release-gate.sh`
-- Public issue forms: `.github/ISSUE_TEMPLATE/`
-- macOS DMG spike: `packaging/macos/dmg/`
-- Windows service prep: `packaging/windows/`
-
-## Codex Data Sources
-
-AI Keeper reads:
-
-- `$CODEX_HOME/state_5.sqlite`, defaulting to `~/.codex/state_5.sqlite`
+- `$CODEX_HOME/state_5.sqlite`
 - `$CODEX_HOME/sessions/**/*.jsonl`
 - `$CODEX_HOME/archived_sessions/*.jsonl`
 - `codex exec --json` streams when using the wrapper
 
-## Task Attribution
+Claude metadata ingestion is available through:
 
-Project attribution uses the git root when available, otherwise `cwd`.
-Task attribution uses a git branch issue id such as `AIK-42`, then the branch
-name, then `unassigned`.
+```bash
+uv run aikeeper sync claude
+```
+
+## Release And Distribution
+
+Build release artifacts locally:
+
+```bash
+scripts/package.sh --version v0.25.2 --output-dir dist
+scripts/sign-release.sh --dist-dir dist --signer none
+```
+
+Run the public release gate before changing repository visibility:
+
+```bash
+scripts/public-release-gate.sh --version v0.25.2 --output-dir dist --online
+```
+
+Release artifacts are signed in GitHub Actions with keyless `cosign`. See
+[Release Verification](docs/release-verification.md).
 
 ## Development
 
 ```bash
 uv run pytest -q
 ```
+
+Useful docs:
+
+- [Privacy](PRIVACY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Public Release Checklist](docs/public-release-checklist.md)
+- [Public Release Gate](docs/public-release-gate.md)
+- [GitHub Ops Status](docs/github-ops-status.md)

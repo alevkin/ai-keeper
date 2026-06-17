@@ -3,10 +3,12 @@
 These settings require owner action in the personal account before AI Keeper is
 made public.
 
-- Confirm the default branch is `main`.
-- Enable branch protection for `main`.
-- Require CI to pass before merging.
-- Keep Actions permissions read-only by default.
+- Confirm the default branch is `main`. Current: done on 2026-06-17.
+- Enable branch protection for `main`. Current: lightweight protection is
+  enabled on 2026-06-17.
+- Require CI to pass before merging. Current: deferred until the first public
+  collaboration workflow.
+- Keep Actions permissions read-only by default. Current: done.
 - Review Actions permissions before allowing release publishing.
 - Keep repository secrets empty until release automation needs them.
 - Store signing keys outside the repository.
@@ -17,3 +19,6 @@ made public.
 Owner action is required for default branch, branch protection, Actions
 permissions, repository visibility, and secret management. Avoid using an
 unrelated organization or company account for these settings.
+
+See [GitHub Operations Status](github-ops-status.md) for the latest verified
+private-repository settings.

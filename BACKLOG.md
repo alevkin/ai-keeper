@@ -476,11 +476,108 @@ Acceptance:
 
 Next distribution/operations wave:
 
-- AK-029 Repo Owner Actions: set GitHub default branch to `main`, review branch
-  protection, Actions permissions, and visibility in the personal GitHub UI.
-- AK-030 CI Follow-up: inspect first GitHub Actions run and fix any
-  runner-specific failures.
-- AK-031 Release Upload Design: decide whether releases should be GitHub
-  Releases, Homebrew tap only, PyPI, or a combination.
-- AK-032 Public Launch Copy: write concise README badges, project description,
-  and first public changelog.
+### AK-029 Repo Owner Actions
+
+Status: shipped in v0.22.0.
+
+Set and verify owner-level GitHub settings from the personal account.
+
+- Set GitHub default branch to `main`.
+- Keep repository private.
+- Keep GitHub Actions enabled with read-only workflow permissions.
+- Add lightweight `main` protection against force-push and deletion.
+- Document current settings in `docs/github-ops-status.md`.
+
+Acceptance:
+
+- `gh repo view alevkin/ai-keeper --json defaultBranchRef` reports `main`.
+- `gh api repos/alevkin/ai-keeper/actions/permissions/workflow` reports
+  `default_workflow_permissions: read`.
+- `main` protection reports `allow_force_pushes.enabled: false` and
+  `allow_deletions.enabled: false`.
+
+### AK-030 CI Follow-up
+
+Status: shipped in v0.22.0.
+
+Inspect the first GitHub Actions run and resolve runner-specific failures.
+
+- Inspect failed `main` CI run.
+- Identify no-runner failure caused by the exhausted private Actions minute
+  quota.
+- Rerun CI after the personal account subscription update.
+- Record the successful rerun.
+
+Acceptance:
+
+- `gh run watch 27707193999 --repo alevkin/ai-keeper --exit-status` exits 0.
+- `docs/github-ops-status.md` records the rerun result.
+
+### AK-031 Release Upload Design
+
+Status: shipped in v0.22.0.
+
+Document the release upload path before adding signing secrets or tap
+automation.
+
+- Use GitHub Releases as the canonical archive distribution channel.
+- Keep Homebrew tap publishing explicit until tap ownership is decided.
+- Defer PyPI until AI Keeper has a library/package distribution reason.
+
+Acceptance:
+
+- `docs/release-upload-design.md` exists.
+- The design explains the auto-release path and avoids external secrets.
+
+### AK-032 Public Launch Copy
+
+Status: shipped in v0.22.0.
+
+Add concise public-facing project copy without changing repository visibility.
+
+- Add README badges and a clear metadata-only product description.
+- Add `CHANGELOG.md`.
+- Link public release docs from the checklist.
+
+Acceptance:
+
+- README states AI Keeper is local-only and metadata-only.
+- Changelog exists and is owned by the auto-release workflow.
+
+### AK-034 Release Upload Automation
+
+Status: shipped in v0.22.0.
+
+Add a GitHub Actions auto-release workflow based on the proven Terraform module
+pattern.
+
+- Trigger on pushes to `main`.
+- Skip release commits that start with `chore(release):`.
+- Determine the next semver version from Conventional Commit messages.
+- Update release metadata files.
+- Generate `CHANGELOG.md` from git history.
+- Commit the changelog and version bump.
+- Create an annotated `v*` tag.
+- Build release artifacts and create a GitHub Release.
+- Avoid Teams/webhook notifications and external secrets in AI Keeper.
+
+Acceptance:
+
+- `.github/workflows/release.yml` exists.
+- `scripts/update-version.py` updates `pyproject.toml`, `uv.lock`, and
+  `packaging/manifest.json`.
+- `scripts/generate-changelog.py` prepends a new changelog section from git
+  history.
+- Workflow uses `contents: write` and `gh release create`.
+
+## Next
+
+- AK-033 Public Release Gate: automate a read-only gate that checks docs,
+  changelog, tags, CI status, audits, package artifacts, and release workflow
+  readiness before making the repository public.
+- AK-035 Release Signing Policy: decide whether release artifacts should use
+  `cosign`, `minisign`, both, or unsigned checksums for the private phase.
+- AK-036 Homebrew Tap Repository: decide and scaffold a separate tap repository
+  if Homebrew becomes a primary distribution channel.
+- AK-037 Public Issue Templates: add bug report, feature request, and security
+  contact templates before public launch.

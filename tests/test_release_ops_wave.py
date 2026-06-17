@@ -21,7 +21,7 @@ def test_release_script_dry_run_uses_local_artifacts_without_secrets(tmp_path: P
             "bash",
             str(REPO / "scripts" / "release.sh"),
             "--version",
-            "v0.21.0",
+            "v0.22.0",
             "--output-dir",
             str(tmp_path / "dist"),
             "--skip-tests",
@@ -37,7 +37,7 @@ def test_release_script_dry_run_uses_local_artifacts_without_secrets(tmp_path: P
     assert "AI Keeper release" in result.stdout
     assert "DRY RUN" in result.stdout
     assert "uv run aikeeper audit distribution --json" in result.stdout
-    assert "scripts/package.sh --version v0.21.0" in result.stdout
+    assert "scripts/package.sh --version v0.22.0" in result.stdout
     assert "scripts/sign-release.sh --dist-dir" in result.stdout
     assert "release-notes.md" in result.stdout
     assert "gh release" not in result.stdout

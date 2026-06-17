@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Auto-release
+    runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: python -m pip install uv
+
+      - name: Calculate next version
+        id: version
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
+          echo "Last tag: ${LAST_TAG:-<none>}"
+
+          if [ -z "$LAST_TAG" ]; then
+            MAJOR=0
+            MINOR=0
+            PATCH=0
+            LOG=$(git log --pretty=format:"%s%n%b")
+          else
+            BASE="${LAST_TAG#v}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE"
+            LOG=$(git log "${LAST_TAG}..HEAD" --pretty=format:"%s%n%b")
+          fi
+
+          if [ -z "$LOG" ]; then
+            echo "No commits since last tag; skipping release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BUMP="none"
+          if echo "$LOG" | grep -qE "(BREAKING CHANGE|^[a-z]+(\(.+\))?!:)"; then
+            BUMP="major"
+          elif echo "$LOG" | grep -qE "^feat(\(.+\))?:"; then
+            BUMP="minor"
+          elif echo "$LOG" | grep -qE "^(fix|perf|refactor|chore)(\(.+\))?:"; then
+            BUMP="patch"
+          fi
+
+          echo "Bump type: $BUMP"
+          if [ "$BUMP" = "none" ]; then
+            echo "No releasable commits; skipping release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          case "$BUMP" in
+            major) TAG="v$((MAJOR + 1)).0.0" ;;
+            minor) TAG="v${MAJOR}.$((MINOR + 1)).0" ;;
+            patch) TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))" ;;
+          esac
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "previous_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Update version metadata
+        if: steps.version.outputs.skip != 'true'
+        run: python scripts/update-version.py "${{ steps.version.outputs.tag }}"
+
+      - name: Generate CHANGELOG.md
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          python scripts/generate-changelog.py \
+            --version "${{ steps.version.outputs.tag }}" \
+            --previous-tag "${{ steps.version.outputs.previous_tag }}" \
+            --release-notes /tmp/release-notes.md
+          head -n 30 CHANGELOG.md
+
+      - name: Test release candidate
+        if: steps.version.outputs.skip != 'true'
+        run: uv run pytest -q
+
+      - name: Audit release candidate
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          uv run aikeeper audit privacy --json
+          uv run aikeeper audit distribution --json
+
+      - name: Commit changelog, tag and push
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md pyproject.toml packaging/manifest.json uv.lock
+          git commit -m "chore(release): ${TAG}"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin main
+          git push origin "$TAG"
+
+      - name: Build release artifacts
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          bash scripts/release.sh --version "$TAG" --output-dir dist --signer none --skip-tests
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file /tmp/release-notes.md \
+            "dist/aikeeper-${TAG}.tar.gz" \
+            "dist/aikeeper-${TAG}.tar.gz.sha256" \
+            "dist/CHECKSUMS.txt" \
+            "dist/SIGNING.md" \
+            "dist/release-manifest.json"

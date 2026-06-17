@@ -23,3 +23,27 @@ def test_github_ci_workflow_runs_metadata_only_release_checks() -> None:
     assert "ruby -c dist/homebrew/aikeeper.rb" in text
     assert "ruby -c dist/homebrew-tap/Formula/aikeeper.rb" in text
     assert "secrets." not in text
+
+
+def test_github_release_workflow_autogenerates_changelog_and_release_artifacts() -> None:
+    workflow = REPO / ".github" / "workflows" / "release.yml"
+    text = workflow.read_text(encoding="utf-8")
+
+    assert "name: Release" in text
+    assert "branches: [main]" in text
+    assert "contents: write" in text
+    assert "fetch-depth: 0" in text
+    assert "chore(release):" in text
+    assert "Calculate next version" in text
+    assert "BREAKING CHANGE" in text
+    assert "feat" in text
+    assert "fix|perf|refactor|chore" in text
+    assert "python scripts/update-version.py" in text
+    assert "python scripts/generate-changelog.py" in text
+    assert "git add CHANGELOG.md pyproject.toml packaging/manifest.json" in text
+    assert 'git tag -a "$TAG"' in text
+    assert "bash scripts/release.sh --version \"$TAG\"" in text
+    assert "gh release create \"$TAG\"" in text
+    assert "dist/aikeeper-${TAG}.tar.gz" in text
+    assert "TEAMS_WEBHOOK_URL" not in text
+    assert "secrets." not in text

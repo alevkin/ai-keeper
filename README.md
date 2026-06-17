@@ -1,6 +1,12 @@
 # AI Keeper
 
-Local-only token usage daemon and dashboard for Codex.
+[![CI](https://github.com/alevkin/ai-keeper/actions/workflows/ci.yml/badge.svg)](https://github.com/alevkin/ai-keeper/actions/workflows/ci.yml)
+[![Privacy](https://img.shields.io/badge/privacy-metadata--only-2f6f5e)](PRIVACY.md)
+[![Local only](https://img.shields.io/badge/runtime-local--only-334155)](README.md)
+
+AI Keeper is a local-only token usage daemon and dashboard for Codex. It helps
+track token and estimated cost usage by project, task, session, and turn without
+copying chat text into its own database.
 
 AI Keeper stores metadata only: token counts, model, cwd, git metadata, session ids,
 transcript paths and ingest offsets. It does not copy prompts, assistant messages,
@@ -33,7 +39,7 @@ scripts/install.sh --port 8766
 Or build and install through the local Homebrew formula:
 
 ```bash
-scripts/package.sh --version v0.21.0 --output-dir dist
+scripts/package.sh --version v0.22.0 --output-dir dist
 brew install --formula dist/homebrew/aikeeper.rb
 aikeeper-install --port 8766
 ```
@@ -91,7 +97,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.21.0
+scripts/upgrade.sh --port 8766 --target v0.22.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -238,7 +244,7 @@ unchanged, and records `turn.completed.usage` as local token events.
 `scripts/package.sh` builds the current local release channel:
 
 ```bash
-scripts/package.sh --version v0.21.0 --output-dir dist
+scripts/package.sh --version v0.22.0 --output-dir dist
 ```
 
 It writes a source archive, sha256 file, `CHECKSUMS.txt`, release manifest,
@@ -265,8 +271,13 @@ Do not store signing keys in this repository. See
 Run the local release automation without uploading anything to GitHub:
 
 ```bash
-scripts/release.sh --version v0.21.0 --output-dir dist --signer none
+scripts/release.sh --version v0.22.0 --output-dir dist --signer none
 ```
+
+GitHub auto-releases are handled by `.github/workflows/release.yml` on pushes to
+`main`. The workflow computes the next semver tag from Conventional Commit
+messages, updates release metadata, regenerates `CHANGELOG.md`, builds artifacts,
+and creates a GitHub Release with checksums.
 
 Before publishing or sharing a package, run the distribution audit:
 

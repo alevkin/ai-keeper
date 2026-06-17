@@ -15,6 +15,9 @@ Use this checklist before changing the repository from private to public.
   JSONL transcripts, logs, diagnostics bundles, and session directories.
 - Review `README.md`, `SECURITY.md`, `PRIVACY.md`, and `CONTRIBUTING.md`.
 - Review `docs/repo-settings-checklist.md`.
+- Review `docs/github-ops-status.md`.
+- Review `docs/release-upload-design.md`.
+- Review `CHANGELOG.md`.
 - Confirm no private SSH key path, company marker, or adjacent project name is
   present in tracked files.
 

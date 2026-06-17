@@ -28,6 +28,9 @@ def test_distribution_audit_passes_current_repo_without_company_or_project_coupl
     assert result["findings"] == []
     assert result["checks"]["tracked_files"] > 0
     assert "scripts/package.sh" in result["checks"]["required_files"]
+    assert ".github/workflows/release.yml" in result["checks"]["required_files"]
+    assert "scripts/generate-changelog.py" in result["checks"]["required_files"]
+    assert "scripts/update-version.py" in result["checks"]["required_files"]
 
 
 def test_distribution_audit_flags_private_project_and_company_markers(tmp_path: Path) -> None:

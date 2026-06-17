@@ -1,71 +1,99 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1040" height="720" viewBox="0 0 1040 720" role="img" aria-labelledby="title desc">
   <title id="title">AI Keeper dashboard preview</title>
-  <desc id="desc">A product preview with token totals, active rate, project usage, task usage, and a small trend chart.</desc>
+  <desc id="desc">A product preview of the AI Keeper Task Economics dashboard with current task cost, projected spend, active rate, cost drivers, and next best move.</desc>
   <defs>
     <filter id="shadow" x="-12%" y="-12%" width="124%" height="124%">
       <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0f172a" flood-opacity="0.14"/>
     </filter>
     <linearGradient id="teal" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#1f9d84"/>
-      <stop offset="1" stop-color="#136f63"/>
+      <stop offset="0" stop-color="#5aa99a"/>
+      <stop offset="1" stop-color="#157465"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" x2="1">
+      <stop offset="0" stop-color="#e4b45f"/>
+      <stop offset="1" stop-color="#9a6415"/>
     </linearGradient>
   </defs>
-  <rect width="1040" height="720" rx="18" fill="#f8fafc"/>
-  <rect x="40" y="40" width="960" height="640" rx="16" fill="#ffffff" stroke="#dbe3ea" filter="url(#shadow)"/>
-  <rect x="40" y="40" width="960" height="68" rx="16" fill="#ffffff" stroke="#dbe3ea"/>
-  <circle cx="78" cy="74" r="13" fill="url(#teal)"/>
-  <path d="M71 74h14M78 67v14" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
-  <text x="108" y="81" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="700" fill="#111827">AI Keeper</text>
-  <text x="840" y="80" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" fill="#64748b">Local dashboard</text>
+  <rect width="1040" height="720" rx="18" fill="#f5f7f4"/>
+  <rect x="36" y="36" width="968" height="648" rx="16" fill="#ffffff" stroke="#d8e1dc" filter="url(#shadow)"/>
+  <rect x="36" y="36" width="968" height="64" rx="16" fill="#ffffff" stroke="#d8e1dc"/>
+  <circle cx="74" cy="68" r="13" fill="url(#teal)"/>
+  <path d="M67 68h14M74 61v14" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+  <text x="104" y="75" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" font-weight="760" fill="#121a19">AI Keeper</text>
+  <rect x="612" y="51" width="88" height="34" rx="8" fill="#edf3ef"/>
+  <text x="634" y="73" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="760" fill="#121a19">Efficiency</text>
+  <text x="724" y="73" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="720" fill="#66736f">Usage</text>
+  <text x="786" y="73" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="720" fill="#66736f">Models</text>
+  <text x="858" y="73" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="720" fill="#66736f">Budgets</text>
 
-  <g transform="translate(78 146)">
-    <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="700" letter-spacing="1.4" fill="#64748b">Today</text>
-    <text x="0" y="52" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="44" font-weight="800" fill="#111827">5.69M</text>
-    <text x="0" y="82" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="16" fill="#64748b">tokens across 4 sessions</text>
-  </g>
-  <g transform="translate(330 146)">
-    <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="700" letter-spacing="1.4" fill="#64748b">This week</text>
-    <text x="0" y="52" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="44" font-weight="800" fill="#111827">$18.42</text>
-    <text x="0" y="82" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="16" fill="#64748b">estimated local spend</text>
-  </g>
-  <g transform="translate(606 146)">
-    <rect x="0" y="-22" width="316" height="128" rx="10" fill="#f8fafc" stroke="#dbe3ea"/>
-    <text x="24" y="11" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="700" letter-spacing="1.4" fill="#64748b">Active rate</text>
-    <text x="24" y="63" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="40" font-weight="800" fill="#111827">82.6K/min</text>
-    <text x="24" y="92" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="16" fill="#64748b">$0.13/min est.</text>
+  <g transform="translate(78 140)">
+    <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="820" fill="#0e5148">EFFICIENCY</text>
+    <text x="0" y="52" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="46" font-weight="820" fill="#121a19">Task Economics</text>
+    <text x="0" y="86" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" fill="#66736f">Manage agent work by cost per useful outcome.</text>
   </g>
 
-  <g transform="translate(78 304)">
-    <rect width="430" height="250" rx="12" fill="#ffffff" stroke="#dbe3ea"/>
-    <text x="24" y="44" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" font-weight="750" fill="#111827">Projects</text>
-    <text x="24" y="84" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#64748b">PROJECT</text>
-    <text x="270" y="84" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#64748b">TODAY</text>
-    <line x1="24" y1="106" x2="406" y2="106" stroke="#e5eaf0"/>
-    <text x="24" y="144" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#166f62">ai-keeper</text>
-    <text x="270" y="144" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#111827">5.69M</text>
-    <text x="24" y="184" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" fill="#475569">client-app</text>
-    <text x="270" y="184" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" fill="#111827">1.28M</text>
-    <text x="24" y="224" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" fill="#475569">infra-tools</text>
-    <text x="270" y="224" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" fill="#111827">840K</text>
+  <g transform="translate(78 252)">
+    <rect width="596" height="256" rx="12" fill="#ffffff" stroke="#b9ddd4"/>
+    <rect width="596" height="70" rx="12" fill="#f7fbf9" stroke="#d8e1dc"/>
+    <text x="24" y="30" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="780" fill="#66736f">CURRENT USEFUL OUTCOME</text>
+    <text x="24" y="58" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="800" fill="#121a19">AK-018 release polish</text>
+    <rect x="440" y="22" width="128" height="28" rx="14" fill="#fff5df" stroke="#edd5a8"/>
+    <text x="464" y="41" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="780" fill="#9a6415">Above usual</text>
+
+    <g transform="translate(24 104)">
+      <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="780" fill="#66736f">SPENT SO FAR</text>
+      <text x="0" y="42" font-family="SFMono-Regular,Consolas,monospace" font-size="34" font-weight="800" fill="#0e5148">$18.42</text>
+      <text x="0" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#66736f">24.8M tokens</text>
+    </g>
+    <g transform="translate(214 104)">
+      <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="780" fill="#66736f">PROJECTED NEXT 30M</text>
+      <text x="0" y="42" font-family="SFMono-Regular,Consolas,monospace" font-size="34" font-weight="800" fill="#121a19">$22.10</text>
+      <text x="0" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#66736f">+$3.68 if rate holds</text>
+    </g>
+    <g transform="translate(428 104)">
+      <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="780" fill="#66736f">USUAL TASK</text>
+      <text x="0" y="42" font-family="SFMono-Regular,Consolas,monospace" font-size="34" font-weight="800" fill="#121a19">$14.90</text>
+      <text x="0" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#9a6415">+23.6% vs baseline</text>
+    </g>
+    <text x="24" y="218" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="760" fill="#66736f">Spent vs usual task</text>
+    <text x="520" y="218" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="800" fill="#9a6415">+23.6%</text>
+    <rect x="24" y="232" width="548" height="12" rx="6" fill="#e7eeeb" stroke="#d7e2dd"/>
+    <rect x="24" y="232" width="408" height="12" rx="6" fill="url(#amber)"/>
   </g>
 
-  <g transform="translate(548 304)">
-    <rect width="374" height="250" rx="12" fill="#ffffff" stroke="#dbe3ea"/>
-    <text x="24" y="44" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" font-weight="750" fill="#111827">Usage trend</text>
-    <text x="24" y="76" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" fill="#64748b">Last 90 minutes, active windows only</text>
-    <line x1="30" y1="198" x2="340" y2="198" stroke="#e5eaf0"/>
-    <line x1="30" y1="154" x2="340" y2="154" stroke="#eef2f6"/>
-    <line x1="30" y1="110" x2="340" y2="110" stroke="#eef2f6"/>
-    <path d="M36 186 C70 176,84 136,116 145 C148 154,151 104,184 112 C226 122,214 172,252 158 C286 146,300 96,338 90" fill="none" stroke="url(#teal)" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="338" cy="90" r="7" fill="#136f63"/>
-    <rect x="24" y="214" width="134" height="22" rx="6" fill="#e8f5f1"/>
-    <text x="36" y="230" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#136f63">cache ratio 42%</text>
+  <g transform="translate(704 252)">
+    <rect width="236" height="256" rx="12" fill="#ffffff" stroke="#d8e1dc"/>
+    <rect width="236" height="56" rx="12" fill="#f8faf7" stroke="#d8e1dc"/>
+    <text x="20" y="35" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="800" fill="#121a19">Next best move</text>
+    <text x="20" y="90" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="21" font-weight="800" fill="#121a19">Narrow the next turn</text>
+    <text x="20" y="122" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#66736f">Live burn is high. Keep the next</text>
+    <text x="20" y="144" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#66736f">prompt scoped to one file, one</text>
+    <text x="20" y="166" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#66736f">failing test, or one decision.</text>
+    <rect x="20" y="184" width="94" height="28" rx="14" fill="#edf3ef" stroke="#d8e1dc"/>
+    <text x="33" y="203" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="760" fill="#121a19">Run tests first</text>
+    <rect x="20" y="222" width="124" height="28" rx="14" fill="#edf3ef" stroke="#d8e1dc"/>
+    <text x="33" y="241" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="760" fill="#121a19">Split remaining work</text>
   </g>
 
-  <g transform="translate(78 590)">
-    <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="700" letter-spacing="1.4" fill="#64748b">LATEST TURN</text>
-    <text x="0" y="34" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#111827">85,673 tokens</text>
-    <text x="190" y="34" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" fill="#64748b">session 14.2M</text>
-    <text x="370" y="34" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" fill="#64748b">task today 5.7M</text>
+  <g transform="translate(78 534)">
+    <rect width="284" height="98" rx="12" fill="#ffffff" stroke="#d8e1dc"/>
+    <text x="20" y="32" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="780" fill="#66736f">Active rate</text>
+    <text x="20" y="70" font-family="SFMono-Regular,Consolas,monospace" font-size="28" font-weight="800" fill="#121a19">82.6K/min</text>
+    <rect x="166" y="40" width="14" height="36" rx="7" fill="#5d9d90"/>
+    <rect x="188" y="28" width="14" height="48" rx="7" fill="#157465"/>
+    <rect x="210" y="50" width="14" height="26" rx="7" fill="#5d9d90"/>
+    <rect x="232" y="20" width="14" height="56" rx="7" fill="#157465"/>
+  </g>
+  <g transform="translate(384 534)">
+    <rect width="286" height="98" rx="12" fill="#ffffff" stroke="#d8e1dc"/>
+    <text x="20" y="32" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="780" fill="#66736f">COST DRIVERS</text>
+    <circle cx="24" cy="58" r="5" fill="#9a6415"/>
+    <text x="40" y="63" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" font-weight="760" fill="#121a19">Turn volume</text>
+    <text x="184" y="63" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" font-weight="800" fill="#0e5148">18 turns</text>
+  </g>
+  <g transform="translate(704 534)">
+    <rect width="236" height="98" rx="12" fill="#ffffff" stroke="#d8e1dc"/>
+    <text x="20" y="32" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="780" fill="#66736f">This week</text>
+    <text x="20" y="70" font-family="SFMono-Regular,Consolas,monospace" font-size="28" font-weight="800" fill="#121a19">$64.80</text>
   </g>
 </svg>

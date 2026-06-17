@@ -1,15 +1,23 @@
 {% extends "base.html" %}
-{% block title %}AI Keeper Command{% endblock %}
+{% block title %}AI Keeper Efficiency{% endblock %}
 {% block content %}
 {% set burn = overview.burn_rate.current %}
 {% set burn_trend = overview.burn_rate.trend %}
 {% set providers = overview.provider_totals %}
+{% set econ = overview.task_economics %}
 {% set alert_count = (1 if overview.budget_warnings else 0) + (1 if overview.ingest_health.issues else 0) + (1 if overview.privacy_audit.findings else 0) %}
-<section class="command-hero" aria-label="Operator summary">
+{% if econ.configured and econ.baseline.estimated_cost_usd %}
+  {% set trajectory_percent = econ.spent.estimated_cost_usd * 100 / econ.baseline.estimated_cost_usd %}
+{% else %}
+  {% set trajectory_percent = 34 %}
+{% endif %}
+{% set trajectory_width = 100 if trajectory_percent > 100 else (6 if trajectory_percent < 6 else trajectory_percent) %}
+
+<section class="efficiency-hero" aria-label="Task economics summary">
   <div>
-    <span class="command-eyebrow">Local AI usage cockpit</span>
-    <h1>Command</h1>
-    <p>Track live spend, provider mix, budget pressure, and privacy-safe ingest health while Codex and Claude are doing the work.</p>
+    <span class="efficiency-eyebrow">Efficiency</span>
+    <h1>Task Economics</h1>
+    <p>AI Keeper helps developers turn AI agents from an open-ended burn rate into a managed engineering budget.</p>
   </div>
   <div class="hero-actions">
     <a class="health-pill {{ overview.ingest_health.status }}" href="/health">
@@ -20,144 +28,203 @@
   </div>
 </section>
 
-<section class="metric-row command-metrics" aria-label="Key usage metrics">
-  <article class="metric-card primary">
-    <span class="label">Today</span>
-    <strong data-today-tokens title="{{ overview.today_tokens | tokens }}">{{ overview.today_tokens | compact_tokens }}</strong>
-    <small data-today-cost title="{{ overview.estimated_cost.today_usd | usd }}">{{ overview.estimated_cost.today_usd | compact_usd }} estimated</small>
-  </article>
-  <article class="metric-card">
-    <span class="label">Last turn</span>
-    <strong data-last-turn-tokens>
-      {% if overview.current_activity %}{{ overview.current_activity.last_turn_tokens | compact_tokens }}{% else %}0{% endif %}
-    </strong>
-    <small data-last-turn-cost>
-      {% if overview.current_activity %}{{ overview.current_activity.last_turn_cost_usd | usd }} estimated{% else %}$0.00 estimated{% endif %}
-    </small>
-  </article>
-  <article class="metric-card active-rate-card">
-    <span class="label">Active rate</span>
-    <strong data-active-token-rate title="{% if burn %}{{ burn.tokens_per_minute | round(2) }} tokens/min{% else %}0 tokens/min{% endif %}">
-      {% if burn %}{{ burn.tokens_per_minute | per_minute }}{% else %}0/min{% endif %}
-    </strong>
-    <small data-active-cost-rate title="{% if burn %}{{ burn.usd_per_minute | usd }}/min{% else %}$0.00/min{% endif %}">
-      {% if burn %}{{ burn.usd_per_minute | usd_per_minute }} est.{% else %}$0.00/min est.{% endif %}
-    </small>
-    <div class="rate-trend" aria-label="Active rate trend">
-      {% set trend_points = burn_trend.points %}
-      {% set max_rate = trend_points | map(attribute="tokens_per_minute") | max if trend_points else 0 %}
-      <div class="rate-sparkline" data-rate-trend-bars>
-        {% for point in trend_points %}
-        <span
-          data-rate-bar
-          class="{% if point.tokens_per_minute == 0 %}empty{% endif %}"
-          style="height: {{ (point.tokens_per_minute * 100 / max_rate) if max_rate else 0 }}%"
-          title="{{ point.tokens_per_minute | per_minute }} · {{ point.usd_per_minute | usd_per_minute }}"
-        ></span>
+<section class="economics-layout">
+  <div class="economics-main">
+    <section class="panel trajectory-panel {{ econ.status }}" aria-labelledby="task-economics-title">
+      <div class="trajectory-head">
+        <div>
+          <span class="label">Current useful outcome</span>
+          <h2 id="task-economics-title">
+            {% if econ.configured %}{{ econ.task.name }}{% else %}No active task{% endif %}
+          </h2>
+          <p>
+            {% if econ.configured and overview.current_activity %}
+            {{ econ.task.project_name }} · {{ overview.current_activity.provider }} · {{ overview.current_activity.model or "unknown model" }}
+            {% else %}
+            Start Codex or Claude activity to build a task-level baseline.
+            {% endif %}
+          </p>
+        </div>
+        <span class="economics-status {{ econ.status }}" data-task-economics-status>{{ econ.status_label }}</span>
+      </div>
+
+      <div class="trajectory-metrics" aria-label="Current task economics">
+        <div>
+          <span class="label">Spent so far</span>
+          <strong data-task-spent-cost>
+            {% if econ.configured %}{{ econ.spent.estimated_cost_usd | compact_usd }}{% else %}$0.00{% endif %}
+          </strong>
+          <small data-task-spent-tokens>
+            {% if econ.configured %}{{ econ.spent.tokens | compact_tokens }} tokens{% else %}No task events yet{% endif %}
+          </small>
+        </div>
+        <div>
+          <span class="label">Projected next {{ econ.projection_minutes }}m</span>
+          <strong data-task-projected-cost>
+            {% if econ.configured %}{{ econ.projection.estimated_cost_usd | compact_usd }}{% else %}$0.00{% endif %}
+          </strong>
+          <small data-task-projection-additional>
+            {% if econ.configured %}+{{ econ.projection.additional_cost_usd | compact_usd }} if rate holds{% else %}Waiting for live rate{% endif %}
+          </small>
+        </div>
+        <div>
+          <span class="label">Usual task</span>
+          <strong data-task-baseline-cost>
+            {% if econ.configured and econ.baseline.estimated_cost_usd is not none %}
+            {{ econ.baseline.estimated_cost_usd | compact_usd }}
+            {% else %}
+            Learning
+            {% endif %}
+          </strong>
+          <small data-task-baseline-delta>
+            {% if econ.configured and econ.baseline.delta_ratio is not none %}
+            {{ econ.baseline.delta_ratio | signed_percent }} vs baseline
+            {% elif econ.configured %}
+            {{ econ.baseline.sample_size }} comparable tasks
+            {% else %}
+            Needs task history
+            {% endif %}
+          </small>
+        </div>
+        <div>
+          <span class="label">Last turn</span>
+          <strong data-last-turn-tokens>
+            {% if overview.current_activity %}{{ overview.current_activity.last_turn_tokens | compact_tokens }}{% else %}0{% endif %}
+          </strong>
+          <small data-last-turn-cost>
+            {% if overview.current_activity %}{{ overview.current_activity.last_turn_cost_usd | usd }} estimated{% else %}$0.00 estimated{% endif %}
+          </small>
+        </div>
+      </div>
+
+      <div class="trajectory-track-wrap">
+        <div class="trajectory-track-head">
+          <span>
+            {% if econ.configured and econ.baseline.estimated_cost_usd %}
+            Spent vs usual task
+            {% else %}
+            Baseline progress
+            {% endif %}
+          </span>
+          <strong data-task-track-label>
+            {% if econ.configured and econ.baseline.delta_ratio is not none %}
+            {{ econ.baseline.delta_ratio | signed_percent }}
+            {% elif econ.configured %}
+            learning
+            {% else %}
+            idle
+            {% endif %}
+          </strong>
+        </div>
+        <div class="trajectory-track" aria-hidden="true">
+          <span data-task-track style="width: {{ trajectory_width }}%"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="economics-grid" aria-label="Live efficiency signals">
+      <article class="panel now-panel">
+        <div class="panel-head">
+          <h2>Now</h2>
+          {% if overview.current_activity %}<a href="/sessions/{{ overview.current_activity.id }}">Open session</a>{% endif %}
+        </div>
+        <div class="now-body">
+          <div class="now-rate">
+            <span class="label">Active rate</span>
+            <strong data-active-token-rate title="{% if burn %}{{ burn.tokens_per_minute | round(2) }} tokens/min{% else %}0 tokens/min{% endif %}">
+              {% if burn %}{{ burn.tokens_per_minute | per_minute }}{% else %}0/min{% endif %}
+            </strong>
+            <small data-active-cost-rate title="{% if burn %}{{ burn.usd_per_minute | usd }}/min{% else %}$0.00/min{% endif %}">
+              {% if burn %}{{ burn.usd_per_minute | usd_per_minute }} est.{% else %}$0.00/min est.{% endif %}
+            </small>
+          </div>
+          {% if overview.current_activity %}
+          <div class="now-session">
+            <span class="label">Session</span>
+            <a href="/sessions/{{ overview.current_activity.id }}" title="{{ overview.current_activity.session_id }}">
+              {{ overview.current_activity.session_label }}
+            </a>
+            <small>{{ overview.current_activity.total_tokens | compact_tokens }} tokens / {{ overview.current_activity.estimated_cost_usd | usd }} est.</small>
+          </div>
+          {% endif %}
+          <div class="rate-trend" aria-label="Active rate trend">
+            {% set trend_points = burn_trend.points %}
+            {% set max_rate = trend_points | map(attribute="tokens_per_minute") | max if trend_points else 0 %}
+            <div class="rate-sparkline" data-rate-trend-bars>
+              {% for point in trend_points %}
+              <span
+                data-rate-bar
+                class="{% if point.tokens_per_minute == 0 %}empty{% endif %}"
+                style="height: {{ (point.tokens_per_minute * 100 / max_rate) if max_rate else 0 }}%"
+                title="{{ point.tokens_per_minute | per_minute }} · {{ point.usd_per_minute | usd_per_minute }}"
+              ></span>
+              {% endfor %}
+            </div>
+            <span class="trend-summary {{ burn_trend.direction }}" data-active-trend-summary>
+              {% if burn_trend.previous_tokens_per_minute == 0 and burn_trend.recent_tokens_per_minute > 0 %}
+                new activity vs previous 5m
+              {% elif burn_trend.direction == "up" %}
+                {{ burn_trend.delta_ratio | signed_percent }} vs previous 5m
+              {% elif burn_trend.direction == "down" %}
+                {{ burn_trend.delta_ratio | signed_percent }} vs previous 5m
+              {% else %}
+                steady vs previous 5m
+              {% endif %}
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel drivers-panel">
+        <div class="panel-head">
+          <h2>Cost drivers</h2>
+          <span>{% if econ.configured %}{{ econ.spent.event_count }} turns{% else %}learning{% endif %}</span>
+        </div>
+        <div class="driver-list">
+          {% for driver in econ.drivers %}
+          <div class="driver-row {{ driver.state }}">
+            <span class="driver-state" aria-hidden="true"></span>
+            <div>
+              <strong>{{ driver.label }}</strong>
+              <small>{{ driver.detail }}</small>
+            </div>
+            <span>{{ driver.value }}</span>
+          </div>
+          {% endfor %}
+          {% if not econ.drivers %}
+          <p class="empty-state">No cost drivers yet.</p>
+          {% endif %}
+        </div>
+      </article>
+    </section>
+
+    <section class="panel task-ledger-panel">
+      <div class="panel-head">
+        <h2>Task Ledger</h2>
+        <span>recent turns</span>
+      </div>
+      {% if econ.ledger %}
+      <div class="ledger-list">
+        {% for event in econ.ledger %}
+        <div class="ledger-row">
+          <span class="phase-pill {{ event.phase }}">{{ event.phase }}</span>
+          <span>
+            <strong>Turn {{ event.sequence }}</strong>
+            <small>{{ event.provider }} · {{ event.model }}</small>
+          </span>
+          <span class="ledger-number" title="{{ event.tokens | tokens }} tokens">{{ event.tokens | compact_tokens }}</span>
+          <span class="ledger-cost">{{ event.estimated_cost_usd | compact_usd }}</span>
+        </div>
         {% endfor %}
       </div>
-      <span class="trend-summary {{ burn_trend.direction }}" data-active-trend-summary>
-        {% if burn_trend.previous_tokens_per_minute == 0 and burn_trend.recent_tokens_per_minute > 0 %}
-          new activity vs previous 5m
-        {% elif burn_trend.direction == "up" %}
-          {{ burn_trend.delta_ratio | signed_percent }} vs previous 5m
-        {% elif burn_trend.direction == "down" %}
-          {{ burn_trend.delta_ratio | signed_percent }} vs previous 5m
-        {% else %}
-          steady vs previous 5m
-        {% endif %}
-      </span>
-    </div>
-  </article>
-  <article class="metric-card quiet-metric">
-    <span class="label">This week</span>
-    <strong data-week-tokens title="{{ overview.week_tokens | tokens }}">{{ overview.week_tokens | compact_tokens }}</strong>
-    <small data-week-cost title="{{ overview.estimated_cost.week_usd | usd }}">{{ overview.estimated_cost.week_usd | compact_usd }} estimated</small>
-  </article>
-</section>
-
-<section class="panel provider-runway" aria-labelledby="providers-title">
-  <div class="provider-runway-head">
-    <div>
-      <span class="label">Tracked providers</span>
-      <h2 id="providers-title">Providers</h2>
-      <p>All-time usage mix across local adapters. Cost is estimated from model pricing; raw prompts and replies stay out of the database.</p>
-    </div>
-    <a href="/models">Model efficiency</a>
-  </div>
-  {% if providers %}
-  <div class="provider-meter" aria-label="Token share by provider">
-    {% for provider in providers %}
-    {% set provider_share = provider.token_share * 100 %}
-    <span
-      class="provider-meter-segment provider-{{ provider.provider | lower }}"
-      style="width: {{ provider_share if provider_share > 0.5 else 0.5 }}%"
-      title="{{ provider.provider }} · {{ provider.total_tokens | tokens }} tokens · {{ provider.estimated_cost_usd | usd }} est."
-    ></span>
-    {% endfor %}
-  </div>
-  <div class="provider-track">
-    {% for provider in providers %}
-    {% set provider_share = provider.token_share * 100 %}
-    <a class="provider-tile provider-{{ provider.provider | lower }}" href="/models">
-      <span class="provider-title">
-        <span class="provider-mark" aria-hidden="true"></span>
-        <strong>{{ provider.provider }}</strong>
-        <small>{{ provider.model_count }} models</small>
-      </span>
-      <span class="provider-stats">
-        <strong title="{{ provider.total_tokens | tokens }}">{{ provider.total_tokens | compact_tokens }}</strong>
-        <small>{{ provider.estimated_cost_usd | compact_usd }} est. · {{ provider.event_count | tokens }} turns</small>
-      </span>
-      <span class="provider-share">{{ provider_share | round(1) }}%</span>
-    </a>
-    {% endfor %}
-  </div>
-  {% else %}
-  <p class="empty-state">No providers imported yet.</p>
-  {% endif %}
-</section>
-
-<section class="command-layout">
-  <div class="command-main">
-    <section class="panel current-panel">
-      <div class="panel-head">
-        <h2>Current activity</h2>
-        {% if overview.current_activity %}<a href="/sessions/{{ overview.current_activity.id }}">Open session</a>{% endif %}
-      </div>
-      {% if overview.current_activity %}
-      <div class="activity-main activity-ledger">
-        <div>
-          <span class="label">Project</span>
-          <a href="/projects/{{ overview.current_activity.project_id }}">{{ overview.current_activity.project_name }}</a>
-          <small>{{ overview.current_activity.root_path }}</small>
-        </div>
-        <div>
-          <span class="label">Provider</span>
-          <strong class="provider-name">{{ overview.current_activity.provider }}</strong>
-          <small>{{ overview.current_activity.model or "unknown model" }}</small>
-        </div>
-        <div>
-          <span class="label">Task</span>
-          <strong>{{ overview.current_activity.task_name }}</strong>
-          <small>{{ overview.current_activity.task_key }}</small>
-        </div>
-        <div>
-          <span class="label">Session</span>
-          <a href="/sessions/{{ overview.current_activity.id }}" title="{{ overview.current_activity.session_id }}">
-            {{ overview.current_activity.session_label }}
-          </a>
-          <small>{{ overview.current_activity.total_tokens | tokens }} tokens / {{ overview.current_activity.estimated_cost_usd | usd }} est.</small>
-        </div>
-      </div>
       {% else %}
-      <p class="empty-state">No provider activity imported yet.</p>
+      <p class="empty-state">Task turns will appear here after the next sync.</p>
       {% endif %}
     </section>
 
     <section class="panel trend-panel">
       <div class="panel-head">
-        <h2>7-day spend</h2>
+        <h2>Spend rhythm</h2>
         <a href="/usage">Usage details</a>
       </div>
       {% set max_daily = overview.daily_tokens | map(attribute="tokens") | max %}
@@ -173,31 +240,60 @@
         {% endfor %}
       </div>
     </section>
+  </div>
 
-    <section class="panel digest-panel">
+  <aside class="economics-rail" aria-label="Efficiency guidance and context">
+    <section class="panel next-move-panel {{ econ.status }}">
       <div class="panel-head">
-        <h2>Top projects</h2>
-        <a href="/usage">View all</a>
+        <h2>Next best move</h2>
+        <span>{{ econ.status_label }}</span>
       </div>
-      {% set top_projects = overview.projects | sort(attribute="today_tokens", reverse=true) %}
-      <div class="digest-list">
-        {% for project in top_projects[:4] %}
-        <a class="digest-row" href="/projects/{{ project.id }}">
-          <span>
-            <strong>{{ project.name }}</strong>
-            <small>{{ project.root_path }}</small>
-          </span>
-          <span class="digest-number" title="{{ project.today_tokens | tokens }}">{{ project.today_tokens | compact_tokens }}</span>
-        </a>
-        {% endfor %}
-        {% if not top_projects %}
-        <p class="empty-state">No projects imported yet.</p>
+      <div class="next-move-body">
+        <strong data-next-move-title>{{ econ.next_best_move.title }}</strong>
+        <p data-next-move-detail>{{ econ.next_best_move.detail }}</p>
+        {% if econ.next_best_move.actions %}
+        <div class="action-chips" data-next-move-actions>
+          {% for action in econ.next_best_move.actions %}
+          <span>{{ action }}</span>
+          {% endfor %}
+        </div>
         {% endif %}
       </div>
     </section>
-  </div>
 
-  <aside class="operator-rail" aria-label="Operator alerts">
+    <section class="panel provider-context" aria-labelledby="providers-title">
+      <div class="panel-head">
+        <h2 id="providers-title">Providers</h2>
+        <a href="/models">Models</a>
+      </div>
+      {% if providers %}
+      <div class="provider-meter compact" aria-label="Token share by provider">
+        {% for provider in providers %}
+        {% set provider_share = provider.token_share * 100 %}
+        <span
+          class="provider-meter-segment provider-{{ provider.provider | lower }}"
+          style="width: {{ provider_share if provider_share > 0.5 else 0.5 }}%"
+          title="{{ provider.provider }} · {{ provider.total_tokens | tokens }} tokens · {{ provider.estimated_cost_usd | usd }} est."
+        ></span>
+        {% endfor %}
+      </div>
+      <div class="provider-mini-list">
+        {% for provider in providers[:3] %}
+        {% set provider_share = provider.token_share * 100 %}
+        <a class="provider-mini provider-{{ provider.provider | lower }}" href="/models">
+          <span>
+            <strong>{{ provider.provider }}</strong>
+            <small>{{ provider.model_count }} models · {{ provider.event_count | tokens }} turns</small>
+          </span>
+          <span>{{ provider_share | round(1) }}%</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="empty-state">No providers imported yet.</p>
+      {% endif %}
+    </section>
+
     <section class="panel alert-panel">
       <div class="panel-head">
         <h2>Operator alerts</h2>
@@ -255,6 +351,16 @@
       </div>
       <div class="cost-stack">
         <div>
+          <span class="label">Today</span>
+          <strong data-today-cost title="{{ overview.estimated_cost.today_usd | usd }}">{{ overview.estimated_cost.today_usd | compact_usd }}</strong>
+          <small data-today-tokens title="{{ overview.today_tokens | tokens }}">{{ overview.today_tokens | compact_tokens }} tokens</small>
+        </div>
+        <div>
+          <span class="label">This week</span>
+          <strong data-week-cost title="{{ overview.estimated_cost.week_usd | usd }}">{{ overview.estimated_cost.week_usd | compact_usd }}</strong>
+          <small data-week-tokens title="{{ overview.week_tokens | tokens }}">{{ overview.week_tokens | compact_tokens }} tokens</small>
+        </div>
+        <div>
           <span class="label">All time</span>
           <strong data-total-cost title="{{ overview.estimated_cost.total_usd | usd }}">{{ overview.estimated_cost.total_usd | compact_usd }}</strong>
           <small data-total-tokens title="{{ overview.total_tokens | tokens }}">{{ overview.total_tokens | compact_tokens }} tokens</small>
@@ -282,8 +388,8 @@
     updateMetric("[data-today-tokens]", data.today_tokens);
     updateMetric("[data-week-tokens]", data.week_tokens);
     updatePlainCost("[data-total-cost]", data.estimated_cost.total_usd);
-    updateInlineCost("[data-today-cost]", data.estimated_cost.today_usd);
-    updateInlineCost("[data-week-cost]", data.estimated_cost.week_usd);
+    updatePlainCost("[data-today-cost]", data.estimated_cost.today_usd);
+    updatePlainCost("[data-week-cost]", data.estimated_cost.week_usd);
     if (data.current_activity) {
       updateMetric("[data-last-turn-tokens]", data.current_activity.last_turn_tokens);
       updateInlineCost("[data-last-turn-cost]", data.current_activity.last_turn_cost_usd);
@@ -294,6 +400,9 @@
     }
     if (data.burn_rate && data.burn_rate.trend) {
       updateBurnRateTrend(data.burn_rate.trend);
+    }
+    if (data.task_economics) {
+      updateTaskEconomics(data.task_economics);
     }
     const sync = document.querySelector("[data-last-sync]");
     if (sync) sync.textContent = "synced " + new Date(data.generated_at_ms).toLocaleTimeString();
@@ -332,6 +441,56 @@
     if (!element) return;
     element.textContent = usdFormatter.format(value) + "/min est.";
     element.title = usdFormatter.format(value) + "/min";
+  }
+
+  function updateTaskEconomics(economics) {
+    if (!economics.configured) return;
+    updatePlainCost("[data-task-spent-cost]", economics.spent.estimated_cost_usd);
+    updateMetric("[data-task-spent-tokens]", economics.spent.tokens);
+    const spentTokens = document.querySelector("[data-task-spent-tokens]");
+    if (spentTokens) spentTokens.textContent += " tokens";
+    updatePlainCost("[data-task-projected-cost]", economics.projection.estimated_cost_usd);
+    const additional = document.querySelector("[data-task-projection-additional]");
+    if (additional) additional.textContent = `+${usdFormatter.format(economics.projection.additional_cost_usd || 0)} if rate holds`;
+    const status = document.querySelector("[data-task-economics-status]");
+    if (status) {
+      status.textContent = economics.status_label || "Learning baseline";
+      status.className = `economics-status ${economics.status || "learning"}`;
+    }
+    const baselineCost = document.querySelector("[data-task-baseline-cost]");
+    if (baselineCost) {
+      if (economics.baseline.estimated_cost_usd === null || economics.baseline.estimated_cost_usd === undefined) {
+        baselineCost.textContent = "Learning";
+      } else {
+        baselineCost.textContent = usdFormatter.format(economics.baseline.estimated_cost_usd);
+      }
+    }
+    const baselineDelta = document.querySelector("[data-task-baseline-delta]");
+    if (baselineDelta) {
+      baselineDelta.textContent =
+        economics.baseline.delta_ratio === null || economics.baseline.delta_ratio === undefined
+          ? `${economics.baseline.sample_size || 0} comparable tasks`
+          : `${signedPercent(economics.baseline.delta_ratio)} vs baseline`;
+    }
+    const track = document.querySelector("[data-task-track]");
+    const trackLabel = document.querySelector("[data-task-track-label]");
+    if (track) {
+      let width = 34;
+      if (economics.baseline.estimated_cost_usd) {
+        width = economics.spent.estimated_cost_usd * 100 / economics.baseline.estimated_cost_usd;
+      }
+      track.style.width = `${Math.max(6, Math.min(100, width))}%`;
+    }
+    if (trackLabel) {
+      trackLabel.textContent =
+        economics.baseline.delta_ratio === null || economics.baseline.delta_ratio === undefined
+          ? "learning"
+          : signedPercent(economics.baseline.delta_ratio);
+    }
+    const moveTitle = document.querySelector("[data-next-move-title]");
+    const moveDetail = document.querySelector("[data-next-move-detail]");
+    if (moveTitle) moveTitle.textContent = economics.next_best_move.title || "";
+    if (moveDetail) moveDetail.textContent = economics.next_best_move.detail || "";
   }
 
   function updateBurnRateTrend(trend) {

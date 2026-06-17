@@ -8,7 +8,8 @@ def test_readme_is_product_focused_and_points_to_user_paths() -> None:
     text = (REPO / "README.md").read_text(encoding="utf-8")
 
     assert text.startswith("# AI Keeper")
-    assert "Understand your AI coding spend without giving up privacy." in text
+    assert "Turn AI agents from an open-ended burn rate into a managed engineering budget." in text
+    assert "AI implementation cost per useful outcome" in text
     assert "## Why AI Keeper" in text
     assert "## What You Get" in text
     assert "## Install" in text
@@ -36,19 +37,21 @@ def test_github_pages_landing_is_static_product_page() -> None:
     svg = preview.read_text(encoding="utf-8")
     hook_svg = hook_preview.read_text(encoding="utf-8")
 
-    assert "<title>AI Keeper - Local AI Token Tracker</title>" in html
+    assert "<title>AI Keeper - AI Task Economics</title>" in html
     assert 'href="styles.css?v=' in html
     assert 'href="styles.css"' not in html
-    assert 'src="assets/dashboard-preview.svg"' in html
+    assert 'src="assets/dashboard-preview.svg?v=' in html
     assert 'src="assets/codex-hook-preview.svg"' in html
     assert 'AI Keeper Codex hook summary preview' in html
     assert 'href="#features"' in html
     assert 'href="#privacy"' in html
     assert 'href="#install"' in html
     assert 'href="https://github.com/alevkin/ai-keeper"' in html
-    assert "Understand your AI coding spend without giving up privacy." in html
-    assert "Track Codex and Claude tokens" in html
-    assert "Claude metadata import" in html
+    assert "Turn AI agents into a managed engineering budget." in html
+    assert "AI-assisted implementation task costs" in html
+    assert "Task Economics" in html
+    assert "Next best move" in html
+    assert "Task Ledger" in html
     assert "cache read and cache write tokens" in html
     assert 'id="codex-hook"' in html
     assert "Codex gets the usage line too" in html
@@ -64,6 +67,8 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert "navigator.clipboard.writeText(command)" in html
     assert "No prompts. No assistant messages. No raw transcript copies." in html
     assert "AI Keeper dashboard preview" in svg
+    assert "Task Economics" in svg
+    assert "Next best move" in svg
     assert "Active rate" in svg
     assert "This week" in svg
     assert "AI Keeper Codex hook summary preview" in hook_svg

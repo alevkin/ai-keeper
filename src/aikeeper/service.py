@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from statistics import median
 
 from aikeeper.analytics import context_health, detect_session_anomalies, simulate_cost_rows
 from aikeeper.audit import audit_privacy
@@ -25,6 +26,7 @@ ACTIVE_WINDOW_MS = 600_000
 IDLE_GAP_MS = 120_000
 BURN_TREND_BUCKET_MS = 60_000
 BURN_TREND_BUCKETS = ACTIVE_WINDOW_MS // BURN_TREND_BUCKET_MS
+ECONOMICS_PROJECTION_MINUTES = 30
 
 
 def _sum_tokens_since(con, session_filter: str, params: tuple, since_ms: int) -> int:
@@ -392,6 +394,282 @@ def _provider_totals(model_rows: list[dict], total_tokens: int) -> list[dict]:
     return sorted(rows, key=lambda item: (item["estimated_cost_usd"], item["total_tokens"]), reverse=True)
 
 
+def _task_rollups(con) -> list[dict]:
+    rows = con.execute(
+        """
+        select t.id as task_id, t.task_key, t.display_name, p.name as project_name,
+               s.id as session_pk, s.provider, s.model, te.sequence, te.timestamp_ms,
+               te.input_tokens, te.cached_input_tokens,
+               te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
+               te.output_tokens, te.total_tokens
+        from tasks t
+        join projects p on p.id = t.project_id
+        left join sessions s on s.task_id = t.id
+        left join token_events te on te.session_pk = s.id
+        order by t.id asc, te.timestamp_ms asc, te.sequence asc
+        """
+    ).fetchall()
+    grouped: dict[int, dict] = {}
+    for row in rows:
+        task_id = int(row["task_id"])
+        item = grouped.setdefault(
+            task_id,
+            {
+                "task_id": task_id,
+                "task_key": row["task_key"],
+                "display_name": row["display_name"],
+                "project_name": row["project_name"],
+                "session_ids": set(),
+                "events": [],
+            },
+        )
+        if row["session_pk"] is not None:
+            item["session_ids"].add(int(row["session_pk"]))
+        if row["sequence"] is not None:
+            item["events"].append(row)
+
+    rollups = []
+    for item in grouped.values():
+        events = item["events"]
+        total_tokens = sum(_row_int(row, "total_tokens") for row in events)
+        input_tokens = sum(_row_int(row, "input_tokens") for row in events)
+        cached_input_tokens = sum(_row_int(row, "cached_input_tokens") for row in events)
+        cache_creation_input_tokens = sum(
+            _row_int(row, "cache_creation_input_tokens") + _row_int(row, "cache_creation_1h_input_tokens")
+            for row in events
+        )
+        output_tokens = sum(_row_int(row, "output_tokens") for row in events)
+        cache_denominator = input_tokens + cached_input_tokens + cache_creation_input_tokens
+        rollups.append(
+            {
+                "task_id": item["task_id"],
+                "task_key": item["task_key"],
+                "display_name": item["display_name"],
+                "project_name": item["project_name"],
+                "session_count": len(item["session_ids"]),
+                "event_count": len(events),
+                "total_tokens": total_tokens,
+                "input_tokens": input_tokens,
+                "cached_input_tokens": cached_input_tokens,
+                "cache_creation_input_tokens": cache_creation_input_tokens,
+                "output_tokens": output_tokens,
+                "estimated_cost_usd": _estimate_rows_cost(events)["usd"] if events else 0.0,
+                "active_ms": _active_ms(events),
+                "cache_share": round(cached_input_tokens / cache_denominator, 6) if cache_denominator else 0.0,
+            }
+        )
+    return rollups
+
+
+def _driver_state(value: float, warn_at: float, over_at: float, *, higher_is_better: bool = False) -> str:
+    if higher_is_better:
+        if value >= over_at:
+            return "good"
+        if value >= warn_at:
+            return "watch"
+        return "risk"
+    if value >= over_at:
+        return "risk"
+    if value >= warn_at:
+        return "watch"
+    return "good"
+
+
+def _task_event_rows(con, task_id: int) -> list:
+    return con.execute(
+        """
+        select s.provider, s.model, te.sequence, te.timestamp_ms,
+               te.input_tokens, te.cached_input_tokens,
+               te.cache_creation_input_tokens, te.cache_creation_1h_input_tokens,
+               te.output_tokens, te.reasoning_output_tokens, te.total_tokens
+        from token_events te
+        join sessions s on s.id = te.session_pk
+        where s.task_id = ?
+        order by te.timestamp_ms desc, te.sequence desc
+        limit 12
+        """,
+        (task_id,),
+    ).fetchall()
+
+
+def _phase_for_turn(sequence: int, index_from_latest: int) -> str:
+    if sequence <= 2:
+        return "plan"
+    if index_from_latest <= 1:
+        return "verify"
+    return "build"
+
+
+def _task_economics(con, current: dict | None, burn_rate: dict) -> dict:
+    empty = {
+        "configured": False,
+        "projection_minutes": ECONOMICS_PROJECTION_MINUTES,
+        "status": "learning",
+        "status_label": "Learning baseline",
+        "next_best_move": {
+            "title": "Start a tracked task",
+            "detail": "AI Keeper will compare task cost once provider events arrive.",
+            "actions": [],
+        },
+        "drivers": [],
+        "ledger": [],
+    }
+    if not current:
+        return empty
+
+    rollups = _task_rollups(con)
+    current_rollup = next((row for row in rollups if row["task_id"] == int(current["task_id"])), None)
+    if not current_rollup:
+        return empty
+
+    baseline_costs = [
+        float(row["estimated_cost_usd"])
+        for row in rollups
+        if row["task_id"] != int(current["task_id"]) and float(row["estimated_cost_usd"]) > 0
+    ]
+    baseline_tokens = [
+        int(row["total_tokens"])
+        for row in rollups
+        if row["task_id"] != int(current["task_id"]) and int(row["total_tokens"]) > 0
+    ]
+    baseline_events = [
+        int(row["event_count"])
+        for row in rollups
+        if row["task_id"] != int(current["task_id"]) and int(row["event_count"]) > 0
+    ]
+    baseline_cost = round(float(median(baseline_costs)), 6) if baseline_costs else None
+    baseline_token_count = int(median(baseline_tokens)) if baseline_tokens else None
+    baseline_event_count = int(median(baseline_events)) if baseline_events else None
+    task_cost = float(current_rollup["estimated_cost_usd"])
+    task_tokens = int(current_rollup["total_tokens"])
+    event_count = int(current_rollup["event_count"])
+    active = int(current_rollup["active_ms"])
+    current_burn = burn_rate.get("current") if burn_rate else None
+    usd_per_minute = float(current_burn.get("usd_per_minute", 0.0)) if current_burn else 0.0
+    tokens_per_minute = float(current_burn.get("tokens_per_minute", 0.0)) if current_burn else 0.0
+    projected_cost = round(task_cost + usd_per_minute * ECONOMICS_PROJECTION_MINUTES, 6)
+    projected_tokens = int(task_tokens + tokens_per_minute * ECONOMICS_PROJECTION_MINUTES)
+    baseline_delta = (task_cost - baseline_cost) / baseline_cost if baseline_cost else None
+
+    if baseline_cost is None:
+        status = "learning"
+        status_label = "Learning baseline"
+    elif baseline_delta <= 0.1:
+        status = "efficient"
+        status_label = "Within usual range"
+    elif baseline_delta <= 0.75:
+        status = "watch"
+        status_label = "Above usual"
+    else:
+        status = "risk"
+        status_label = "Expensive task"
+
+    token_delta = (task_tokens - baseline_token_count) / baseline_token_count if baseline_token_count else None
+    event_delta = (event_count - baseline_event_count) / baseline_event_count if baseline_event_count else None
+    avg_turn_cost = round(task_cost / event_count, 6) if event_count else 0.0
+    drivers = [
+        {
+            "label": "Context load",
+            "value": f"{task_tokens:,} tokens",
+            "state": _driver_state(token_delta or 0.0, 0.25, 0.75) if token_delta is not None else "learning",
+            "detail": "Compared with usual task tokens" if token_delta is not None else "Needs more completed task history",
+        },
+        {
+            "label": "Turn volume",
+            "value": f"{event_count:,} turns",
+            "state": _driver_state(event_delta or 0.0, 0.25, 0.75) if event_delta is not None else "learning",
+            "detail": "More turns usually means more rework and context drag" if event_delta is not None else "Baseline not ready yet",
+        },
+        {
+            "label": "Cache leverage",
+            "value": f"{current_rollup['cache_share'] * 100:.0f}%",
+            "state": _driver_state(float(current_rollup["cache_share"]), 0.15, 0.35, higher_is_better=True),
+            "detail": "Higher cache share lowers repeated context cost",
+        },
+        {
+            "label": "Active burn",
+            "value": f"${usd_per_minute:.2f}/min",
+            "state": _driver_state(usd_per_minute, 0.25, 0.75),
+            "detail": f"Projection uses the last {ACTIVE_WINDOW_MS // 60_000} active minutes",
+        },
+    ]
+
+    actions = []
+    if status == "risk":
+        title = "Stop the drift before the next broad turn"
+        detail = "The task is already far above your learned baseline. Ask for a narrow plan or split the remaining work."
+        actions = ["Ask for a 3-step plan", "Split the task", "Commit the working slice"]
+    elif usd_per_minute >= 0.25:
+        title = "Let this turn finish, then narrow the next one"
+        detail = "Live burn is high. Keep the next prompt scoped to one file, one failing test, or one decision."
+        actions = ["Narrow next turn", "Run tests first", "Avoid broad refactor prompts"]
+    elif current_rollup["cache_share"] < 0.15 and event_count >= 6:
+        title = "Compress context before more implementation"
+        detail = "Repeated context is not getting much cache help. Summarize state, then continue with a smaller prompt."
+        actions = ["Summarize state", "Drop old context", "Continue from latest diff"]
+    elif baseline_cost is None:
+        title = "Keep collecting task history"
+        detail = "AI Keeper needs more task samples before it can judge whether this task is unusually expensive."
+        actions = ["Finish the current slice", "Keep task branches clean"]
+    else:
+        title = "Continue, but keep the next turn specific"
+        detail = "The task is still inside the learned range. Preserve that by asking for the smallest useful next step."
+        actions = ["Continue", "Keep scope narrow"]
+
+    ledger = []
+    recent_rows = _task_event_rows(con, int(current["task_id"]))
+    for index, row in enumerate(recent_rows):
+        cost = _estimate_rows_cost([row])["usd"]
+        ledger.append(
+            {
+                "sequence": int(row["sequence"]),
+                "phase": _phase_for_turn(int(row["sequence"]), index),
+                "provider": row["provider"],
+                "model": row["model"],
+                "tokens": _row_int(row, "total_tokens"),
+                "estimated_cost_usd": cost,
+                "timestamp_ms": int(row["timestamp_ms"]),
+            }
+        )
+    ledger.reverse()
+
+    return {
+        "configured": True,
+        "projection_minutes": ECONOMICS_PROJECTION_MINUTES,
+        "status": status,
+        "status_label": status_label,
+        "task": {
+            "id": current_rollup["task_id"],
+            "key": current_rollup["task_key"],
+            "name": current_rollup["display_name"],
+            "project_name": current_rollup["project_name"],
+        },
+        "spent": {
+            "tokens": task_tokens,
+            "estimated_cost_usd": task_cost,
+            "event_count": event_count,
+            "session_count": int(current_rollup["session_count"]),
+            "active_ms": active,
+            "avg_turn_cost_usd": avg_turn_cost,
+        },
+        "projection": {
+            "tokens": projected_tokens,
+            "estimated_cost_usd": projected_cost,
+            "additional_cost_usd": round(projected_cost - task_cost, 6),
+        },
+        "baseline": {
+            "sample_size": len(baseline_costs),
+            "estimated_cost_usd": baseline_cost,
+            "tokens": baseline_token_count,
+            "event_count": baseline_event_count,
+            "delta_ratio": round(baseline_delta, 6) if baseline_delta is not None else None,
+        },
+        "drivers": drivers,
+        "next_best_move": {"title": title, "detail": detail, "actions": actions},
+        "ledger": ledger,
+    }
+
+
 def _simulation_summaries(con) -> list[dict]:
     rows = con.execute(
         """
@@ -637,6 +915,7 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
         current_task_key = current_activity["task_key"] if current_activity else None
         model_efficiency = _model_efficiency(con)
         total_token_count = int(total_tokens["tokens"])
+        burn_rate = _current_burn_rate(con, now)
         return {
             "generated_at_ms": now,
             "total_tokens": total_token_count,
@@ -658,7 +937,8 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
             },
             "daily_tokens": _daily_tokens(con, now),
             "current_activity": current_activity,
-            "burn_rate": _current_burn_rate(con, now),
+            "burn_rate": burn_rate,
+            "task_economics": _task_economics(con, current_activity, burn_rate),
             "model_efficiency": model_efficiency,
             "provider_totals": _provider_totals(model_efficiency, total_token_count),
             "simulations": _simulation_summaries(con),

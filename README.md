@@ -4,27 +4,32 @@
 [![Privacy](https://img.shields.io/badge/privacy-metadata--only-2f6f5e)](PRIVACY.md)
 [![Local only](https://img.shields.io/badge/runtime-local--only-334155)](README.md)
 
-Understand your AI coding spend without giving up privacy.
+Turn AI agents from an open-ended burn rate into a managed engineering budget.
 
-AI Keeper is a local dashboard for Codex and Claude usage. It shows token and
-estimated cost usage by project, task, session, and turn, then surfaces the
-latest totals back inside Codex after every turn.
+AI Keeper is a local Task Economics dashboard for Codex and Claude usage. It
+shows what each AI-assisted implementation task costs, how fast the current
+task is spending, and when the next prompt should get smaller.
 
-It is built for developers who want a simple answer to a surprisingly hard
-question: where did today's AI context and money go?
+It is built for developers who care about AI implementation cost per useful outcome,
+not just raw token totals.
 
 Product page: [andrei.levk.in/ai-keeper](https://andrei.levk.in/ai-keeper/)
 User guide: [docs/user-guide.md](docs/user-guide.md)
 
 ## Why AI Keeper
 
-AI coding tools are becoming part of daily engineering work, but usage often
-stays invisible until a bill, a quota, or a slow session surprises you.
+AI coding tools are becoming part of daily engineering work, but the cost of a
+single useful outcome often stays invisible until a bill, a quota, or a slow
+session surprises you.
 
-AI Keeper makes usage observable while keeping the sensitive parts local:
+AI Keeper makes task economics visible while keeping the sensitive parts local:
 
-- See which projects and tasks consume the most tokens.
-- Compare session and turn-level usage while you work.
+- See what the current task has cost so far and what the next 30 active minutes
+  are likely to add.
+- Compare the current task with your learned baseline for similar work.
+- Review the Task Ledger by phase, provider, model, turn, tokens, and estimated
+  cost.
+- Get a small next-best-move hint when the task starts drifting.
 - Estimate cost from local token events and bundled pricing data.
 - Spot active burn rate, cache behavior, large turns, and model switches.
 - Keep prompts, assistant messages, and raw transcripts out of AI Keeper's
@@ -32,7 +37,12 @@ AI Keeper makes usage observable while keeping the sensitive parts local:
 
 ## What You Get
 
-- **Dashboard**: today, week, project, task, session, provider, model, and turn views.
+- **Efficiency dashboard**: Task Economics, live rate, cost drivers, Task Ledger,
+  provider mix, budgets, and health.
+- **Task Economics**: spent so far, projected next 30 minutes, learned baseline,
+  and current status for the active task.
+- **Next best move**: lightweight guidance to narrow prompts, split work, or
+  commit useful slices before agent work drifts.
 - **Codex hook summary**: after each turn, see current turn, session, task, and
   project totals with a dashboard link.
 - **Claude metadata import**: sync local Claude JSONL usage, including cache
@@ -90,8 +100,9 @@ After Codex hooks are installed, each turn can include a short usage line:
 AI Keeper | turn 85,673 tokens ($0.07 est.) | session 14,195,171 tokens ($12.40 est.) | task today 5,697,011 tokens | project today 5,697,011 tokens | dashboard
 ```
 
-The dashboard gives the bigger picture: active burn rate, trend, task totals,
-project totals, model efficiency, ingest health, and recent sessions.
+The dashboard gives the bigger picture: Task Economics, active burn rate, cost
+drivers, task ledger, provider mix, budgets, model efficiency, and ingest
+health.
 
 ## Privacy Model
 

@@ -302,7 +302,85 @@ def test_overview_exposes_v2_dashboard_metadata(tmp_path: Path) -> None:
     assert data["estimated_cost"]["today_usd"] == pytest.approx(0.003775)
     assert data["current_activity"]["last_turn_cost_usd"] == pytest.approx(0.003775)
     assert data["projects"][0]["estimated_cost_usd"] == pytest.approx(0.003775)
+    economics = data["task_economics"]
+    assert economics["configured"] is True
+    assert economics["task"]["key"] == "AIK-7"
+    assert economics["spent"]["tokens"] == 300
+    assert economics["spent"]["estimated_cost_usd"] == pytest.approx(0.003775)
+    assert economics["projection_minutes"] == 30
+    assert economics["projection"]["estimated_cost_usd"] >= economics["spent"]["estimated_cost_usd"]
+    assert economics["baseline"]["sample_size"] == 0
+    assert economics["status"] == "learning"
+    assert economics["next_best_move"]["title"]
+    assert len(economics["drivers"]) == 4
+    assert economics["ledger"][0]["tokens"] == 300
     assert data["generated_at_ms"] == now
+
+
+def test_task_economics_compares_current_task_against_baseline(tmp_path: Path) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    now = 1_781_000_000_000
+    with connect(db_path) as con:
+        project_id = con.execute("select id from projects").fetchone()[0]
+        con.execute(
+            """
+            insert into tasks(project_id, task_key, source, git_branch, issue_id, display_name, first_seen_ms, last_seen_ms)
+            values (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (project_id, "BASE-1", "git_branch", "baseline", "BASE-1", "BASE-1", now - 1_000_000, now - 1_000_000),
+        )
+        baseline_task_id = con.execute("select id from tasks where task_key = 'BASE-1'").fetchone()[0]
+        con.execute(
+            """
+            insert into sessions(
+                provider, session_id, transcript_path, cwd, model, model_provider,
+                source, project_id, task_id, git_sha, git_branch, git_origin_url,
+                created_at_ms, updated_at_ms, total_tokens, last_seen_ms
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "codex",
+                "baseline-session",
+                "/tmp/baseline.jsonl",
+                str(cwd),
+                "gpt-5.5",
+                "openai",
+                "test",
+                project_id,
+                baseline_task_id,
+                "abc123",
+                "baseline",
+                None,
+                now - 1_000_000,
+                now - 1_000_000,
+                100,
+                now - 1_000_000,
+            ),
+        )
+        baseline_session_pk = con.execute("select id from sessions where session_id = 'baseline-session'").fetchone()[0]
+        con.execute(
+            """
+            insert into token_events(
+                session_pk, sequence, timestamp_ms, input_tokens, cached_input_tokens,
+                output_tokens, reasoning_output_tokens, total_tokens,
+                running_total_tokens, source_path, source_offset
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (baseline_session_pk, 1, now - 1_000_000, 50, 0, 50, 0, 100, 100, "/tmp/baseline.jsonl", 100),
+        )
+
+    data = build_overview(db_path, now_ms=now)
+    economics = data["task_economics"]
+
+    assert economics["baseline"]["sample_size"] == 1
+    assert economics["baseline"]["estimated_cost_usd"] is not None
+    assert economics["baseline"]["delta_ratio"] is not None
+    assert economics["status"] in {"watch", "risk"}
+    assert economics["projection"]["additional_cost_usd"] >= 0
+    assert economics["drivers"][0]["label"] == "Context load"
 
 
 def test_overview_page_renders_budget_guards(tmp_path: Path, monkeypatch) -> None:
@@ -409,18 +487,22 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     assert "v9.9.9" in page.text
     assert 'href="/static/styles.css?v=v9.9.9"' in page.text
     assert favicon.status_code == 204
-    assert 'aria-current="page">Command' in page.text
-    assert "Current activity" in page.text
+    assert 'aria-current="page">Efficiency' in page.text
+    assert "Task Economics" in page.text
+    assert "Current useful outcome" in page.text
+    assert "Next best move" in page.text
+    assert "Task Ledger" in page.text
+    assert "Cost drivers" in page.text
     assert "$0.0038 estimated" in page.text
     assert "$0.0038" in page.text
     assert "session-1" in page.text
-    assert "7-day spend" in page.text
+    assert "Spend rhythm" in page.text
     assert "Active rate" in page.text
     assert "Active rate trend" in page.text
     assert "previous 5m" in page.text
     assert 'data-rate-trend-bars' in page.text
     assert "Operator alerts" in page.text
-    assert "Tracked providers" in page.text
+    assert "Providers" in page.text
     assert "Model Efficiency" not in page.text
 
     assert usage_page.status_code == 200

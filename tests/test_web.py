@@ -407,6 +407,7 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     diagnostics_page = client.get("/diagnostics")
 
     assert "v9.9.9" in page.text
+    assert 'href="/static/styles.css?v=v9.9.9"' in page.text
     assert favicon.status_code == 204
     assert 'aria-current="page">Command' in page.text
     assert "Current activity" in page.text

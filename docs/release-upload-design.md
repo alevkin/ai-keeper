@@ -43,9 +43,20 @@ Review generated files:
 - `dist/release-manifest.json`
 - `dist/homebrew-tap/Formula/aikeeper.rb`
 
+Prepare the dedicated tap checkout locally:
+
+   ```bash
+   scripts/publish-homebrew-tap.sh \
+     --version v0.24.0 \
+     --dist-dir dist \
+     --tap-dir output/homebrew-ai-keeper \
+     --no-push
+   ```
+
 ## Deferred Decisions
 
-- Whether Homebrew uses an in-repo formula, a dedicated tap repository, or both.
+- When to publish `alevkin/homebrew-ai-keeper` publicly.
+- When to run the first `brew install alevkin/ai-keeper/aikeeper` smoke test.
 - Whether `minisign` is useful as a manual secondary signature.
 
 PyPI publishing is deferred because the MVP is a local daemon plus OS service

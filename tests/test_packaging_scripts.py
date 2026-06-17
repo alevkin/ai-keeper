@@ -52,12 +52,14 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["scripts"]["install"] == "scripts/install.sh"
     assert manifest["scripts"]["package"] == "scripts/package.sh"
     assert manifest["scripts"]["publish"] == "scripts/publish.sh"
+    assert manifest["scripts"]["publish_homebrew_tap"] == "scripts/publish-homebrew-tap.sh"
     assert manifest["scripts"]["public_release_gate"] == "scripts/public-release-gate.sh"
     assert manifest["scripts"]["release"] == "scripts/release.sh"
     assert manifest["scripts"]["sign"] == "scripts/sign-release.sh"
     assert manifest["targets"]["source_archive"] == "dist/aikeeper-<version>.tar.gz"
     assert manifest["targets"]["homebrew_formula"] == "dist/homebrew/aikeeper.rb"
     assert manifest["targets"]["homebrew_tap_formula"] == "dist/homebrew-tap/Formula/aikeeper.rb"
+    assert manifest["targets"]["homebrew_tap_publish"] == "scripts/publish-homebrew-tap.sh"
     assert manifest["targets"]["checksums"] == "dist/CHECKSUMS.txt"
     assert manifest["targets"]["ci_workflow"] == ".github/workflows/ci.yml"
     assert manifest["targets"]["release_workflow"] == ".github/workflows/release.yml"
@@ -73,6 +75,9 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["targets"]["public_release_gate"] == "scripts/public-release-gate.sh"
     assert manifest["repository"]["url"] == "git@github.com:alevkin/ai-keeper.git"
     assert manifest["repository"]["visibility"] == "private"
+    assert manifest["homebrew_tap"]["repository"] == "alevkin/homebrew-ai-keeper"
+    assert manifest["homebrew_tap"]["formula"] == "Formula/aikeeper.rb"
+    assert manifest["homebrew_tap"]["install"] == "brew install alevkin/ai-keeper/aikeeper"
     assert manifest["signing"]["default"] == "cosign-keyless"
     assert manifest["signing"]["issuer"] == "https://token.actions.githubusercontent.com"
     assert manifest["signing"]["identity"] == (
@@ -80,8 +85,9 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     )
     assert "dist/CHECKSUMS.txt.sigstore.json" in manifest["signing"]["bundles"]
     assert manifest["future_targets"] == [
-        "homebrew-tap-repository",
-        "public-issue-templates",
+        "public-visibility-switch",
+        "brew-install-smoke-test",
+        "signed-macos-installer",
     ]
 
 
@@ -101,6 +107,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     checksums = output_dir / "CHECKSUMS.txt"
     manifest_path = output_dir / "release-manifest.json"
     formula = output_dir / "homebrew" / "aikeeper.rb"
+    tap_formula = output_dir / "homebrew-tap" / "Formula" / "aikeeper.rb"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert result.returncode == 0, result.stderr
@@ -114,9 +121,13 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert checksums.exists()
     assert manifest["checksums"] == checksums.name
     formula_text = formula.read_text(encoding="utf-8")
+    tap_formula_text = tap_formula.read_text(encoding="utf-8")
     assert "file://" in formula_text
     assert 'homepage "https://github.com/alevkin/ai-keeper"' in formula_text
+    assert 'url "https://github.com/alevkin/ai-keeper/releases/download/v0.22.0/aikeeper-v0.22.0.tar.gz"' in tap_formula_text
+    assert "file://" not in tap_formula_text
     assert manifest["sha256"] in formula_text
+    assert manifest["sha256"] in tap_formula_text
     assert "aikeeper-install" in formula_text
     assert "aikeeper-upgrade" in formula_text
     assert "aikeeper-rollback" in formula_text
@@ -135,3 +146,43 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert "aikeeper-v0.22.0/pyproject.toml" in names
     assert not any("/.git/" in name or "/.venv/" in name or "/.vscode/" in name for name in names)
     assert not any(name.endswith("aikeeper.sqlite") or "/sessions/" in name for name in names)
+
+
+def test_publish_homebrew_tap_script_scaffolds_tap_without_push(tmp_path: Path) -> None:
+    output_dir = tmp_path / "dist"
+    tap_dir = tmp_path / "homebrew-ai-keeper"
+
+    subprocess.run(
+        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.24.0", "--output-dir", str(output_dir)],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(REPO / "scripts" / "publish-homebrew-tap.sh"),
+            "--version",
+            "v0.24.0",
+            "--dist-dir",
+            str(output_dir),
+            "--tap-dir",
+            str(tap_dir),
+            "--no-push",
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    formula = tap_dir / "Formula" / "aikeeper.rb"
+    readme = tap_dir / "README.md"
+    assert formula.exists()
+    assert readme.exists()
+    assert "brew install alevkin/ai-keeper/aikeeper" in readme.read_text(encoding="utf-8")
+    assert "https://github.com/alevkin/ai-keeper/releases/download/v0.24.0" in formula.read_text(encoding="utf-8")
+    assert "Push: skipped" in result.stdout

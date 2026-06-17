@@ -35,6 +35,7 @@ def test_packaging_manifest_tracks_distribution_prep_wave_targets() -> None:
     assert manifest["scripts"]["sign"] == "scripts/sign-release.sh"
     assert manifest["targets"]["checksums"] == "dist/CHECKSUMS.txt"
     assert manifest["targets"]["homebrew_tap_formula"] == "dist/homebrew-tap/Formula/aikeeper.rb"
+    assert manifest["targets"]["homebrew_tap_publish"] == "scripts/publish-homebrew-tap.sh"
     assert manifest["targets"]["ci_workflow"] == ".github/workflows/ci.yml"
     assert manifest["targets"]["release_workflow"] == ".github/workflows/release.yml"
     assert manifest["targets"]["public_release_gate_workflow"] == ".github/workflows/public-release-gate.yml"
@@ -47,10 +48,14 @@ def test_packaging_manifest_tracks_distribution_prep_wave_targets() -> None:
     assert manifest["targets"]["version_updater"] == "scripts/update-version.py"
     assert manifest["targets"]["changelog_generator"] == "scripts/generate-changelog.py"
     assert manifest["targets"]["public_release_gate"] == "scripts/public-release-gate.sh"
+    assert manifest["targets"]["issue_template_config"] == ".github/ISSUE_TEMPLATE/config.yml"
+    assert manifest["targets"]["bug_report_template"] == ".github/ISSUE_TEMPLATE/bug_report.yml"
+    assert manifest["targets"]["feature_request_template"] == ".github/ISSUE_TEMPLATE/feature_request.yml"
     assert manifest["targets"]["macos_dmg_wrapper"] == "packaging/macos/dmg/Aikeeper Installer.command"
     assert manifest["future_targets"] == [
-        "homebrew-tap-repository",
-        "public-issue-templates",
+        "public-visibility-switch",
+        "brew-install-smoke-test",
+        "signed-macos-installer",
     ]
 
 
@@ -75,7 +80,9 @@ def test_package_script_writes_tap_formula_and_checksum_index(tmp_path: Path) ->
     assert checksums.exists()
     assert f"  {archive.name}" in checksums.read_text(encoding="utf-8")
     assert tap_formula.exists()
-    assert 'homepage "https://github.com/alevkin/ai-keeper"' in tap_formula.read_text(encoding="utf-8")
+    tap_formula_text = tap_formula.read_text(encoding="utf-8")
+    assert 'homepage "https://github.com/alevkin/ai-keeper"' in tap_formula_text
+    assert 'url "https://github.com/alevkin/ai-keeper/releases/download/v0.22.0/aikeeper-v0.22.0.tar.gz"' in tap_formula_text
     assert manifest["checksums"] == checksums.name
     assert manifest["homebrew_tap_formula"] == str(tap_formula)
     assert manifest["signing"]["default"] == "cosign-keyless"

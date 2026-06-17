@@ -9,6 +9,7 @@ Current supported installer scripts:
 - `scripts/rollback.sh`
 - `scripts/package.sh`
 - `scripts/publish.sh`
+- `scripts/publish-homebrew-tap.sh`
 - `scripts/release.sh`
 - `scripts/sign-release.sh`
 
@@ -66,6 +67,19 @@ scripts/release.sh --version v0.21.0 --output-dir dist --signer none
 Use `--signer cosign` only in an OIDC-capable signing environment, such as the
 GitHub release workflow.
 
+Prepare a dedicated Homebrew tap checkout:
+
+```bash
+scripts/publish-homebrew-tap.sh \
+  --version v0.24.0 \
+  --dist-dir dist \
+  --tap-dir output/homebrew-ai-keeper \
+  --no-push
+```
+
+The dedicated tap repo is `alevkin/homebrew-ai-keeper`; Homebrew users install
+from it with `brew install alevkin/ai-keeper/aikeeper`.
+
 Publish to the private GitHub repository after tests and audit pass:
 
 ```bash
@@ -74,6 +88,6 @@ scripts/publish.sh --remote git@github.com:alevkin/ai-keeper.git --ssh-key ~/.ss
 
 Planned targets:
 
-- dedicated Homebrew tap repository
-- public issue templates
-- public launch copy
+- public visibility switch
+- brew install smoke test
+- signed macOS installer

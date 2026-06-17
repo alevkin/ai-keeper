@@ -8,6 +8,7 @@
     "install": "scripts/install.sh",
     "package": "scripts/package.sh",
     "publish": "scripts/publish.sh",
+    "publish_homebrew_tap": "scripts/publish-homebrew-tap.sh",
     "public_release_gate": "scripts/public-release-gate.sh",
     "release": "scripts/release.sh",
     "sign": "scripts/sign-release.sh",
@@ -23,6 +24,7 @@
     "source_archive": "dist/aikeeper-<version>.tar.gz",
     "homebrew_formula": "dist/homebrew/aikeeper.rb",
     "homebrew_tap_formula": "dist/homebrew-tap/Formula/aikeeper.rb",
+    "homebrew_tap_publish": "scripts/publish-homebrew-tap.sh",
     "checksums": "dist/CHECKSUMS.txt",
     "ci_workflow": ".github/workflows/ci.yml",
     "release_workflow": ".github/workflows/release.yml",
@@ -36,8 +38,18 @@
     "version_updater": "scripts/update-version.py",
     "changelog_generator": "scripts/generate-changelog.py",
     "public_release_gate": "scripts/public-release-gate.sh",
+    "issue_template_config": ".github/ISSUE_TEMPLATE/config.yml",
+    "bug_report_template": ".github/ISSUE_TEMPLATE/bug_report.yml",
+    "feature_request_template": ".github/ISSUE_TEMPLATE/feature_request.yml",
+    "security_contact_template": ".github/ISSUE_TEMPLATE/security_contact.yml",
     "macos_dmg_wrapper": "packaging/macos/dmg/Aikeeper Installer.command",
     "windows_service_prep": "packaging/windows/install-service.ps1"
+  },
+  "homebrew_tap": {
+    "repository": "alevkin/homebrew-ai-keeper",
+    "remote": "git@github.com:alevkin/homebrew-ai-keeper.git",
+    "formula": "Formula/aikeeper.rb",
+    "install": "brew install alevkin/ai-keeper/aikeeper"
   },
   "runtime": {
     "language": "Python",
@@ -58,7 +70,8 @@
     ]
   },
   "future_targets": [
-    "homebrew-tap-repository",
-    "public-issue-templates"
+    "public-visibility-switch",
+    "brew-install-smoke-test",
+    "signed-macos-installer"
   ]
 }

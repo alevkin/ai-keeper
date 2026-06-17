@@ -248,8 +248,8 @@ scripts/package.sh --version v0.22.0 --output-dir dist
 ```
 
 It writes a source archive, sha256 file, `CHECKSUMS.txt`, release manifest,
-local Homebrew formula, and tap-ready Homebrew formula under `dist/`. The
-generated formula installs wrapper commands: `aikeeper-install`,
+local Homebrew formula, and tap-ready Homebrew formula under `dist/`. The local
+formula installs wrapper commands: `aikeeper-install`,
 `aikeeper-upgrade`, `aikeeper-rollback`, `aikeeper-publish`, and
 `aikeeper-sign`, `aikeeper-release`, and `aikeeper-public-release-gate`.
 
@@ -277,6 +277,20 @@ scripts/release.sh --version v0.22.0 --output-dir dist --signer none
 
 Use `--signer cosign` in GitHub Actions or another OIDC-capable environment to
 write `.sigstore.json` bundles.
+
+Prepare the dedicated Homebrew tap checkout without pushing:
+
+```bash
+scripts/publish-homebrew-tap.sh \
+  --version v0.24.0 \
+  --dist-dir dist \
+  --tap-dir output/homebrew-ai-keeper \
+  --no-push
+```
+
+The tap repository name is `alevkin/homebrew-ai-keeper`, which gives users the
+short Homebrew install path `brew install alevkin/ai-keeper/aikeeper` once the
+tap is published.
 
 GitHub auto-releases are handled by `.github/workflows/release.yml` on pushes to
 `main`. The workflow computes the next semver tag from Conventional Commit
@@ -315,16 +329,19 @@ store SSH key material in the repository.
 
 Public release hygiene lives in [SECURITY.md](SECURITY.md),
 [PRIVACY.md](PRIVACY.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
-[docs/public-release-checklist.md](docs/public-release-checklist.md).
+[docs/public-release-checklist.md](docs/public-release-checklist.md). Public
+issue forms are in `.github/ISSUE_TEMPLATE/` and require metadata-only reports.
 Owner-level GitHub settings are tracked in
 [docs/repo-settings-checklist.md](docs/repo-settings-checklist.md).
 
 Distribution preparation notes:
 
 - Homebrew tap layout: `dist/homebrew-tap/Formula/aikeeper.rb`
+- Homebrew tap publisher: `scripts/publish-homebrew-tap.sh`
 - CI workflow: `.github/workflows/ci.yml`
 - Release automation: `scripts/release.sh`
 - Public release gate: `scripts/public-release-gate.sh`
+- Public issue forms: `.github/ISSUE_TEMPLATE/`
 - macOS DMG spike: `packaging/macos/dmg/`
 - Windows service prep: `packaging/windows/`
 

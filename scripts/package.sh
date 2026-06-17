@@ -131,6 +131,7 @@ with tarfile.open(archive_path, "w:gz") as package:
 
 sha256 = hashlib.sha256(archive_path.read_bytes()).hexdigest()
 checksum_path.write_text(f"{sha256}  {archive_name}\n", encoding="utf-8")
+release_url = f"https://github.com/alevkin/ai-keeper/releases/download/{version}/{archive_name}"
 
 formula_text = f'''class Aikeeper < Formula
   desc "Local-only Codex token usage daemon and dashboard"
@@ -193,7 +194,10 @@ formula_text = f'''class Aikeeper < Formula
 end
 '''
 formula_path.write_text(formula_text, encoding="utf-8")
-tap_formula_path.write_text(formula_text, encoding="utf-8")
+tap_formula_path.write_text(
+    formula_text.replace(f'url "file://{archive_path}"', f'url "{release_url}"'),
+    encoding="utf-8",
+)
 
 checksum_lines = [
     f"{sha256}  {archive_name}",
@@ -212,6 +216,11 @@ manifest = {
     "checksums": checksums_path.name,
     "homebrew_formula": str(formula_path),
     "homebrew_tap_formula": str(tap_formula_path),
+    "homebrew_tap": {
+        "repository": "alevkin/homebrew-ai-keeper",
+        "formula": "Formula/aikeeper.rb",
+        "install": "brew install alevkin/ai-keeper/aikeeper",
+    },
     "generated_at": datetime.now(tz=UTC).isoformat(),
     "local_only": True,
     "metadata_only": True,

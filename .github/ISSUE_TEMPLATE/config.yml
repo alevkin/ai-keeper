@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/alevkin/ai-keeper/security/policy
+    about: Report vulnerabilities privately. Do not open public issues with secrets, prompts, transcripts, or local database files.
+  - name: Release downloads
+    url: https://github.com/alevkin/ai-keeper/releases
+    about: Download signed release artifacts and verification files.

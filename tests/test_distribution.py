@@ -33,7 +33,12 @@ def test_distribution_audit_passes_current_repo_without_company_or_project_coupl
     assert ".github/workflows/public-release-gate.yml" in result["checks"]["required_files"]
     assert "scripts/generate-changelog.py" in result["checks"]["required_files"]
     assert "scripts/public-release-gate.sh" in result["checks"]["required_files"]
+    assert "scripts/publish-homebrew-tap.sh" in result["checks"]["required_files"]
     assert "scripts/update-version.py" in result["checks"]["required_files"]
+    assert ".github/ISSUE_TEMPLATE/config.yml" in result["checks"]["required_files"]
+    assert ".github/ISSUE_TEMPLATE/bug_report.yml" in result["checks"]["required_files"]
+    assert ".github/ISSUE_TEMPLATE/feature_request.yml" in result["checks"]["required_files"]
+    assert ".github/ISSUE_TEMPLATE/security_contact.yml" in result["checks"]["required_files"]
 
 
 def test_distribution_audit_flags_private_project_and_company_markers(tmp_path: Path) -> None:

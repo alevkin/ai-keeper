@@ -615,9 +615,52 @@ Acceptance:
 - GitHub Release uploads `.sigstore.json` bundles.
 - Public release gate fails online when bundle assets are missing.
 
+### AK-036 Homebrew Tap Repository
+
+Status: shipped in v0.25.0.
+
+Prepare a dedicated Homebrew tap path without requiring a public visibility
+switch yet.
+
+- Use `alevkin/homebrew-ai-keeper` as the tap repository name so Homebrew users
+  can install with `brew install alevkin/ai-keeper/aikeeper`.
+- Generate tap formulae with GitHub Release URLs instead of local `file://`
+  archive URLs.
+- Add `scripts/publish-homebrew-tap.sh` to scaffold `Formula/aikeeper.rb` and a
+  tap README, with `--no-push` for local validation.
+- Keep tap publishing explicit and SSH-key scoped.
+
+Acceptance:
+
+- Package output includes a remote-release tap formula.
+- Tap publisher creates `Formula/aikeeper.rb` and `README.md` without pushing
+  when `--no-push` is used.
+- Packaging manifest documents the tap repository and install command.
+
+### AK-037 Public Issue Templates
+
+Status: shipped in v0.25.0.
+
+Add public issue forms before making AI Keeper visible outside the private
+repository.
+
+- Add bug report, feature request, and security contact issue forms.
+- Disable blank issues and link vulnerability reports to the security policy.
+- Require reporters to confirm they did not include prompts, assistant
+  messages, raw transcripts, API keys, or local database files.
+
+Acceptance:
+
+- `.github/ISSUE_TEMPLATE/` contains config, bug, feature, and security contact
+  forms.
+- Distribution audit requires the issue template files.
+- Tests verify the forms are metadata-only and privacy-first.
+
 ## Next
 
-- AK-036 Homebrew Tap Repository: decide and scaffold a separate tap repository
-  if Homebrew becomes a primary distribution channel.
-- AK-037 Public Issue Templates: add bug report, feature request, and security
-  contact templates before public launch.
+- AK-038 Public Visibility Switch: run the public gate, verify owner settings,
+  and decide when to flip `alevkin/ai-keeper` from private to public.
+- AK-039 Brew Install Smoke Test: publish or dry-run the tap repository and
+  verify `brew install alevkin/ai-keeper/aikeeper` from a clean environment.
+- AK-040 Signed macOS Installer: decide whether DMG/notarization is needed for
+  colleague onboarding beyond Homebrew and GitHub Release archives.

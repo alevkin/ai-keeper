@@ -66,6 +66,7 @@ def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
         "scripts/generate-changelog.py",
         "scripts/install.sh",
         "scripts/package.sh",
+        "scripts/publish-homebrew-tap.sh",
         "scripts/public-release-gate.sh",
         "scripts/release.sh",
         "scripts/sign-release.sh",
@@ -78,6 +79,10 @@ def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
         "packaging/macos/dmg/README.md",
         "packaging/windows/README.md",
         "packaging/windows/install-service.ps1",
+        ".github/ISSUE_TEMPLATE/config.yml",
+        ".github/ISSUE_TEMPLATE/bug_report.yml",
+        ".github/ISSUE_TEMPLATE/feature_request.yml",
+        ".github/ISSUE_TEMPLATE/security_contact.yml",
     ]
     (repo / ".github" / "workflows").mkdir(parents=True)
     (repo / "packaging").mkdir()

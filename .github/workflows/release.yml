@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -28,6 +29,9 @@ jobs:
 
       - name: Install uv
         run: python -m pip install uv
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4.1.0
 
       - name: Calculate next version
         id: version
@@ -117,7 +121,7 @@ jobs:
         if: steps.version.outputs.skip != 'true'
         run: |
           TAG="${{ steps.version.outputs.tag }}"
-          bash scripts/release.sh --version "$TAG" --output-dir dist --signer none --skip-tests
+          bash scripts/release.sh --version "$TAG" --output-dir dist --signer cosign --skip-tests
 
       - name: Create GitHub Release
         if: steps.version.outputs.skip != 'true'
@@ -129,7 +133,10 @@ jobs:
             --title "$TAG" \
             --notes-file /tmp/release-notes.md \
             "dist/aikeeper-${TAG}.tar.gz" \
+            "dist/aikeeper-${TAG}.tar.gz.sigstore.json" \
             "dist/aikeeper-${TAG}.tar.gz.sha256" \
             "dist/CHECKSUMS.txt" \
+            "dist/CHECKSUMS.txt.sigstore.json" \
             "dist/SIGNING.md" \
-            "dist/release-manifest.json"
+            "dist/release-manifest.json" \
+            "dist/release-manifest.json.sigstore.json"

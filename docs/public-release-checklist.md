@@ -11,7 +11,8 @@ Use this checklist before changing the repository from private to public.
 - Build a package with `scripts/package.sh --version <tag> --output-dir dist`.
 - Generate checksums with `scripts/sign-release.sh --dist-dir dist --signer none`.
 - Run `scripts/public-release-gate.sh --version <tag> --output-dir dist --online`.
-- Optionally sign release artifacts with `cosign` or `minisign`.
+- Confirm the GitHub Release includes keyless `cosign` Sigstore bundles for the
+  archive, `CHECKSUMS.txt`, and `release-manifest.json`.
 - Verify the archive excludes `.git`, `.venv`, `.vscode`, local databases,
   JSONL transcripts, logs, diagnostics bundles, and session directories.
 - Review `README.md`, `SECURITY.md`, `PRIVACY.md`, and `CONTRIBUTING.md`.

@@ -25,6 +25,8 @@ The gate verifies:
 - `CHANGELOG.md` contains the release section
 - CI, release, and public gate workflows are present
 - release artifacts, checksums, and manifest are valid
+- release workflow is configured for keyless `cosign`
+- online GitHub Release includes Sigstore bundle assets
 - online GitHub repository, release, and CI state when `--online` is used
 
 It does not change repository visibility, publish a tap repository, or write

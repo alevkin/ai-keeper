@@ -264,8 +264,9 @@ Generate or refresh release verification materials:
 scripts/sign-release.sh --dist-dir dist --signer none
 ```
 
-Optional signatures can be created with external `cosign` or `minisign` keys.
-Do not store signing keys in this repository. See
+GitHub Releases are signed by the release workflow with keyless `cosign` and
+include Sigstore bundle files for the source archive, `CHECKSUMS.txt`, and
+`release-manifest.json`. No signing keys are stored in this repository. See
 [Release Verification](docs/release-verification.md).
 
 Run the local release automation without uploading anything to GitHub:
@@ -274,10 +275,14 @@ Run the local release automation without uploading anything to GitHub:
 scripts/release.sh --version v0.22.0 --output-dir dist --signer none
 ```
 
+Use `--signer cosign` in GitHub Actions or another OIDC-capable environment to
+write `.sigstore.json` bundles.
+
 GitHub auto-releases are handled by `.github/workflows/release.yml` on pushes to
 `main`. The workflow computes the next semver tag from Conventional Commit
 messages, updates release metadata, regenerates `CHANGELOG.md`, builds artifacts,
-and creates a GitHub Release with checksums.
+signs artifacts with keyless `cosign`, and creates a GitHub Release with
+checksums and Sigstore bundles.
 
 Before changing repository visibility, run the public release gate:
 

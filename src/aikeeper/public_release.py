@@ -20,6 +20,15 @@ FORBIDDEN_AUTHOR_PATTERNS = (
 )
 
 
+def _sigstore_bundle_assets(tag: str) -> set[str]:
+    archive_name = f"aikeeper-{tag}.tar.gz"
+    return {
+        f"{archive_name}.sigstore.json",
+        "CHECKSUMS.txt.sigstore.json",
+        "release-manifest.json.sigstore.json",
+    }
+
+
 def _run_command(command: list[str], cwd: Path) -> tuple[int, str, str]:
     try:
         result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, timeout=20, check=False)
@@ -139,6 +148,16 @@ def _workflow_check(repo_root: Path) -> tuple[bool, str]:
         return False, "release workflow must create GitHub releases"
     if "secrets." in release_text or "secrets." in gate_text:
         return False, "release workflows must not depend on repository secrets"
+    if "id-token: write" not in release_text:
+        return False, "release workflow must grant id-token: write for keyless cosign"
+    if "sigstore/cosign-installer@v4.1.0" not in release_text:
+        return False, "release workflow must install cosign"
+    if "--signer cosign" not in release_text:
+        return False, "release workflow must build artifacts with --signer cosign"
+    if ".sigstore.json" not in release_text:
+        return False, "release workflow must upload Sigstore bundle assets"
+    if "sigstore/cosign-installer@v4.1.0" not in gate_text:
+        return False, "public release gate workflow must install cosign"
     if "scripts/public-release-gate.sh" not in gate_text:
         return False, "public release gate workflow must run scripts/public-release-gate.sh"
     return True, "CI, release, and public gate workflows are present"
@@ -191,9 +210,14 @@ def _online_checks(
             "CHECKSUMS.txt",
             "SIGNING.md",
             "release-manifest.json",
-        }
-        passed = data.get("isDraft") is False and data.get("isPrerelease") is False and required_assets <= asset_names
-        _check(checks, "github_release", passed, data.get("url") or "release metadata checked")
+        } | _sigstore_bundle_assets(tag)
+        missing = sorted(required_assets - asset_names)
+        passed = data.get("isDraft") is False and data.get("isPrerelease") is False and not missing
+        if missing:
+            detail = f"missing sigstore or release asset(s): {', '.join(missing)}"
+        else:
+            detail = data.get("url") or "release metadata checked"
+        _check(checks, "github_release", passed, detail)
 
     code, stdout, stderr = runner(
         [

@@ -10,8 +10,9 @@ made public.
   collaboration workflow.
 - Keep Actions permissions read-only by default. Current: done.
 - Review Actions permissions before allowing release publishing.
-- Keep repository secrets empty until release automation needs them.
-- Store signing keys outside the repository.
+- Keep repository secrets empty unless a future workflow has a specific need.
+- Release signing uses keyless `cosign`; do not add signing keys to repository
+  secrets for the default flow.
 - Confirm the repository owner and package namespace are the intended personal account.
 - Confirm visibility remains private until the public-release checklist passes.
 - Review issue templates and private disclosure process before public launch.

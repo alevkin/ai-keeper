@@ -32,7 +32,9 @@ def test_github_release_workflow_autogenerates_changelog_and_release_artifacts()
     assert "name: Release" in text
     assert "branches: [main]" in text
     assert "contents: write" in text
+    assert "id-token: write" in text
     assert "fetch-depth: 0" in text
+    assert "sigstore/cosign-installer@v4.1.0" in text
     assert "chore(release):" in text
     assert "Calculate next version" in text
     assert "BREAKING CHANGE" in text
@@ -42,9 +44,12 @@ def test_github_release_workflow_autogenerates_changelog_and_release_artifacts()
     assert "python scripts/generate-changelog.py" in text
     assert "git add CHANGELOG.md pyproject.toml packaging/manifest.json" in text
     assert 'git tag -a "$TAG"' in text
-    assert "bash scripts/release.sh --version \"$TAG\"" in text
+    assert "bash scripts/release.sh --version \"$TAG\" --output-dir dist --signer cosign --skip-tests" in text
     assert "gh release create \"$TAG\"" in text
     assert "dist/aikeeper-${TAG}.tar.gz" in text
+    assert "dist/aikeeper-${TAG}.tar.gz.sigstore.json" in text
+    assert "dist/CHECKSUMS.txt.sigstore.json" in text
+    assert "dist/release-manifest.json.sigstore.json" in text
     assert "TEAMS_WEBHOOK_URL" not in text
     assert "secrets." not in text
 
@@ -58,6 +63,7 @@ def test_public_release_gate_workflow_runs_manually_with_read_only_permissions()
     assert "contents: read" in text
     assert "actions: read" in text
     assert "fetch-depth: 0" in text
+    assert "sigstore/cosign-installer@v4.1.0" in text
     assert "scripts/public-release-gate.sh" in text
     assert "--online" in text
     assert "secrets." not in text

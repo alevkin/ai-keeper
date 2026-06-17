@@ -13,8 +13,9 @@ AI Keeper release verification
 Usage: scripts/sign-release.sh [--dist-dir DIR] [--signer auto|none|minisign|cosign]
                                [--key PATH] [--dry-run]
 
-Writes CHECKSUMS.txt and SIGNING.md for release artifacts. Optional signatures
-sign CHECKSUMS.txt with minisign or cosign when an external key is provided.
+Writes CHECKSUMS.txt and SIGNING.md for release artifacts. The cosign signer
+uses keyless GitHub OIDC by default and writes Sigstore bundle files next to
+the signed artifacts.
 EOF
 }
 
@@ -72,6 +73,8 @@ if [[ "$SIGNER" == "auto" ]]; then
   elif [[ -n "${AIKEEPER_COSIGN_KEY:-}" && -x "$(command -v cosign || true)" ]]; then
     SIGNER="cosign"
     KEY="${KEY:-$AIKEEPER_COSIGN_KEY}"
+  elif [[ "${GITHUB_ACTIONS:-}" == "true" && -x "$(command -v cosign || true)" ]]; then
+    SIGNER="cosign"
   else
     SIGNER="none"
   fi
@@ -86,6 +89,7 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
       ! -name 'SIGNING.md' \
       ! -name '*.minisig' \
       ! -name '*.sig' \
+      ! -name '*.sigstore.json' \
       -print0 |
       sort -z |
       xargs -0 shasum -a 256 |
@@ -104,10 +108,31 @@ Verify release checksums from this directory:
 shasum -a 256 -c CHECKSUMS.txt
 ```
 
-Optional signature files, when present, sign `CHECKSUMS.txt`. Signing keys are
-not stored in AI Keeper packages.
+GitHub releases include keyless Sigstore bundles created by cosign for the
+source archive, `CHECKSUMS.txt`, and `release-manifest.json`. Verify them with:
+
+```bash
+for artifact in aikeeper-*.tar.gz CHECKSUMS.txt release-manifest.json; do
+  cosign verify-blob "$artifact" \
+    --bundle "$artifact.sigstore.json" \
+    --certificate-identity "https://github.com/alevkin/ai-keeper/.github/workflows/release.yml@refs/heads/main" \
+    --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+done
+```
+
+No signing keys are stored in AI Keeper packages or repository secrets.
 EOF
 fi
+
+cosign_targets=()
+while IFS= read -r -d '' target; do
+  cosign_targets+=("$target")
+done < <(find "$DIST_DIR" -maxdepth 1 -type f -name 'aikeeper-v*.tar.gz' -print0 | sort -z)
+for target in "$CHECKSUMS" "$DIST_DIR/release-manifest.json"; do
+  if [[ -f "$target" ]]; then
+    cosign_targets+=("$target")
+  fi
+done
 
 case "$SIGNER" in
   none)
@@ -127,14 +152,33 @@ case "$SIGNER" in
     ;;
   cosign)
     KEY="${KEY:-${AIKEEPER_COSIGN_KEY:-}}"
-    if [[ -z "$KEY" ]]; then
-      echo "cosign signer requires --key or AIKEEPER_COSIGN_KEY" >&2
+    if [[ "${#cosign_targets[@]}" -eq 0 ]]; then
+      echo "cosign signer found no artifacts to sign" >&2
       exit 2
     fi
-    echo "+ cosign sign-blob --key $KEY --output-signature $CHECKSUMS.sig $CHECKSUMS"
+    if [[ -n "$KEY" ]]; then
+      echo "Signer: cosign key"
+    else
+      echo "Signer: cosign keyless"
+    fi
+    for target in "${cosign_targets[@]}"; do
+      bundle="$target.sigstore.json"
+      if [[ -n "$KEY" ]]; then
+        echo "+ cosign sign-blob --yes --key $KEY --bundle $bundle $target"
+      else
+        echo "+ cosign sign-blob --yes --bundle $bundle $target"
+      fi
+    done
     if [[ "$DRY_RUN" -eq 0 ]]; then
       command -v cosign >/dev/null 2>&1 || { echo "Missing cosign" >&2; exit 1; }
-      cosign sign-blob --key "$KEY" --output-signature "$CHECKSUMS.sig" "$CHECKSUMS"
+      for target in "${cosign_targets[@]}"; do
+        bundle="$target.sigstore.json"
+        if [[ -n "$KEY" ]]; then
+          cosign sign-blob --yes --key "$KEY" --bundle "$bundle" "$target"
+        else
+          cosign sign-blob --yes --bundle "$bundle" "$target"
+        fi
+      done
     fi
     ;;
 esac

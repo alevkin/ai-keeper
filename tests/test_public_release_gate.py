@@ -36,6 +36,15 @@ def _write_release_artifacts(dist: Path, tag: str) -> None:
             continue
         checksum_lines.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}")
     (dist / "CHECKSUMS.txt").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
+    (dist / f"{archive.name}.sigstore.json").write_text('{"mediaType":"application/vnd.dev.sigstore.bundle+json"}\n', encoding="utf-8")
+    (dist / "CHECKSUMS.txt.sigstore.json").write_text(
+        '{"mediaType":"application/vnd.dev.sigstore.bundle+json"}\n',
+        encoding="utf-8",
+    )
+    (dist / "release-manifest.json.sigstore.json").write_text(
+        '{"mediaType":"application/vnd.dev.sigstore.bundle+json"}\n',
+        encoding="utf-8",
+    )
 
 
 def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
@@ -91,12 +100,17 @@ def _write_minimal_release_repo(repo: Path, tag: str = "v1.2.3") -> None:
         encoding="utf-8",
     )
     (repo / ".github" / "workflows" / "release.yml").write_text(
-        "name: Release\npermissions:\n  contents: write\nsteps:\n  - run: gh release create \"$TAG\"\n",
+        "name: Release\npermissions:\n  contents: write\n  id-token: write\nsteps:\n"
+        "  - uses: sigstore/cosign-installer@v4.1.0\n"
+        "  - run: bash scripts/release.sh --version \"$TAG\" --output-dir dist --signer cosign --skip-tests\n"
+        "  - run: gh release create \"$TAG\" dist/aikeeper-${TAG}.tar.gz.sigstore.json "
+        "dist/CHECKSUMS.txt.sigstore.json dist/release-manifest.json.sigstore.json\n",
         encoding="utf-8",
     )
     (repo / ".github" / "workflows" / "public-release-gate.yml").write_text(
         "name: Public Release Gate\nworkflow_dispatch:\npermissions:\n  contents: read\n  actions: read\n"
-        "steps:\n  - run: bash scripts/public-release-gate.sh --version v1.2.3 --online\n",
+        "steps:\n  - uses: sigstore/cosign-installer@v4.1.0\n"
+        "  - run: bash scripts/public-release-gate.sh --version v1.2.3 --online\n",
         encoding="utf-8",
     )
     _write_release_artifacts(repo / "dist", tag)
@@ -194,3 +208,51 @@ def test_cli_public_release_gate_emits_json_for_current_release(tmp_path: Path) 
     payload = json.loads(result.stdout)
     assert payload["status"] == "pass"
     assert payload["release_ready"] is True
+
+
+def test_online_public_release_gate_requires_sigstore_release_assets(tmp_path: Path) -> None:
+    _write_minimal_release_repo(tmp_path)
+
+    def runner(command: list[str], cwd: Path) -> tuple[int, str, str]:
+        if command[:4] == ["gh", "repo", "view", "alevkin/ai-keeper"]:
+            return 0, json.dumps({"defaultBranchRef": {"name": "main"}, "visibility": "PRIVATE", "isPrivate": True}), ""
+        if command[:4] == ["gh", "release", "view", "v1.2.3"]:
+            assets = [
+                {"name": "aikeeper-v1.2.3.tar.gz"},
+                {"name": "aikeeper-v1.2.3.tar.gz.sha256"},
+                {"name": "CHECKSUMS.txt"},
+                {"name": "SIGNING.md"},
+                {"name": "release-manifest.json"},
+            ]
+            return 0, json.dumps({"isDraft": False, "isPrerelease": False, "assets": assets, "url": "https://example.test"}), ""
+        if command[:4] == ["gh", "run", "list", "--repo"]:
+            return 0, json.dumps([{"databaseId": 1, "conclusion": "success", "status": "completed"}]), ""
+        result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False)
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+    result = evaluate_public_release_gate(
+        repo_root=tmp_path,
+        db_path=tmp_path / "keeper.sqlite",
+        dist_dir=tmp_path / "dist",
+        tag="v1.2.3",
+        online=True,
+        github_repo="alevkin/ai-keeper",
+        privacy_result={"status": "pass", "metadata_only": True, "findings": []},
+        distribution_result={
+            "status": "pass",
+            "project_agnostic": True,
+            "company_agnostic": True,
+            "metadata_only": True,
+            "local_only": True,
+            "findings": [],
+        },
+        runner=runner,
+    )
+
+    assert result["status"] == "fail"
+    assert any(
+        check["name"] == "github_release"
+        and check["status"] == "fail"
+        and "sigstore" in check["detail"]
+        for check in result["checks"]
+    )

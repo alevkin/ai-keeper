@@ -328,8 +328,8 @@ Status: shipped in v0.19.0.
 Create verification materials for release artifacts.
 
 - Generate `CHECKSUMS.txt` during packaging.
-- Add `scripts/sign-release.sh` for checksum refresh and optional
-  `cosign`/`minisign` signatures.
+- Add `scripts/sign-release.sh` for checksum refresh and manual external
+  signatures.
 - Document verification commands without storing signing keys.
 
 Acceptance:
@@ -517,7 +517,7 @@ Acceptance:
 
 Status: shipped in v0.22.0.
 
-Document the release upload path before adding signing secrets or tap
+Document the release upload path before adding the signing policy or tap
 automation.
 
 - Use GitHub Releases as the canonical archive distribution channel.
@@ -591,10 +591,32 @@ Acceptance:
   permissions.
 - Distribution audit requires the public release gate files.
 
+### AK-035 Release Signing Policy
+
+Status: shipped in v0.24.0.
+
+Make GitHub Release artifacts signed by default before sharing AI Keeper outside
+the current workspace.
+
+- Use keyless `cosign` signing in `.github/workflows/release.yml`.
+- Grant only `id-token: write` plus release `contents: write`; do not introduce
+  signing secrets.
+- Publish Sigstore bundles for the source archive, `CHECKSUMS.txt`, and
+  `release-manifest.json`.
+- Teach `aikeeper audit public-release` to require cosign-ready workflows and
+  Sigstore bundle assets on the GitHub Release.
+- Keep local checksum-only package verification available for development
+  builds.
+
+Acceptance:
+
+- Release workflow installs `sigstore/cosign-installer`.
+- Release workflow runs `scripts/release.sh --signer cosign`.
+- GitHub Release uploads `.sigstore.json` bundles.
+- Public release gate fails online when bundle assets are missing.
+
 ## Next
 
-- AK-035 Release Signing Policy: decide whether release artifacts should use
-  `cosign`, `minisign`, both, or unsigned checksums for the private phase.
 - AK-036 Homebrew Tap Repository: decide and scaffold a separate tap repository
   if Homebrew becomes a primary distribution channel.
 - AK-037 Public Issue Templates: add bug report, feature request, and security

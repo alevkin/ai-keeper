@@ -16,11 +16,14 @@ The workflow:
 - Runs tests and metadata-only audits.
 - Commits the release metadata and changelog.
 - Creates an annotated `v*` tag.
-- Builds release artifacts with `scripts/release.sh`.
-- Creates a GitHub Release with the generated release notes and artifacts.
+- Installs `cosign` with `sigstore/cosign-installer`.
+- Builds release artifacts with `scripts/release.sh --signer cosign`.
+- Creates a GitHub Release with the generated release notes, artifacts,
+  checksums, and Sigstore bundles.
 
 No external repository secrets are required for the default flow. The workflow
-uses `GITHUB_TOKEN` through `gh release create`.
+uses `GITHUB_TOKEN` through `gh release create` and GitHub OIDC for keyless
+`cosign` signing.
 
 ## Local Fallback
 
@@ -43,8 +46,7 @@ Review generated files:
 ## Deferred Decisions
 
 - Whether Homebrew uses an in-repo formula, a dedicated tap repository, or both.
-- Whether signed artifacts use `cosign`, `minisign`, or both.
-- Which signing secrets, if any, are allowed in GitHub Actions.
+- Whether `minisign` is useful as a manual secondary signature.
 
 PyPI publishing is deferred because the MVP is a local daemon plus OS service
 installer rather than a Python library API.

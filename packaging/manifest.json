@@ -44,8 +44,20 @@
     "package_manager": "uv",
     "service_manager": "launchd"
   },
+  "signing": {
+    "default": "cosign-keyless",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "identity": "https://github.com/alevkin/ai-keeper/.github/workflows/release.yml@refs/heads/main",
+    "bundles": [
+      "dist/aikeeper-<version>.tar.gz.sigstore.json",
+      "dist/CHECKSUMS.txt.sigstore.json",
+      "dist/release-manifest.json.sigstore.json"
+    ],
+    "optional": [
+      "minisign"
+    ]
+  },
   "future_targets": [
-    "release-signing-policy",
     "homebrew-tap-repository",
     "public-issue-templates"
   ]

@@ -49,7 +49,6 @@ def test_packaging_manifest_tracks_distribution_prep_wave_targets() -> None:
     assert manifest["targets"]["public_release_gate"] == "scripts/public-release-gate.sh"
     assert manifest["targets"]["macos_dmg_wrapper"] == "packaging/macos/dmg/Aikeeper Installer.command"
     assert manifest["future_targets"] == [
-        "release-signing-policy",
         "homebrew-tap-repository",
         "public-issue-templates",
     ]
@@ -79,7 +78,13 @@ def test_package_script_writes_tap_formula_and_checksum_index(tmp_path: Path) ->
     assert 'homepage "https://github.com/alevkin/ai-keeper"' in tap_formula.read_text(encoding="utf-8")
     assert manifest["checksums"] == checksums.name
     assert manifest["homebrew_tap_formula"] == str(tap_formula)
-    assert manifest["signing"]["optional"] == ["cosign", "minisign"]
+    assert manifest["signing"]["default"] == "cosign-keyless"
+    assert manifest["signing"]["bundles"] == [
+        f"{archive.name}.sigstore.json",
+        "CHECKSUMS.txt.sigstore.json",
+        "release-manifest.json.sigstore.json",
+    ]
+    assert manifest["signing"]["optional"] == ["minisign"]
 
 
 def test_sign_release_script_generates_verification_materials(tmp_path: Path) -> None:
@@ -134,6 +139,41 @@ def test_sign_release_dry_run_shows_optional_signature_command(tmp_path: Path) -
     assert result.returncode == 0, result.stderr
     assert "DRY RUN" in result.stdout
     assert "minisign -S" in result.stdout
+
+
+def test_sign_release_dry_run_shows_keyless_cosign_bundle_commands(tmp_path: Path) -> None:
+    output_dir = tmp_path / "dist"
+    subprocess.run(
+        ["bash", str(REPO / "scripts" / "package.sh"), "--version", "v0.22.0", "--output-dir", str(output_dir)],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(REPO / "scripts" / "sign-release.sh"),
+            "--dist-dir",
+            str(output_dir),
+            "--signer",
+            "cosign",
+            "--dry-run",
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "DRY RUN" in result.stdout
+    assert "Signer: cosign keyless" in result.stdout
+    assert "cosign sign-blob --yes --bundle" in result.stdout
+    assert "aikeeper-v0.22.0.tar.gz.sigstore.json" in result.stdout
+    assert "CHECKSUMS.txt.sigstore.json" in result.stdout
+    assert "release-manifest.json.sigstore.json" in result.stdout
 
 
 def test_macos_dmg_wrapper_is_thin_and_documented() -> None:

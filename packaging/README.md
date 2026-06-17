@@ -53,14 +53,18 @@ Generate release verification material:
 scripts/sign-release.sh --dist-dir dist --signer none
 ```
 
-Optional signatures use external `cosign` or `minisign` keys. Signing keys must
-not be committed or packaged.
+GitHub Releases use keyless `cosign` through GitHub OIDC and include Sigstore
+bundles for the archive, `CHECKSUMS.txt`, and `release-manifest.json`. Signing
+keys must not be committed or packaged.
 
 Generate the local release bundle and notes:
 
 ```bash
 scripts/release.sh --version v0.21.0 --output-dir dist --signer none
 ```
+
+Use `--signer cosign` only in an OIDC-capable signing environment, such as the
+GitHub release workflow.
 
 Publish to the private GitHub repository after tests and audit pass:
 
@@ -70,7 +74,6 @@ scripts/publish.sh --remote git@github.com:alevkin/ai-keeper.git --ssh-key ~/.ss
 
 Planned targets:
 
-- repository owner actions
-- CI follow-up after the first GitHub Actions run
-- release upload design
+- dedicated Homebrew tap repository
+- public issue templates
 - public launch copy

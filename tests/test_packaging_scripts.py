@@ -73,8 +73,13 @@ def test_packaging_manifest_documents_light_packaging_surface() -> None:
     assert manifest["targets"]["public_release_gate"] == "scripts/public-release-gate.sh"
     assert manifest["repository"]["url"] == "git@github.com:alevkin/ai-keeper.git"
     assert manifest["repository"]["visibility"] == "private"
+    assert manifest["signing"]["default"] == "cosign-keyless"
+    assert manifest["signing"]["issuer"] == "https://token.actions.githubusercontent.com"
+    assert manifest["signing"]["identity"] == (
+        "https://github.com/alevkin/ai-keeper/.github/workflows/release.yml@refs/heads/main"
+    )
+    assert "dist/CHECKSUMS.txt.sigstore.json" in manifest["signing"]["bundles"]
     assert manifest["future_targets"] == [
-        "release-signing-policy",
         "homebrew-tap-repository",
         "public-issue-templates",
     ]

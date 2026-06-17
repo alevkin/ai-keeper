@@ -215,7 +215,16 @@ manifest = {
     "generated_at": datetime.now(tz=UTC).isoformat(),
     "local_only": True,
     "metadata_only": True,
-    "signing": {"checksums": checksums_path.name, "optional": ["cosign", "minisign"]},
+    "signing": {
+        "default": "cosign-keyless",
+        "checksums": checksums_path.name,
+        "bundles": [
+            f"{archive_name}.sigstore.json",
+            "CHECKSUMS.txt.sigstore.json",
+            "release-manifest.json.sigstore.json",
+        ],
+        "optional": ["minisign"],
+    },
     "excluded": ["sqlite databases", "jsonl transcripts", ".git", ".venv", ".vscode", "dist", "output"],
 }
 manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")

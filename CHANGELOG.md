@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.24.0
+
+- feat: add keyless cosign release signing
+
 ## v0.23.0
 
 - fix: make release gate tests candidate-safe

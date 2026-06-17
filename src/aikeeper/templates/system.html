@@ -97,6 +97,34 @@
 
 <section class="panel system-panel">
   <div class="panel-head">
+    <h2>Recent Jobs</h2>
+    <span>{{ system.jobs|length }} latest</span>
+  </div>
+  {% if system.jobs %}
+  <div class="job-list">
+    {% for job in system.jobs %}
+    <div class="job-row {{ job.status }}">
+      <div>
+        <strong>{{ job.action }}</strong>
+        <small>{{ job.command }}</small>
+        {% if job.output_tail %}
+        <code>{{ job.output_tail }}</code>
+        {% endif %}
+      </div>
+      <span>{{ job.status }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <strong>No jobs yet</strong>
+    <span>System actions will appear here with queued, running, ok, or fail status.</span>
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel system-panel">
+  <div class="panel-head">
     <h2>Local Paths</h2>
     <span>metadata only</span>
   </div>

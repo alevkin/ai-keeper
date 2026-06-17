@@ -854,6 +854,82 @@ td small,
   overflow-wrap: anywhere;
 }
 
+.job-list {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px 18px;
+}
+
+.job-row {
+  align-items: start;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px;
+}
+
+.job-row strong {
+  display: block;
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.job-row small {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.job-row code {
+  background: #edf2f1;
+  border: 1px solid #dfe8e4;
+  border-radius: 5px;
+  color: var(--text);
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 8px;
+  max-height: 96px;
+  overflow: auto;
+  padding: 7px 8px;
+  white-space: pre-wrap;
+}
+
+.job-row > span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.job-row.ok > span {
+  background: var(--accent-soft);
+  border-color: #b9ddd4;
+  color: var(--accent-strong);
+}
+
+.job-row.fail > span {
+  background: var(--red-soft);
+  border-color: #efc0bd;
+  color: var(--red);
+}
+
+.job-row.running > span,
+.job-row.queued > span {
+  background: var(--amber-soft);
+  border-color: #edd5a8;
+  color: var(--amber);
+}
+
 .source-state {
   color: var(--amber);
   font-size: 11px;
@@ -1103,6 +1179,14 @@ tbody tr:hover {
   .system-action-form {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .job-row {
+    grid-template-columns: 1fr;
+  }
+
+  .job-row > span {
+    justify-self: start;
   }
 
   .trend-bars {

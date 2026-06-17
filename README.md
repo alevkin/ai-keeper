@@ -34,9 +34,10 @@ Open <http://127.0.0.1:8766> for the dashboard. After the hooks are installed,
 Codex turn summaries include a dashboard link when the daemon is reachable.
 Use <http://127.0.0.1:8766/system> for local service status, paths, logs, and
 recovery commands. The System page can queue confirmed background actions for
-repair, reinstall, restart, and metadata-only diagnostics.
+repair, reinstall, restart, and metadata-only diagnostics, then track them as
+observable jobs with queued, running, ok, or fail status.
 Use <http://127.0.0.1:8766/diagnostics> to create metadata-only diagnostics
-bundles, download recent archives, and inspect the latest system action log.
+bundles, download recent archives, and inspect recent system jobs.
 
 For manual one-off use:
 
@@ -82,7 +83,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.14.0
+scripts/upgrade.sh --port 8766 --target v0.15.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -203,6 +204,7 @@ uv run aikeeper sync claude
 uv run aikeeper audit privacy --json
 uv run aikeeper health ingest --json
 uv run aikeeper diagnostics bundle --port 8766
+uv run aikeeper jobs run --job-id 1 --json
 uv run aikeeper simulate --target-model gpt-5.4-mini
 uv run aikeeper export --format markdown
 uv run aikeeper codex exec -- "summarize this repository"
@@ -214,6 +216,10 @@ tail logs. They do not include prompts, assistant messages, raw transcripts, or
 the SQLite database file.
 The dashboard Diagnostics page can create these bundles directly and download
 recent archives without exposing raw chat content.
+
+System actions are stored as metadata-only jobs in SQLite. Each job records the
+action name, command, cwd, status, timestamps, exit code, log path, and output
+tail. It does not store prompts, assistant messages, or raw transcripts.
 
 `aikeeper codex exec -- ...` wraps `codex exec --json`, streams Codex output
 unchanged, and records `turn.completed.usage` as local token events.

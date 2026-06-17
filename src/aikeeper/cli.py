@@ -34,6 +34,7 @@ from aikeeper.openai_costs import fetch_and_import_costs
 from aikeeper.service import status_for_cwd
 from aikeeper.service import simulate_model_cost
 from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home, claude_home, codex_home, default_db_path, ensure_app_home
+from aikeeper.system_jobs import run_system_job
 from aikeeper.web import create_app
 
 
@@ -49,6 +50,7 @@ health_app = typer.Typer(help="Inspect AI Keeper ingest health.")
 service_app = typer.Typer(help="Install and control the macOS launchd service.")
 uninstall_app = typer.Typer(help="Remove AI Keeper integrations.")
 diagnostics_app = typer.Typer(help="Create metadata-only troubleshooting bundles.")
+jobs_app = typer.Typer(help="Run and inspect AI Keeper system jobs.")
 app.add_typer(daemon_app, name="daemon")
 app.add_typer(sync_app, name="sync")
 app.add_typer(hook_app, name="hook")
@@ -59,6 +61,7 @@ app.add_typer(health_app, name="health")
 app.add_typer(service_app, name="service")
 app.add_typer(uninstall_app, name="uninstall")
 app.add_typer(diagnostics_app, name="diagnostics")
+app.add_typer(jobs_app, name="jobs")
 
 
 @daemon_app.command("start")
@@ -338,6 +341,19 @@ def diagnostics_bundle(
         sys.stdout.write(json.dumps(data, indent=2) + "\n")
         return
     console.print(f"Created AI Keeper diagnostics bundle: {archive}")
+
+
+@jobs_app.command("run")
+def jobs_run(
+    job_id: Annotated[int, typer.Option()],
+    db_path: Annotated[Path, typer.Option()] = default_db_path(),
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    job = run_system_job(db_path, job_id=job_id)
+    if as_json:
+        sys.stdout.write(json.dumps(job, indent=2) + "\n")
+        return
+    console.print(f"AI Keeper job {job['id']}: {job['status']}")
 
 
 def _doctor_check(name: str, status: str, detail: str, fix: str | None = None) -> dict[str, str | None]:

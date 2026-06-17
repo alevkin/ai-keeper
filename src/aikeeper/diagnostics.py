@@ -10,6 +10,7 @@ from aikeeper.audit import audit_privacy
 from aikeeper.health import ingest_health
 from aikeeper.launchd import default_launch_agent_path, launch_agent_status
 from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home
+from aikeeper.system_jobs import list_system_jobs
 from aikeeper.timeutils import now_ms
 from aikeeper.version import get_app_version
 
@@ -97,10 +98,11 @@ def append_system_action_log(message: str, *, home: Path | None = None) -> Path:
     return path
 
 
-def diagnostics_overview(*, limit: int = 10, home: Path | None = None) -> dict[str, Any]:
+def diagnostics_overview(*, limit: int = 10, home: Path | None = None, db_path: Path | str | None = None) -> dict[str, Any]:
     root = home or app_home()
     return {
         "bundles": list_diagnostics_bundles(limit=limit, home=root),
+        "jobs": list_system_jobs(db_path, limit=limit) if db_path else [],
         "action_log": list_system_action_log(limit=20, home=root),
         "paths": {
             "diagnostics_dir": str(_diagnostics_dir(root)),

@@ -410,23 +410,34 @@ def test_system_actions_require_confirmation_and_queue_background_command(tmp_pa
     cwd = tmp_path / "repo"
     cwd.mkdir()
     seed_usage(db_path, cwd)
-    calls: list[tuple[str, int]] = []
-    monkeypatch.setattr(
-        "aikeeper.web._launch_system_action",
-        lambda action, port: calls.append((action, port)) or {"status": "queued", "action": action},
-    )
+    launched: list[int] = []
+    monkeypatch.setattr("aikeeper.web._launch_system_job_runner", lambda db, job_id: launched.append(job_id))
     app = create_app(db_path=db_path)
     client = TestClient(app)
 
     rejected = client.post("/system/actions/repair", data={"confirm": "nope"}, follow_redirects=False)
     accepted = client.post("/system/actions/repair", data={"confirm": "repair"}, follow_redirects=False)
     invalid = client.post("/system/actions/unknown", data={"confirm": "unknown"}, follow_redirects=False)
+    page = client.get("/system")
+    api = client.get("/api/system").json()
 
     assert rejected.status_code == 400
     assert accepted.status_code == 303
-    assert accepted.headers["location"] == "/system?action=repair"
+    assert accepted.headers["location"] == "/system?job=1"
     assert invalid.status_code == 404
-    assert calls == [("repair", 8766)]
+    assert launched == [1]
+    assert "Recent Jobs" in page.text
+    assert "repair" in page.text
+    assert "queued" in page.text
+    assert api["jobs"][0]["action"] == "repair"
+    assert api["jobs"][0]["status"] == "queued"
+
+    diagnostics = client.post("/system/actions/diagnostics", data={"confirm": "diagnostics"}, follow_redirects=False)
+    diagnostics_api = client.get("/api/system").json()
+
+    assert diagnostics.status_code == 303
+    assert diagnostics_api["jobs"][0]["action"] == "diagnostics"
+    assert "--json" in diagnostics_api["jobs"][0]["command"]
 
 
 def test_diagnostics_page_lists_bundles_actions_and_downloads_archive(tmp_path: Path, monkeypatch) -> None:
@@ -443,6 +454,14 @@ def test_diagnostics_page_lists_bundles_actions_and_downloads_archive(tmp_path: 
     bundle.write_bytes(b"diagnostics zip")
     (log_dir / "system-actions.log").write_text("repair queued\nCreated AI Keeper diagnostics bundle\n", encoding="utf-8")
     monkeypatch.setenv("AIKEEPER_HOME", str(app_home))
+    with connect(db_path) as con:
+        con.execute(
+            """
+            insert into system_jobs(action, status, command_json, cwd, log_path, created_at_ms)
+            values (?, ?, ?, ?, ?, ?)
+            """,
+            ("repair", "ok", '["aikeeper", "doctor"]', str(cwd), str(log_dir / "system-actions.log"), 1_781_000_000_000),
+        )
     app = create_app(db_path=db_path)
     client = TestClient(app)
 
@@ -457,6 +476,8 @@ def test_diagnostics_page_lists_bundles_actions_and_downloads_archive(tmp_path: 
     assert "repair queued" in page.text
     assert f'href="/diagnostics/bundles/{bundle.name}"' in page.text
     assert api["bundles"][0]["filename"] == bundle.name
+    assert api["jobs"][0]["action"] == "repair"
+    assert api["jobs"][0]["status"] == "ok"
     assert api["action_log"][-1] == "Created AI Keeper diagnostics bundle"
     assert download.status_code == 200
     assert download.content == b"diagnostics zip"

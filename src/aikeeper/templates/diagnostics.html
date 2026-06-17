@@ -46,22 +46,47 @@
 
   <div class="panel system-panel">
     <div class="panel-head">
-      <h2>Action Log</h2>
-      <span>latest tail</span>
+      <h2>System Jobs</h2>
+      <span>{{ diagnostics.jobs|length }} latest</span>
     </div>
-    {% if diagnostics.action_log %}
-    <ol class="action-log">
-      {% for line in diagnostics.action_log %}
-      <li>{{ line }}</li>
+    {% if diagnostics.jobs %}
+    <div class="job-list">
+      {% for job in diagnostics.jobs %}
+      <div class="job-row {{ job.status }}">
+        <div>
+          <strong>{{ job.action }}</strong>
+          <small>{{ job.command }}</small>
+        </div>
+        <span>{{ job.status }}</span>
+      </div>
       {% endfor %}
-    </ol>
+    </div>
     {% else %}
     <div class="empty-state">
-      <strong>No actions recorded</strong>
-      <span>Repair, reinstall, restart, and diagnostics jobs will appear here.</span>
+      <strong>No jobs recorded</strong>
+      <span>Confirmed System actions will appear here.</span>
     </div>
     {% endif %}
   </div>
+</section>
+
+<section class="panel system-panel">
+  <div class="panel-head">
+    <h2>Action Log</h2>
+    <span>legacy tail</span>
+  </div>
+  {% if diagnostics.action_log %}
+  <ol class="action-log">
+    {% for line in diagnostics.action_log %}
+    <li>{{ line }}</li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div class="empty-state">
+    <strong>No actions recorded</strong>
+    <span>Legacy action log entries will appear here.</span>
+  </div>
+  {% endif %}
 </section>
 
 <section class="panel system-panel">

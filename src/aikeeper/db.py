@@ -104,6 +104,21 @@ create table if not exists budget_settings (
     primary key(scope, scope_key)
 );
 
+create table if not exists system_jobs (
+    id integer primary key autoincrement,
+    action text not null,
+    status text not null,
+    command_json text not null,
+    cwd text not null,
+    log_path text not null,
+    created_at_ms integer not null,
+    started_at_ms integer,
+    finished_at_ms integer,
+    exit_code integer,
+    output_tail text not null default '',
+    error text
+);
+
 create index if not exists idx_sessions_cwd on sessions(cwd);
 create index if not exists idx_sessions_project on sessions(project_id);
 create index if not exists idx_sessions_task on sessions(task_id);
@@ -111,6 +126,8 @@ create index if not exists idx_token_events_session on token_events(session_pk, 
 create index if not exists idx_token_events_timestamp on token_events(timestamp_ms);
 create index if not exists idx_external_costs_bucket on external_costs(provider, bucket_start_s);
 create index if not exists idx_budget_settings_scope on budget_settings(scope, scope_key);
+create index if not exists idx_system_jobs_created on system_jobs(created_at_ms desc);
+create index if not exists idx_system_jobs_status on system_jobs(status);
 """
 
 

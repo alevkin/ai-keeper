@@ -24,6 +24,8 @@ from aikeeper.service import overview, project_detail, session_detail, simulate_
 from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home
 from aikeeper.settings import codex_home as default_codex_home
 from aikeeper.settings import default_db_path
+from aikeeper.system_jobs import create_system_job, list_system_jobs
+from aikeeper.timeutils import now_ms
 from aikeeper.version import get_app_version
 
 
@@ -157,6 +159,7 @@ def _system_status(*, db: Path, home: Path, host: str, port: int) -> dict:
             "diagnostics_bundle": f"uv run aikeeper diagnostics bundle --port {port}",
         },
         "actions": list(SYSTEM_ACTIONS),
+        "jobs": list_system_jobs(db, limit=8),
     }
 
 
@@ -169,23 +172,50 @@ def _action_command(action: str, port: int, root: Path) -> list[str]:
     if action == "restart":
         return [*base, "service", "restart"]
     if action == "diagnostics":
-        return [*base, "diagnostics", "bundle", "--port", str(port)]
+        return [*base, "diagnostics", "bundle", "--port", str(port), "--json"]
     raise KeyError(action)
 
 
-def _launch_system_action(action: str, port: int) -> dict[str, str]:
+def _launch_system_job_runner(db: Path, job_id: int) -> None:
+    root = project_root() or Path.cwd()
+    logs_dir = app_home() / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    runner_log = logs_dir / "system-job-runner.log"
+    command = [
+        "uv",
+        "--directory",
+        str(root),
+        "run",
+        "aikeeper",
+        "jobs",
+        "run",
+        "--job-id",
+        str(job_id),
+        "--db-path",
+        str(db),
+    ]
+    shell_command = " ".join(shlex.quote(part) for part in command)
+    subprocess.Popen(
+        ["/bin/sh", "-lc", f"sleep 1; {shell_command} >> {shlex.quote(str(runner_log))} 2>&1"],
+        cwd=root,
+        start_new_session=True,
+    )
+
+
+def _launch_system_action(db: Path, action: str, port: int) -> dict:
     root = project_root() or Path.cwd()
     command = _action_command(action, port, root)
     logs_dir = app_home() / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
-    log_path = logs_dir / "system-actions.log"
-    shell_command = " ".join(shlex.quote(part) for part in command)
-    subprocess.Popen(
-        ["/bin/sh", "-lc", f"sleep 1; {shell_command} >> {shlex.quote(str(log_path))} 2>&1"],
+    job = create_system_job(
+        db,
+        action=action,
+        command=command,
         cwd=root,
-        start_new_session=True,
+        log_path=logs_dir / f"system-job-{now_ms()}-{action}.log",
     )
-    return {"status": "queued", "action": action, "log_path": str(log_path)}
+    _launch_system_job_runner(db, job["id"])
+    return job
 
 
 def _run_polling_sync(db: Path, home: Path, stop: threading.Event, interval_seconds: int = 5) -> None:
@@ -266,7 +296,7 @@ def create_app(
 
     @app.get("/api/diagnostics")
     def api_diagnostics() -> dict:
-        return diagnostics_overview()
+        return diagnostics_overview(db_path=db)
 
     @app.get("/api/audit/privacy")
     def api_privacy_audit() -> dict:
@@ -349,7 +379,7 @@ def create_app(
             request,
             "diagnostics.html",
             {
-                "diagnostics": diagnostics_overview(),
+                "diagnostics": diagnostics_overview(db_path=db),
                 "created": created,
                 "version": get_app_version(),
                 "active_page": "diagnostics",
@@ -384,10 +414,10 @@ def create_app(
             raise HTTPException(status_code=400, detail="confirmation mismatch")
         _host, port = _request_host_port(request)
         try:
-            _launch_system_action(action, port)
+            job = _launch_system_action(db, action, port)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="unknown action") from exc
-        return RedirectResponse(f"/system?action={action}", status_code=303)
+        return RedirectResponse(f"/system?job={job['id']}", status_code=303)
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
     def project(request: Request, project_id: int) -> HTMLResponse:

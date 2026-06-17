@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.25.0
+
+- feat: add Homebrew tap and public issue prep
+
 ## v0.24.0
 
 - feat: add keyless cosign release signing

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.27.0
+
+- feat: redesign command dashboard
+
 ## v0.26.3
 
 - fix: surface Claude providers on overview

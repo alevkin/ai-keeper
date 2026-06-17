@@ -39,6 +39,14 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert 'href="#install"' in html
     assert 'href="https://github.com/alevkin/ai-keeper"' in html
     assert "Understand your AI coding spend without giving up privacy." in html
+    assert 'id="codex-hook"' in html
+    assert "Codex gets the usage line too" in html
+    assert "<strong>AI Keeper</strong> | turn 125,770 tokens" in html
+    assert "session 237,711,203 tokens" in html
+    assert "task today 20,409,269 tokens" in html
+    assert "project today 20,409,269 tokens" in html
+    assert "Web preview" in html
+    assert "Open in" in html
     assert "Install in one command" in html
     assert "brew install alevkin/tap/aikeeper" in html
     assert "aikeeper-install --port 8766" not in html
@@ -50,6 +58,9 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert "Active rate" in svg
     assert "This week" in svg
     assert ".copy-command" in css
+    assert ".hook-preview" in css
+    assert ".hook-message" in css
+    assert ".web-preview-card" in css
     assert "display: grid" in css
     assert "@media (max-width: 760px)" in css
 

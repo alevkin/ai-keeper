@@ -397,3 +397,28 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     assert "Doctor" in system_page.text
     assert "LaunchAgent" in system_page.text
     assert "uv run aikeeper doctor --fix --port 8766" in system_page.text
+    assert 'action="/system/actions/repair"' in system_page.text
+
+
+def test_system_actions_require_confirmation_and_queue_background_command(tmp_path: Path, monkeypatch) -> None:
+    db_path = tmp_path / "keeper.sqlite"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    seed_usage(db_path, cwd)
+    calls: list[tuple[str, int]] = []
+    monkeypatch.setattr(
+        "aikeeper.web._launch_system_action",
+        lambda action, port: calls.append((action, port)) or {"status": "queued", "action": action},
+    )
+    app = create_app(db_path=db_path)
+    client = TestClient(app)
+
+    rejected = client.post("/system/actions/repair", data={"confirm": "nope"}, follow_redirects=False)
+    accepted = client.post("/system/actions/repair", data={"confirm": "repair"}, follow_redirects=False)
+    invalid = client.post("/system/actions/unknown", data={"confirm": "unknown"}, follow_redirects=False)
+
+    assert rejected.status_code == 400
+    assert accepted.status_code == 303
+    assert accepted.headers["location"] == "/system?action=repair"
+    assert invalid.status_code == 404
+    assert calls == [("repair", 8766)]

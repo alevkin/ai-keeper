@@ -15,6 +15,7 @@ from aikeeper.audit import audit_privacy
 from aikeeper.claude import sync_claude_once
 from aikeeper.codex import ExecIngestState, ingest_codex_exec_line, sync_codex_once
 from aikeeper.db import connect, init_db
+from aikeeper.diagnostics import create_diagnostics_bundle
 from aikeeper.exports import export_usage
 from aikeeper.health import ingest_health
 from aikeeper.hooks import handle_codex_hook
@@ -47,6 +48,7 @@ audit_app = typer.Typer(help="Inspect AI Keeper privacy guarantees.")
 health_app = typer.Typer(help="Inspect AI Keeper ingest health.")
 service_app = typer.Typer(help="Install and control the macOS launchd service.")
 uninstall_app = typer.Typer(help="Remove AI Keeper integrations.")
+diagnostics_app = typer.Typer(help="Create metadata-only troubleshooting bundles.")
 app.add_typer(daemon_app, name="daemon")
 app.add_typer(sync_app, name="sync")
 app.add_typer(hook_app, name="hook")
@@ -56,6 +58,7 @@ app.add_typer(audit_app, name="audit")
 app.add_typer(health_app, name="health")
 app.add_typer(service_app, name="service")
 app.add_typer(uninstall_app, name="uninstall")
+app.add_typer(diagnostics_app, name="diagnostics")
 
 
 @daemon_app.command("start")
@@ -314,6 +317,27 @@ def health_ingest_cmd(
     for source in data["ingest_state"]["problem_sources"][:5]:
         state = "missing" if source["exists"] is False else "lagging" if source["lagging"] else "ok"
         console.print(f"  {state} source: {source['path'] or source['source_key']}")
+
+
+@diagnostics_app.command("bundle")
+def diagnostics_bundle(
+    host: Annotated[str, typer.Option()] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option()] = DEFAULT_PORT,
+    db_path: Annotated[Path | None, typer.Option()] = None,
+    output_dir: Annotated[Path | None, typer.Option()] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    archive = create_diagnostics_bundle(
+        db_path=db_path or default_db_path(),
+        output_dir=output_dir,
+        host=host,
+        port=port,
+    )
+    data = {"archive_path": str(archive), "metadata_only": True}
+    if as_json:
+        sys.stdout.write(json.dumps(data, indent=2) + "\n")
+        return
+    console.print(f"Created AI Keeper diagnostics bundle: {archive}")
 
 
 def _doctor_check(name: str, status: str, detail: str, fix: str | None = None) -> dict[str, str | None]:

@@ -24,10 +24,17 @@ uv run aikeeper install all --port 8766
 uv run aikeeper doctor --port 8766
 ```
 
+Or use the lightweight install script:
+
+```bash
+scripts/install.sh --port 8766
+```
+
 Open <http://127.0.0.1:8766> for the dashboard. After the hooks are installed,
 Codex turn summaries include a dashboard link when the daemon is reachable.
 Use <http://127.0.0.1:8766/system> for local service status, paths, logs, and
-recovery commands.
+recovery commands. The System page can queue confirmed background actions for
+repair, reinstall, restart, and metadata-only diagnostics.
 
 For manual one-off use:
 
@@ -69,6 +76,13 @@ uv run aikeeper doctor --fix --port 8766
 
 Use `uv run aikeeper uninstall all` to remove the LaunchAgent and AI Keeper
 Codex hook entries together. It keeps the local SQLite database by default.
+
+Upgrade and rollback helpers:
+
+```bash
+scripts/upgrade.sh --port 8766 --target v0.13.0
+scripts/rollback.sh --port 8766 --target v0.12.0
+```
 
 The installer writes `~/Library/LaunchAgents/com.aikeeper.daemon.plist` when
 that directory is writable. If it is not writable, AI Keeper falls back to
@@ -186,13 +200,26 @@ uv run aikeeper sync codex --once
 uv run aikeeper sync claude
 uv run aikeeper audit privacy --json
 uv run aikeeper health ingest --json
+uv run aikeeper diagnostics bundle --port 8766
 uv run aikeeper simulate --target-model gpt-5.4-mini
 uv run aikeeper export --format markdown
 uv run aikeeper codex exec -- "summarize this repository"
 ```
 
+Diagnostics bundles are written under `$AIKEEPER_HOME/diagnostics` by default.
+They contain doctor/system status, privacy/ingest health, service metadata, and
+tail logs. They do not include prompts, assistant messages, raw transcripts, or
+the SQLite database file.
+
 `aikeeper codex exec -- ...` wraps `codex exec --json`, streams Codex output
 unchanged, and records `turn.completed.usage` as local token events.
+
+## Packaging
+
+`packaging/manifest.json` defines the current lightweight packaging contract:
+local-only, metadata-only, script-driven install/upgrade/rollback. It is a base
+for future macOS DMG, Homebrew, and Windows packaging rather than a full binary
+installer today.
 
 ## Codex Data Sources
 

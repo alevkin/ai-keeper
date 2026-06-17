@@ -707,6 +707,53 @@ td small,
   padding: 16px 18px 18px;
 }
 
+.system-action-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 16px 18px 18px;
+}
+
+.system-action-form {
+  align-items: center;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 12px;
+}
+
+.system-action-form div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.system-action-form strong {
+  font-size: 14px;
+}
+
+.system-action-form small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.system-action-form button {
+  background: var(--text);
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 760;
+  padding: 8px 10px;
+}
+
 .source-state {
   color: var(--amber);
   font-size: 11px;
@@ -944,12 +991,18 @@ tbody tr:hover {
   .budget-input-grid,
   .rail-stats,
   .system-checks,
-  .command-grid {
+  .command-grid,
+  .system-action-grid {
     grid-template-columns: 1fr;
   }
 
   .system-facts li {
     grid-template-columns: 1fr;
+  }
+
+  .system-action-form {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .trend-bars {

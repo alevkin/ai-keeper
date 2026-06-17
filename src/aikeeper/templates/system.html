@@ -69,6 +69,29 @@
       <strong>Restart</strong>
       <code>{{ system.commands.service_restart }}</code>
     </div>
+    <div>
+      <strong>Diagnostics</strong>
+      <code>{{ system.commands.diagnostics_bundle }}</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel system-panel">
+  <div class="panel-head">
+    <h2>System Actions</h2>
+    <span>confirmed background jobs</span>
+  </div>
+  <div class="system-action-grid">
+    {% for action in system.actions %}
+    <form method="post" action="/system/actions/{{ action.key }}" class="system-action-form">
+      <input type="hidden" name="confirm" value="{{ action.key }}">
+      <div>
+        <strong>{{ action.label }}</strong>
+        <small>{{ action.description }}</small>
+      </div>
+      <button type="submit">{{ action.label }}</button>
+    </form>
+    {% endfor %}
   </div>
 </section>
 

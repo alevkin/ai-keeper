@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shlex
+import subprocess
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -16,7 +18,7 @@ from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
 from aikeeper.health import ingest_health
 from aikeeper.installer import codex_hooks_installed
-from aikeeper.launchd import default_launch_agent_path, launch_agent_status
+from aikeeper.launchd import default_launch_agent_path, launch_agent_status, project_root
 from aikeeper.service import overview, project_detail, session_detail, simulate_model_cost
 from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home
 from aikeeper.settings import codex_home as default_codex_home
@@ -25,6 +27,12 @@ from aikeeper.version import get_app_version
 
 
 PACKAGE_DIR = Path(__file__).parent
+SYSTEM_ACTIONS = (
+    {"key": "repair", "label": "Repair", "description": "Run doctor --fix in the background."},
+    {"key": "reinstall", "label": "Reinstall", "description": "Reinstall hooks and the LaunchAgent."},
+    {"key": "restart", "label": "Restart", "description": "Restart the LaunchAgent service."},
+    {"key": "diagnostics", "label": "Diagnostics", "description": "Create a metadata-only diagnostics bundle."},
+)
 templates = Jinja2Templates(directory=str(PACKAGE_DIR / "templates"))
 
 
@@ -145,8 +153,38 @@ def _system_status(*, db: Path, home: Path, host: str, port: int) -> dict:
             "install_all": f"uv run aikeeper install all --port {port}",
             "service_status": f"uv run aikeeper service status --port {port} --json",
             "service_restart": "uv run aikeeper service restart",
+            "diagnostics_bundle": f"uv run aikeeper diagnostics bundle --port {port}",
         },
+        "actions": list(SYSTEM_ACTIONS),
     }
+
+
+def _action_command(action: str, port: int, root: Path) -> list[str]:
+    base = ["uv", "--directory", str(root), "run", "aikeeper"]
+    if action == "repair":
+        return [*base, "doctor", "--fix", "--port", str(port)]
+    if action == "reinstall":
+        return [*base, "install", "all", "--port", str(port)]
+    if action == "restart":
+        return [*base, "service", "restart"]
+    if action == "diagnostics":
+        return [*base, "diagnostics", "bundle", "--port", str(port)]
+    raise KeyError(action)
+
+
+def _launch_system_action(action: str, port: int) -> dict[str, str]:
+    root = project_root() or Path.cwd()
+    command = _action_command(action, port, root)
+    logs_dir = app_home() / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    log_path = logs_dir / "system-actions.log"
+    shell_command = " ".join(shlex.quote(part) for part in command)
+    subprocess.Popen(
+        ["/bin/sh", "-lc", f"sleep 1; {shell_command} >> {shlex.quote(str(log_path))} 2>&1"],
+        cwd=root,
+        start_new_session=True,
+    )
+    return {"status": "queued", "action": action, "log_path": str(log_path)}
 
 
 def _run_polling_sync(db: Path, home: Path, stop: threading.Event, interval_seconds: int = 5) -> None:
@@ -298,6 +336,20 @@ def create_app(
                 "active_page": "system",
             },
         )
+
+    @app.post("/system/actions/{action}")
+    async def system_action(request: Request, action: str) -> RedirectResponse:
+        if action not in {item["key"] for item in SYSTEM_ACTIONS}:
+            raise HTTPException(status_code=404, detail="unknown action")
+        form = await _read_form(request)
+        if form.get("confirm") != action:
+            raise HTTPException(status_code=400, detail="confirmation mismatch")
+        _host, port = _request_host_port(request)
+        try:
+            _launch_system_action(action, port)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="unknown action") from exc
+        return RedirectResponse(f"/system?action={action}", status_code=303)
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse)
     def project(request: Request, project_id: int) -> HTMLResponse:

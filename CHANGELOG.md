@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.26.2
+
+- fix: make release archives deterministic
+
 ## v0.26.1
 
 - fix: update package metadata for AI providers

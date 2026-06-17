@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.23.0
+
+- fix: make release gate tests candidate-safe
+- feat: add public release gate
+
 ## v0.22.0
 
 - feat: add github auto release workflow

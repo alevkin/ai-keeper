@@ -33,7 +33,7 @@ scripts/install.sh --port 8766
 Or build and install through the local Homebrew formula:
 
 ```bash
-scripts/package.sh --version v0.18.0 --output-dir dist
+scripts/package.sh --version v0.19.0 --output-dir dist
 brew install --formula dist/homebrew/aikeeper.rb
 aikeeper-install --port 8766
 ```
@@ -91,7 +91,7 @@ Codex hook entries together. It keeps the local SQLite database by default.
 Upgrade and rollback helpers:
 
 ```bash
-scripts/upgrade.sh --port 8766 --target v0.18.0
+scripts/upgrade.sh --port 8766 --target v0.19.0
 scripts/rollback.sh --port 8766 --target v0.12.0
 ```
 
@@ -238,17 +238,29 @@ unchanged, and records `turn.completed.usage` as local token events.
 `scripts/package.sh` builds the current local release channel:
 
 ```bash
-scripts/package.sh --version v0.18.0 --output-dir dist
+scripts/package.sh --version v0.19.0 --output-dir dist
 ```
 
-It writes a source archive, sha256 file, release manifest, and local Homebrew
-formula under `dist/`. The generated formula installs wrapper commands:
-`aikeeper-install`, `aikeeper-upgrade`, and `aikeeper-rollback`.
+It writes a source archive, sha256 file, `CHECKSUMS.txt`, release manifest,
+local Homebrew formula, and tap-ready Homebrew formula under `dist/`. The
+generated formula installs wrapper commands: `aikeeper-install`,
+`aikeeper-upgrade`, `aikeeper-rollback`, `aikeeper-publish`, and
+`aikeeper-sign`.
 
 The packaging contract remains local-only and metadata-only. Release archives
 exclude `.git`, `.venv`, `dist`, `output`, SQLite databases, JSONL transcripts,
 `.vscode`, and Codex session directories. Future targets remain macOS DMG and
 Windows service/installer.
+
+Generate or refresh release verification materials:
+
+```bash
+scripts/sign-release.sh --dist-dir dist --signer none
+```
+
+Optional signatures can be created with external `cosign` or `minisign` keys.
+Do not store signing keys in this repository. See
+[Release Verification](docs/release-verification.md).
 
 Before publishing or sharing a package, run the distribution audit:
 
@@ -272,6 +284,16 @@ scripts/publish.sh \
 The publish script configures the local git author, runs the distribution audit,
 sets `origin` when needed, and pushes the current branch plus tags. It does not
 store SSH key material in the repository.
+
+Public release hygiene lives in [SECURITY.md](SECURITY.md),
+[PRIVACY.md](PRIVACY.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
+[docs/public-release-checklist.md](docs/public-release-checklist.md).
+
+Distribution preparation notes:
+
+- Homebrew tap layout: `dist/homebrew-tap/Formula/aikeeper.rb`
+- macOS DMG spike: `packaging/macos/dmg/`
+- Windows service prep: `packaging/windows/`
 
 ## Codex Data Sources
 

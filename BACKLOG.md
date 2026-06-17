@@ -302,17 +302,104 @@ Acceptance:
 - Packaging manifest documents the private repository and publish script.
 - The source archive and Homebrew formula point at the GitHub project homepage.
 
+### AK-019 Public Release Hygiene
+
+Status: shipped in v0.19.0.
+
+Prepare the repository for a future public switch.
+
+- Add license, security policy, contributing guide, privacy statement, and
+  public-readiness checklist.
+- Keep docs explicit about local-only and metadata-only behavior.
+- Keep public-release checks runnable before repository visibility changes.
+
+Acceptance:
+
+- `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, `PRIVACY.md`, and
+  `docs/public-release-checklist.md` are present.
+- Docs tell contributors not to store prompts, assistant messages, raw
+  transcripts, or local databases.
+- Tests verify required public-release docs exist.
+
+### AK-020 Signed Release Artifacts
+
+Status: shipped in v0.19.0.
+
+Create verification materials for release artifacts.
+
+- Generate `CHECKSUMS.txt` during packaging.
+- Add `scripts/sign-release.sh` for checksum refresh and optional
+  `cosign`/`minisign` signatures.
+- Document verification commands without storing signing keys.
+
+Acceptance:
+
+- Package output includes `CHECKSUMS.txt`.
+- `scripts/sign-release.sh --signer none` writes `CHECKSUMS.txt` and
+  `SIGNING.md`.
+- Dry-run signature mode shows the external signing command.
+
+### AK-021 Homebrew Tap Path
+
+Status: shipped in v0.19.0.
+
+Prepare a tap-ready Homebrew layout.
+
+- Generate `dist/homebrew-tap/Formula/aikeeper.rb` beside the local formula.
+- Keep the formula source archive based until a public asset URL is available.
+- Document the future tap migration path.
+
+Acceptance:
+
+- Package output contains the tap-ready formula.
+- Packaging manifest exposes the tap formula target.
+- Tests verify formula generation.
+
+### AK-022 macOS App/DMG Research Spike
+
+Status: shipped in v0.19.0.
+
+Prototype a thin macOS installer wrapper without duplicating install logic.
+
+- Add `packaging/macos/dmg/Aikeeper Installer.command`.
+- Keep the wrapper delegated to `scripts/install.sh`.
+- Document that local databases, logs, diagnostics, and transcripts stay out of
+  the installer.
+
+Acceptance:
+
+- Wrapper references `scripts/install.sh`.
+- Wrapper does not duplicate `aikeeper install all` internals.
+- DMG notes document the packaging boundary.
+
+### AK-023 Windows Service Prep
+
+Status: shipped in v0.19.0.
+
+Document the future Windows service path.
+
+- Add Windows packaging notes for Codex on Windows.
+- Add a dry-run PowerShell service-prep skeleton.
+- Keep Windows support marked as not implemented until tested on Windows.
+
+Acceptance:
+
+- `packaging/windows/README.md` explains constraints and metadata-only behavior.
+- `packaging/windows/install-service.ps1 -DryRun` sketches the daemon command.
+- Tests verify the docs and dry-run script surface.
+
 ## Now
 
-Next distribution wave:
+Next distribution/operations wave:
 
-- AK-019 Public Release Hygiene: add license, security policy, contributing
-  guide, privacy statement, and public-readiness checklist.
-- AK-020 Signed Release Artifacts: produce checksums, optional cosign/minisign
-  signatures, and verification docs.
-- AK-021 Homebrew Tap Path: split generated formula into a tap-ready layout and
-  document the future public tap migration.
-- AK-022 macOS App/DMG Research Spike: prototype a thin installer wrapper around
-  the existing scripts without duplicating service logic.
-- AK-023 Windows Service Prep: document Windows service constraints and sketch
-  a future installer path for Codex-on-Windows users.
+- AK-024 GitHub CI: add metadata-only CI for tests, distribution audit, package
+  build, checksum verification, and formula syntax.
+- AK-025 Release Automation: generate release notes and package artifacts from
+  a tag without using local secrets.
+- AK-026 Repo Settings Checklist: document private-to-public GitHub settings
+  that still require owner action, including default branch, Actions
+  permissions, branch protection, and secret management.
+- AK-027 Update Channel UX: show installed version, latest local tag, and
+  upgrade path in the System page.
+- AK-028 Installer Preflight Hardening: make install/package scripts report
+  missing tools and unsupported platforms more clearly.

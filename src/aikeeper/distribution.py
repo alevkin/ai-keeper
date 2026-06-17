@@ -34,15 +34,26 @@ IGNORED_SUFFIXES = {
 REQUIRED_DISTRIBUTION_FILES = [
     "README.md",
     "BACKLOG.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "PRIVACY.md",
+    "docs/public-release-checklist.md",
+    "docs/release-verification.md",
     "pyproject.toml",
     "uv.lock",
     "scripts/install.sh",
     "scripts/package.sh",
+    "scripts/sign-release.sh",
     "scripts/upgrade.sh",
     "scripts/rollback.sh",
     "packaging/manifest.json",
     "packaging/README.md",
     "packaging/macos/README.md",
+    "packaging/macos/dmg/Aikeeper Installer.command",
+    "packaging/macos/dmg/README.md",
+    "packaging/windows/README.md",
+    "packaging/windows/install-service.ps1",
 ]
 
 _PRIVATE_USER = "Andrei" + "_Levkin"

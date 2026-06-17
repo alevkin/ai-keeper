@@ -1,6 +1,6 @@
 {
   "name": "AI Keeper",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "local_only": true,
   "metadata_only": true,
   "default_port": 8766,
@@ -8,6 +8,7 @@
     "install": "scripts/install.sh",
     "package": "scripts/package.sh",
     "publish": "scripts/publish.sh",
+    "sign": "scripts/sign-release.sh",
     "upgrade": "scripts/upgrade.sh",
     "rollback": "scripts/rollback.sh"
   },
@@ -18,7 +19,11 @@
   },
   "targets": {
     "source_archive": "dist/aikeeper-<version>.tar.gz",
-    "homebrew_formula": "dist/homebrew/aikeeper.rb"
+    "homebrew_formula": "dist/homebrew/aikeeper.rb",
+    "homebrew_tap_formula": "dist/homebrew-tap/Formula/aikeeper.rb",
+    "checksums": "dist/CHECKSUMS.txt",
+    "macos_dmg_wrapper": "packaging/macos/dmg/Aikeeper Installer.command",
+    "windows_service_prep": "packaging/windows/install-service.ps1"
   },
   "runtime": {
     "language": "Python",
@@ -26,6 +31,8 @@
     "service_manager": "launchd"
   },
   "future_targets": [
+    "signed-releases",
+    "homebrew-tap",
     "macos-dmg",
     "windows"
   ]

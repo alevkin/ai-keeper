@@ -11,8 +11,8 @@ AI Keeper package builder
 
 Usage: scripts/package.sh --version VERSION [--output-dir DIR]
 
-Builds a metadata-only source release archive, sha256 file, release manifest,
-and a local Homebrew formula that installs from the generated archive.
+Builds a metadata-only source release archive, checksum files, release manifest,
+and Homebrew formula layouts that install from the generated archive.
 EOF
 }
 
@@ -72,9 +72,12 @@ archive_name = f"aikeeper-{version}.tar.gz"
 prefix = f"aikeeper-{version}"
 archive_path = output_dir / archive_name
 checksum_path = output_dir / f"{archive_name}.sha256"
+checksums_path = output_dir / "CHECKSUMS.txt"
 manifest_path = output_dir / "release-manifest.json"
 formula_dir = output_dir / "homebrew"
 formula_path = formula_dir / "aikeeper.rb"
+tap_formula_dir = output_dir / "homebrew-tap" / "Formula"
+tap_formula_path = tap_formula_dir / "aikeeper.rb"
 
 excluded_dirs = {
     ".git",
@@ -119,6 +122,7 @@ def archive_filter(info: tarfile.TarInfo) -> tarfile.TarInfo:
 
 output_dir.mkdir(parents=True, exist_ok=True)
 formula_dir.mkdir(parents=True, exist_ok=True)
+tap_formula_dir.mkdir(parents=True, exist_ok=True)
 
 with tarfile.open(archive_path, "w:gz") as package:
     for path in sorted(repo.rglob("*")):
@@ -128,8 +132,7 @@ with tarfile.open(archive_path, "w:gz") as package:
 sha256 = hashlib.sha256(archive_path.read_bytes()).hexdigest()
 checksum_path.write_text(f"{sha256}  {archive_name}\n", encoding="utf-8")
 
-formula_path.write_text(
-    f'''class Aikeeper < Formula
+formula_text = f'''class Aikeeper < Formula
   desc "Local-only Codex token usage daemon and dashboard"
   homepage "https://github.com/alevkin/ai-keeper"
   url "file://{archive_path}"
@@ -155,10 +158,15 @@ formula_path.write_text(
       #!/usr/bin/env bash
       exec "#{{libexec}}/scripts/publish.sh" "$@"
     EOS
+    (bin/"aikeeper-sign").write <<~EOS
+      #!/usr/bin/env bash
+      exec "#{{libexec}}/scripts/sign-release.sh" "$@"
+    EOS
     chmod 0755, bin/"aikeeper-install"
     chmod 0755, bin/"aikeeper-upgrade"
     chmod 0755, bin/"aikeeper-rollback"
     chmod 0755, bin/"aikeeper-publish"
+    chmod 0755, bin/"aikeeper-sign"
   end
 
   test do
@@ -173,9 +181,16 @@ formula_path.write_text(
     EOS
   end
 end
-''',
-    encoding="utf-8",
-)
+'''
+formula_path.write_text(formula_text, encoding="utf-8")
+tap_formula_path.write_text(formula_text, encoding="utf-8")
+
+checksum_lines = [
+    f"{sha256}  {archive_name}",
+    f"{hashlib.sha256(formula_path.read_bytes()).hexdigest()}  homebrew/aikeeper.rb",
+    f"{hashlib.sha256(tap_formula_path.read_bytes()).hexdigest()}  homebrew-tap/Formula/aikeeper.rb",
+]
+checksums_path.write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
 
 manifest = {
     "name": "AI Keeper",
@@ -184,16 +199,21 @@ manifest = {
     "archive_path": str(archive_path),
     "sha256": sha256,
     "sha256_path": str(checksum_path),
+    "checksums": checksums_path.name,
     "homebrew_formula": str(formula_path),
+    "homebrew_tap_formula": str(tap_formula_path),
     "generated_at": datetime.now(tz=UTC).isoformat(),
     "local_only": True,
     "metadata_only": True,
-    "excluded": ["sqlite databases", "jsonl transcripts", ".git", ".venv", "dist", "output"],
+    "signing": {"checksums": checksums_path.name, "optional": ["cosign", "minisign"]},
+    "excluded": ["sqlite databases", "jsonl transcripts", ".git", ".venv", ".vscode", "dist", "output"],
 }
 manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 print(f"Archive: {archive_path}")
 print(f"SHA256:  {checksum_path}")
+print(f"Checksums: {checksums_path}")
 print(f"Formula: {formula_path}")
+print(f"Tap formula: {tap_formula_path}")
 print(f"Manifest: {manifest_path}")
 PY

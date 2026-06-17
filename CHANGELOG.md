@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.26.0
+
+- feat: add Claude metadata ingestion
+- docs: fix landing hook preview
+- docs: show Codex hook preview on landing
+
 ## v0.25.3
 
 - fix: auto-install Homebrew service

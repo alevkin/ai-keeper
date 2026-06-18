@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30.5
+
+- fix(homebrew): install bundled uv resource
+
 ## v0.30.4
 
 - test(install): allow linux dashboard opener

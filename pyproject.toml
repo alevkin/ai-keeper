@@ -1,6 +1,6 @@
 [project]
 name = "aikeeper"
-version = "0.29.1"
+version = "0.30.0"
 description = "Local Codex and Claude token usage daemon and dashboard."
 readme = "README.md"
 requires-python = ">=3.13"

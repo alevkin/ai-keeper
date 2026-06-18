@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30.0
+
+- feat: make hook summary action oriented
+
 ## v0.29.1
 
 - fix: keep workflow guidance out of hook summary

@@ -1,7 +1,7 @@
 # Repository Settings Checklist
 
 These settings require owner action in the personal account before AI Keeper is
-made public.
+made public or before accepting external contributors.
 
 - Confirm the default branch is `main`. Current: done on 2026-06-17.
 - Enable branch protection for `main`. Current: lightweight protection is
@@ -15,14 +15,16 @@ made public.
   secrets for the default flow.
 - Confirm the repository owner and package namespace are the intended personal account.
 - Confirm visibility remains private until the public-release checklist passes.
+  Current: repository made public on 2026-06-18 after the gate passed.
 - Review issue templates before public launch. Current: metadata-only issue
   forms added in `.github/ISSUE_TEMPLATE/`.
 - Confirm GitHub private vulnerability reporting is enabled before public
   launch, or keep `SECURITY.md` as the explicit private disclosure path.
+  Current: enabled on 2026-06-18.
 
 Owner action is required for default branch, branch protection, Actions
 permissions, repository visibility, and secret management. Avoid using an
 unrelated organization or company account for these settings.
 
 See [GitHub Operations Status](github-ops-status.md) for the latest verified
-private-repository settings.
+repository settings.

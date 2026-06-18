@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.30.1
+
+- fix(homebrew): keep libexec readme path buildable
+- docs: update public repository status
+
 ## v0.30.0
 
 - feat: make hook summary action oriented

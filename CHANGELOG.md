@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30.6
+
+- fix(install): run daemon as aikeeper
+
 ## v0.30.5
 
 - fix(homebrew): install bundled uv resource

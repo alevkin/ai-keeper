@@ -64,7 +64,6 @@ preflight_cmd() {
 
 open_dashboard() {
   local url="$1"
-  echo "AI Keeper dashboard: $url"
   if [[ "${AIKEEPER_NO_OPEN:-}" == "1" ]]; then
     return
   fi
@@ -81,6 +80,24 @@ open_dashboard() {
   fi
 }
 
+wait_for_dashboard() {
+  local url="$1"
+  local ping_url="$url/api/ping"
+  local attempts="${AIKEEPER_DASHBOARD_WAIT_ATTEMPTS:-60}"
+  local delay="${AIKEEPER_DASHBOARD_WAIT_DELAY:-0.5}"
+  echo "Waiting for AI Keeper dashboard: $ping_url"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    return 0
+  fi
+  for ((i = 1; i <= attempts; i++)); do
+    if curl --fail --silent --show-error "$ping_url" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep "$delay"
+  done
+  return 1
+}
+
 echo "AI Keeper install"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN"
@@ -90,6 +107,7 @@ PLATFORM="$(uname -s)"
 echo "Preflight"
 echo "Platform: $PLATFORM"
 preflight_cmd uv
+preflight_cmd curl
 if [[ "$PLATFORM" == "Darwin" ]]; then
   preflight_cmd launchctl
 else
@@ -99,4 +117,10 @@ fi
 run uv --directory "$REPO_ROOT" run aikeeper install all --port "$PORT"
 run uv --directory "$REPO_ROOT" run aikeeper doctor --port "$PORT"
 
-open_dashboard "http://127.0.0.1:$PORT"
+dashboard_url="http://127.0.0.1:$PORT"
+echo "AI Keeper dashboard: $dashboard_url"
+if wait_for_dashboard "$dashboard_url"; then
+  open_dashboard "$dashboard_url"
+else
+  echo "Warning: dashboard did not become ready; browser was not opened." >&2
+fi

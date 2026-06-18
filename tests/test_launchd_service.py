@@ -18,7 +18,47 @@ from aikeeper.settings import claude_home
 from aikeeper.settings import codex_home
 
 
-def test_build_launch_agent_plist_uses_keepalive_and_repo_command(tmp_path: Path, monkeypatch) -> None:
+def test_build_launch_agent_plist_prefers_project_aikeeper_executable(tmp_path: Path, monkeypatch) -> None:
+    app_home = tmp_path / "home"
+    codex_home = tmp_path / "codex"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    executable = repo / ".venv" / "bin" / "aikeeper"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    db = tmp_path / "keeper.sqlite"
+    monkeypatch.setenv("AIKEEPER_HOME", str(app_home))
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+
+    plist = build_launch_agent_plist(
+        host="127.0.0.1",
+        port=8766,
+        db_path=db,
+        repo_dir=repo,
+        uv_path="/usr/local/bin/uv",
+    )
+
+    assert plist["Label"] == "com.aikeeper.daemon"
+    assert plist["RunAtLoad"] is True
+    assert plist["KeepAlive"] is True
+    assert plist["ProgramArguments"] == [
+        str(executable),
+        "daemon",
+        "start",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8766",
+        "--db-path",
+        str(db),
+    ]
+    assert plist["EnvironmentVariables"]["AIKEEPER_HOME"] == str(app_home)
+    assert plist["EnvironmentVariables"]["CODEX_HOME"] == str(codex_home)
+    assert plist["StandardOutPath"] == str(app_home / "logs" / "daemon.stdout.log")
+    assert plist["StandardErrorPath"] == str(app_home / "logs" / "daemon.stderr.log")
+
+
+def test_build_launch_agent_plist_falls_back_to_uv_for_source_tree(tmp_path: Path, monkeypatch) -> None:
     app_home = tmp_path / "home"
     codex_home = tmp_path / "codex"
     repo = tmp_path / "repo"
@@ -35,28 +75,13 @@ def test_build_launch_agent_plist_uses_keepalive_and_repo_command(tmp_path: Path
         uv_path="/usr/local/bin/uv",
     )
 
-    assert plist["Label"] == "com.aikeeper.daemon"
-    assert plist["RunAtLoad"] is True
-    assert plist["KeepAlive"] is True
-    assert plist["ProgramArguments"] == [
+    assert plist["ProgramArguments"][:5] == [
         "/usr/local/bin/uv",
         "--directory",
         str(repo),
         "run",
         "aikeeper",
-        "daemon",
-        "start",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "8766",
-        "--db-path",
-        str(db),
     ]
-    assert plist["EnvironmentVariables"]["AIKEEPER_HOME"] == str(app_home)
-    assert plist["EnvironmentVariables"]["CODEX_HOME"] == str(codex_home)
-    assert plist["StandardOutPath"] == str(app_home / "logs" / "daemon.stdout.log")
-    assert plist["StandardErrorPath"] == str(app_home / "logs" / "daemon.stderr.log")
 
 
 def test_write_launch_agent_plist_outputs_valid_plist(tmp_path: Path, monkeypatch) -> None:
@@ -74,7 +99,8 @@ def test_write_launch_agent_plist_outputs_valid_plist(tmp_path: Path, monkeypatc
     assert written == target
     with target.open("rb") as handle:
         plist = plistlib.load(handle)
-    assert plist["ProgramArguments"][9:11] == ["--port", "8766"]
+    assert "--port" in plist["ProgramArguments"]
+    assert plist["ProgramArguments"][plist["ProgramArguments"].index("--port") + 1] == "8766"
 
 
 def test_default_launch_agent_path_falls_back_when_standard_dir_is_not_writable(
@@ -132,7 +158,8 @@ def test_cli_service_install_writes_plist_without_start(tmp_path: Path, monkeypa
     assert result.exit_code == 0
     with target.open("rb") as handle:
         plist = plistlib.load(handle)
-    assert plist["ProgramArguments"][9:11] == ["--port", "8766"]
+    assert "--port" in plist["ProgramArguments"]
+    assert plist["ProgramArguments"][plist["ProgramArguments"].index("--port") + 1] == "8766"
 
 
 def test_launch_agent_status_reports_ping(monkeypatch, tmp_path: Path) -> None:

@@ -12,14 +12,24 @@ def ensure_project_and_task(
     *,
     cwd: Path | str,
     git_branch: str | None = None,
+    git_sha: str | None = None,
     git_origin_url: str | None = None,
     seen_ms: int | None = None,
+    probe_git: bool = True,
 ) -> tuple[int, int, str | None, str | None, str | None, Path]:
     seen = seen_ms or now_ms()
-    meta = get_git_metadata(cwd)
-    branch = git_branch or meta.branch
-    origin = git_origin_url or meta.origin_url
-    root_path = meta.root_path
+    path = Path(cwd).expanduser()
+    if probe_git:
+        meta = get_git_metadata(path)
+        branch = git_branch or meta.branch
+        origin = git_origin_url or meta.origin_url
+        sha = git_sha or meta.sha
+        root_path = meta.root_path
+    else:
+        branch = git_branch
+        origin = git_origin_url
+        sha = git_sha
+        root_path = path
     name = root_path.name or str(root_path)
 
     con.execute(
@@ -53,7 +63,7 @@ def ensure_project_and_task(
         "select id from tasks where project_id = ? and task_key = ?",
         (project_id, task_key),
     ).fetchone()[0]
-    return project_id, task_id, branch, origin, meta.sha, root_path
+    return project_id, task_id, branch, origin, sha, root_path
 
 
 def upsert_session(
@@ -72,15 +82,17 @@ def upsert_session(
     created_at_ms: int,
     updated_at_ms: int,
     total_tokens: int = 0,
+    probe_git: bool = True,
 ) -> int:
     project_id, task_id, branch, origin, detected_sha, _root_path = ensure_project_and_task(
         con,
         cwd=cwd,
+        git_sha=git_sha,
         git_branch=git_branch,
         git_origin_url=git_origin_url,
         seen_ms=updated_at_ms,
+        probe_git=probe_git,
     )
-    sha = git_sha or detected_sha
     con.execute(
         """
         insert into sessions(
@@ -113,7 +125,7 @@ def upsert_session(
             source,
             project_id,
             task_id,
-            sha,
+            detected_sha,
             branch,
             origin,
             created_at_ms,

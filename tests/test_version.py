@@ -17,3 +17,20 @@ def test_get_app_version_prefers_git_tag(tmp_path: Path) -> None:
 
     assert version["label"] == "v1.2.3"
     assert len(version["commit"]) == 7
+
+
+def test_get_app_version_defaults_to_package_version(monkeypatch) -> None:
+    monkeypatch.setattr("aikeeper.version._package_version", lambda: "0.30.5")
+
+    def fake_git(_repo_dir: Path, *args: str) -> str | None:
+        if args[0] == "describe":
+            return "6.0.2"
+        if args[0] == "rev-parse":
+            return "6861449"
+        return None
+
+    monkeypatch.setattr("aikeeper.version._run_git", fake_git)
+
+    version = get_app_version()
+
+    assert version == {"label": "0.30.5", "commit": "6861449"}

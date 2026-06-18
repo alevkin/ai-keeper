@@ -67,6 +67,14 @@ def _uv_path() -> str:
     return path
 
 
+def _project_aikeeper_executable(root: Path) -> Path | None:
+    for relative in (Path(".venv") / "bin" / "aikeeper", Path(".venv") / "Scripts" / "aikeeper.exe"):
+        candidate = root / relative
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def _daemon_command(
     *,
     host: str,
@@ -77,6 +85,19 @@ def _daemon_command(
 ) -> list[str]:
     root = repo_dir or project_root()
     if root:
+        executable = _project_aikeeper_executable(root)
+        if executable:
+            return [
+                str(executable),
+                "daemon",
+                "start",
+                "--host",
+                host,
+                "--port",
+                str(port),
+                "--db-path",
+                str(db_path),
+            ]
         return [
             uv_path or _uv_path(),
             "--directory",

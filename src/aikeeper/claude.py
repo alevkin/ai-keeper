@@ -181,6 +181,7 @@ def _session_pk_for_event(con: sqlite3.Connection, event: ClaudeEvent, path: Pat
         created_at_ms=event.usage.timestamp_ms,
         updated_at_ms=event.usage.timestamp_ms,
         total_tokens=0,
+        probe_git=False,
     )
     return session_pk, is_new
 

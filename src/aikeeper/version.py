@@ -29,7 +29,9 @@ def _run_git(repo_dir: Path, *args: str) -> str | None:
 
 def get_app_version(repo_dir: Path | str | None = None) -> dict[str, str | None]:
     root = Path(repo_dir).expanduser() if repo_dir else Path(__file__).resolve().parents[2]
-    label = _run_git(root, "describe", "--tags", "--dirty", "--always") or _package_version()
+    package = _package_version()
+    git_label = _run_git(root, "describe", "--tags", "--dirty", "--always")
+    label = package if repo_dir is None and package != "0.0.0" else git_label or package
     commit = _run_git(root, "rev-parse", "--short=7", "HEAD")
     return {"label": label, "commit": commit}
 

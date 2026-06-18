@@ -160,6 +160,34 @@ def test_sync_claude_imports_metadata_only_and_deduplicates_by_offset(tmp_path: 
     assert b"PARTIAL_SECRET" not in db_bytes
 
 
+def test_sync_claude_does_not_probe_project_cwd_git_metadata(tmp_path: Path, monkeypatch) -> None:
+    claude_home = tmp_path / "claude"
+    project_dir = claude_home / "projects" / "-Users-me-Documents-PrivateProject"
+    project_dir.mkdir(parents=True)
+    transcript = project_dir / "claude-session-1.jsonl"
+    append_claude_line(
+        transcript,
+        timestamp="2026-06-12T16:34:53.333Z",
+        input_tokens=10,
+        cache_creation_5m_input_tokens=0,
+        cache_read_input_tokens=20,
+        output_tokens=5,
+    )
+
+    def fail_git_probe(_cwd: Path | str):
+        raise AssertionError("background sync must not run git in project cwd")
+
+    monkeypatch.setattr("aikeeper.storage.get_git_metadata", fail_git_probe)
+    db_path = tmp_path / "keeper.sqlite"
+
+    result = sync_claude_once(db_path=db_path, claude_home=claude_home)
+
+    assert result.token_events_imported == 1
+    with connect(db_path) as con:
+        project = con.execute("select * from projects").fetchone()
+    assert project["root_path"].endswith("/repo")
+
+
 def test_cli_sync_claude_once(tmp_path: Path, monkeypatch) -> None:
     claude_home = tmp_path / "claude"
     project_dir = claude_home / "projects" / "-tmp-repo"

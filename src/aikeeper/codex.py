@@ -256,6 +256,7 @@ def sync_codex_once(
                 created_at_ms=created_at_ms,
                 updated_at_ms=updated_at_ms,
                 total_tokens=_int(_value(row, "tokens_used")),
+                probe_git=False,
             )
             sessions_imported += 1
             if path:

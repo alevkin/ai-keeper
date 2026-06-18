@@ -40,7 +40,7 @@ def test_github_pages_landing_is_static_product_page() -> None:
     hook_svg = hook_preview.read_text(encoding="utf-8")
 
     assert "<title>AI Keeper - AI Task Economics</title>" in html
-    assert 'href="styles.css?v=' in html
+    assert 'href="styles.css?v=20260618-nowrap-v2"' in html
     assert 'href="styles.css"' not in html
     assert 'src="assets/dashboard-preview.svg?v=' in html
     assert 'src="assets/codex-hook-preview.svg"' in html
@@ -87,6 +87,8 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert ".codex-window" not in css
     assert "display: grid" in css
     assert "white-space: nowrap" in css
+    assert "font-size: 92px" in css
+    assert "font-size: clamp" not in css
     assert "grid-template-columns: minmax(500px, 0.9fr) minmax(0, 1.1fr)" in css
     assert "@media (max-width: 760px)" in css
 

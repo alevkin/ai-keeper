@@ -167,6 +167,30 @@ def test_sync_codex_imports_metadata_only_and_deduplicates_by_offset(tmp_path: P
     assert b"Sensitive title should not be stored" not in db_path.read_bytes()
 
 
+def test_sync_codex_does_not_probe_project_cwd_git_metadata(tmp_path: Path, monkeypatch) -> None:
+    codex_home = tmp_path / "codex"
+    codex_home.mkdir()
+    documents_cwd = tmp_path / "Documents" / "PrivateProject"
+    documents_cwd.mkdir(parents=True)
+    rollout = codex_home / "sessions" / "rollout.jsonl"
+    rollout.parent.mkdir(parents=True, exist_ok=True)
+    append_token_line(rollout, "2026-06-12T16:34:53.333Z", 100, 100)
+    write_state_db(codex_home, rollout, documents_cwd)
+
+    def fail_git_probe(_cwd: Path | str):
+        raise AssertionError("background sync must not run git in project cwd")
+
+    monkeypatch.setattr("aikeeper.storage.get_git_metadata", fail_git_probe)
+    db_path = tmp_path / "keeper.sqlite"
+
+    result = sync_codex_once(db_path=db_path, codex_home=codex_home)
+
+    assert result.token_events_imported == 1
+    with connect(db_path) as con:
+        project = con.execute("select * from projects").fetchone()
+    assert project["root_path"] == str(documents_cwd)
+
+
 def test_status_for_cwd_groups_today_by_project_and_task(tmp_path: Path) -> None:
     codex_home = tmp_path / "codex"
     codex_home.mkdir()

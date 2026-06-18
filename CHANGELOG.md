@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30.7
+
+- fix(install): dedupe codex hooks
+
 ## v0.30.6
 
 - fix(install): run daemon as aikeeper

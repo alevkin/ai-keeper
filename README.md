@@ -64,11 +64,12 @@ Homebrew tap:
 
 ```bash
 brew install alevkin/tap/aikeeper
+aikeeper-install --port 8766
 ```
 
-The Homebrew formula runs the local installer after download. It starts the
-user LaunchAgent, installs Codex hooks, and prepares the dashboard on port
-`8766`.
+Homebrew installs the command wrappers. Run `aikeeper-install` after Homebrew
+finishes to start the user LaunchAgent, install Codex hooks, and prepare the
+dashboard on port `8766`.
 
 If you need to repair the local setup later:
 

@@ -34,14 +34,15 @@ Install from the generated Homebrew formula:
 brew install --formula dist/homebrew/aikeeper.rb
 ```
 
-Homebrew runs local setup during `post_install`: it starts the user LaunchAgent,
-installs Codex hooks, and prepares the dashboard on `127.0.0.1:8766`.
-
-Repair an existing setup when needed:
+Homebrew installs command wrappers only. Run setup after Homebrew finishes to
+start the user LaunchAgent, install Codex hooks, and prepare the dashboard on
+`127.0.0.1:8766`:
 
 ```bash
 aikeeper-install --port 8766
 ```
+
+Rerun the same command to repair an existing setup when needed.
 
 The package contract is intentionally local-only and metadata-only. Packages
 must not bundle the SQLite database, Codex transcripts, Claude JSONL files, hook

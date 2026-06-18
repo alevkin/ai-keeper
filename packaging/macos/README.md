@@ -13,8 +13,9 @@ scripts/package.sh --version v0.21.0 --output-dir dist
 brew install --formula dist/homebrew/aikeeper.rb
 ```
 
-The generated formula runs the local installer during Homebrew `post_install`,
-so the LaunchAgent and Codex hooks are refreshed automatically.
+The generated formula installs command wrappers only. Run
+`aikeeper-install --port 8766` after Homebrew finishes so the LaunchAgent and
+Codex hooks are refreshed outside the Homebrew postinstall sandbox.
 
 The DMG research spike lives in `packaging/macos/dmg`. Future DMG packaging
 should wrap the same scripts instead of duplicating install logic:

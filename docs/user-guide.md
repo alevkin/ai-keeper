@@ -10,9 +10,10 @@ Homebrew is the primary macOS install path:
 
 ```bash
 brew install alevkin/tap/aikeeper
+aikeeper-install --port 8766
 ```
 
-The formula runs the local installer during Homebrew `post_install`. That step:
+Run setup after Homebrew finishes. That step:
 
 - starts the local service on `127.0.0.1:8766`
 - installs the Codex hooks
@@ -30,7 +31,7 @@ http://127.0.0.1:8766
 To install on a different port:
 
 ```bash
-AIKEEPER_PORT=8770 brew install alevkin/tap/aikeeper
+aikeeper-install --port 8770
 ```
 
 If AI Keeper is already installed, rerun the local installer:
@@ -48,12 +49,6 @@ aikeeper-install --port 8766
 aikeeper-upgrade --port 8766
 aikeeper-rollback --target v0.25.2 --port 8766
 uv run aikeeper doctor --port 8766
-```
-
-To skip automatic setup during Homebrew install:
-
-```bash
-AIKEEPER_SKIP_AUTO_INSTALL=1 brew install alevkin/tap/aikeeper
 ```
 
 ## What It Stores

@@ -127,7 +127,7 @@
 
       <section id="install" class="section install">
         <div>
-          <h2>Install in one command</h2>
+          <h2>Install locally</h2>
           <p>
             Start the local daemon, install Codex hooks, sync Claude metadata,
             and open the dashboard on your machine.
@@ -139,16 +139,17 @@
             <button
               class="copy-command"
               type="button"
-              data-copy-command="brew install alevkin/tap/aikeeper"
+              data-copy-command="brew install alevkin/tap/aikeeper&#10;aikeeper-install --port 8766"
               aria-label="Copy install command"
             >
               Copy
             </button>
           </div>
-          <pre><code>brew install alevkin/tap/aikeeper</code></pre>
+          <pre><code>brew install alevkin/tap/aikeeper
+aikeeper-install --port 8766</code></pre>
           <p class="install-note">
-            The Homebrew formula runs the local setup after download. Need more
-            control? Read the <a href="user-guide.md">user guide</a>.
+            Homebrew installs the commands. Run setup after install, or read the
+            <a href="user-guide.md">user guide</a> for recovery paths.
           </p>
         </div>
       </section>

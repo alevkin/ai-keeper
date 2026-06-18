@@ -1,7 +1,11 @@
+import json
+import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[1]
+SITE_URL = "https://andrei.levk.in/ai-keeper/"
 
 
 def test_readme_is_product_focused_and_points_to_user_paths() -> None:
@@ -93,6 +97,59 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert "font-size: clamp" not in css
     assert "grid-template-columns: minmax(500px, 0.9fr) minmax(0, 1.1fr)" in css
     assert "@media (max-width: 760px)" in css
+
+
+def test_github_pages_landing_has_search_and_social_metadata() -> None:
+    html = (REPO / "docs" / "index.html").read_text(encoding="utf-8")
+    social_preview = REPO / "docs" / "assets" / "social-preview.png"
+    image_url = f"{SITE_URL}assets/social-preview.png"
+
+    assert f'<link rel="canonical" href="{SITE_URL}">' in html
+    assert '<link rel="sitemap" type="application/xml" href="sitemap.xml">' in html
+    assert '<meta name="robots" content="index,follow,max-image-preview:large">' in html
+    assert '<meta name="author" content="Andrei Levkin">' in html
+    assert '<meta name="theme-color" content="#157465">' in html
+    assert f'<meta property="og:url" content="{SITE_URL}">' in html
+    assert '<meta property="og:site_name" content="AI Keeper">' in html
+    assert '<meta property="og:locale" content="en_US">' in html
+    assert f'<meta property="og:image" content="{image_url}">' in html
+    assert '<meta property="og:image:width" content="1200">' in html
+    assert '<meta property="og:image:height" content="630">' in html
+    assert '<meta property="og:image:alt" content="AI Keeper dashboard showing task economics for AI-assisted engineering work">' in html
+    assert '<meta name="twitter:card" content="summary_large_image">' in html
+    assert '<meta name="twitter:title" content="AI Keeper - AI Task Economics">' in html
+    assert f'<meta name="twitter:image" content="{image_url}">' in html
+
+    match = re.search(r'<script type="application/ld\+json">\s*(.*?)\s*</script>', html, re.S)
+    assert match, "landing page should include SoftwareApplication JSON-LD"
+    structured_data = json.loads(match.group(1))
+    assert structured_data["@context"] == "https://schema.org"
+    assert structured_data["@type"] == "SoftwareApplication"
+    assert structured_data["name"] == "AI Keeper"
+    assert structured_data["url"] == SITE_URL
+    assert structured_data["applicationCategory"] == "DeveloperApplication"
+    assert structured_data["codeRepository"] == "https://github.com/alevkin/ai-keeper"
+    assert structured_data["offers"] == {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+    assert "AI implementation cost per useful outcome" in structured_data["description"]
+    assert "Task Economics" in structured_data["featureList"]
+
+    assert social_preview.exists()
+    assert social_preview.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_github_pages_indexing_files_point_to_canonical_landing() -> None:
+    robots = (REPO / "docs" / "robots.txt").read_text(encoding="utf-8")
+    sitemap = REPO / "docs" / "sitemap.xml"
+
+    assert "User-agent: *" in robots
+    assert "Allow: /" in robots
+    assert f"Sitemap: {SITE_URL}sitemap.xml" in robots
+
+    root = ET.fromstring(sitemap.read_text(encoding="utf-8"))
+    namespace = {"sitemap": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    locs = [loc.text for loc in root.findall("sitemap:url/sitemap:loc", namespace)]
+    assert SITE_URL in locs
+    assert f"{SITE_URL}user-guide.md" in locs
 
 
 def test_markdown_user_guide_documents_primary_and_recovery_paths() -> None:

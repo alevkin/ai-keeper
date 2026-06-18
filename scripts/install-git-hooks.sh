@@ -66,7 +66,12 @@ set -euo pipefail
 cd "$REPO_ROOT"
 # Private markers are read from AIKEEPER_PRIVATE_MARKERS or AIKEEPER_HOME.
 echo "AI Keeper: distribution audit"
-uv run --no-sync aikeeper audit distribution --json >/dev/null
+AIKEEPER_BIN="\$PWD/.venv/bin/aikeeper"
+if [[ -x "\$AIKEEPER_BIN" ]]; then
+  "\$AIKEEPER_BIN" audit distribution --json >/dev/null
+else
+  aikeeper audit distribution --json >/dev/null
+fi
 EOF
 
 read -r -d '' PRE_PUSH <<EOF || true
@@ -75,9 +80,18 @@ set -euo pipefail
 cd "$REPO_ROOT"
 # Private markers are read from AIKEEPER_PRIVATE_MARKERS or AIKEEPER_HOME.
 echo "AI Keeper: distribution audit"
-uv run --no-sync aikeeper audit distribution --json >/dev/null
+AIKEEPER_BIN="\$PWD/.venv/bin/aikeeper"
+if [[ -x "\$AIKEEPER_BIN" ]]; then
+  "\$AIKEEPER_BIN" audit distribution --json >/dev/null
+else
+  aikeeper audit distribution --json >/dev/null
+fi
 echo "AI Keeper: author history private marker audit"
-uv run --no-sync python - <<'PY'
+PYTHON_BIN="\$PWD/.venv/bin/python"
+if [[ ! -x "\$PYTHON_BIN" ]]; then
+  PYTHON_BIN="\$(command -v python3 || command -v python)"
+fi
+"\$PYTHON_BIN" - <<'PY'
 from __future__ import annotations
 
 import subprocess

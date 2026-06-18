@@ -67,6 +67,7 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+AIKEEPER_BIN="$REPO_ROOT/.venv/bin/aikeeper"
 
 run() {
   echo "+ $*"
@@ -83,11 +84,22 @@ run_git_push() {
   fi
 }
 
+ensure_runtime() {
+  if [[ -x "$AIKEEPER_BIN" ]]; then
+    return
+  fi
+  echo "+ bootstrap AI Keeper runtime"
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    uv --directory "$REPO_ROOT" sync --frozen --no-dev
+  fi
+}
+
 run_distribution_audit() {
-  echo "+ uv --directory $REPO_ROOT run aikeeper audit distribution --json"
+  ensure_runtime
+  echo "+ $AIKEEPER_BIN audit distribution --json"
   if [[ "$DRY_RUN" -eq 0 ]]; then
     local audit_json
-    audit_json="$(uv --directory "$REPO_ROOT" run aikeeper audit distribution --json)"
+    audit_json="$("$AIKEEPER_BIN" audit distribution --json)"
     printf '%s\n' "$audit_json"
     printf '%s\n' "$audit_json" | python3 -c 'import json, sys; sys.exit(0 if json.load(sys.stdin).get("status") == "pass" else 1)' || {
       echo "Distribution audit failed; refusing to publish." >&2

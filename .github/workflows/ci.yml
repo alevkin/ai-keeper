@@ -32,10 +32,10 @@ jobs:
         run: uv run pytest -q
 
       - name: Privacy audit
-        run: uv run aikeeper audit privacy --json
+        run: .venv/bin/aikeeper audit privacy --json
 
       - name: Distribution audit
-        run: uv run aikeeper audit distribution --json
+        run: .venv/bin/aikeeper audit distribution --json
 
       - name: Build package
         run: bash scripts/package.sh --version ci-${{ github.sha }} --output-dir dist

@@ -214,6 +214,8 @@ def test_windows_service_prep_is_documented_with_dry_run_script() -> None:
     assert "Windows Service Prep" in readme_text
     assert "Codex on Windows" in readme_text
     assert "metadata-only" in readme_text
+    assert "`.venv` runtime" in readme_text
     assert "param(" in script_text
     assert "$DryRun" in script_text
-    assert "aikeeper daemon start" in script_text
+    assert ".venv\\Scripts\\aikeeper.exe" in script_text
+    assert "uv run" not in script_text

@@ -42,6 +42,10 @@ start the user LaunchAgent, install Codex hooks, and prepare the dashboard on
 aikeeper-install --port 8766
 ```
 
+Then open Codex Settings -> User config -> Hooks, click Trust for the AI Keeper
+hooks, and enable their toggles. Run `aikeeper doctor --port 8766` to verify
+that `codex_hooks` is ok.
+
 Rerun the same command to repair an existing setup when needed.
 
 The package contract is intentionally local-only and metadata-only. Packages
@@ -52,7 +56,7 @@ or `output`.
 Run the distribution audit before publishing:
 
 ```bash
-uv run aikeeper audit distribution --json
+aikeeper audit distribution --json
 ```
 
 The audit verifies that release files remain metadata-only and do not contain

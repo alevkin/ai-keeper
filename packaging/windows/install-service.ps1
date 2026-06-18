@@ -4,7 +4,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Command = "uv run aikeeper daemon start --host 127.0.0.1 --port $Port"
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+$Aikeeper = Join-Path $RepoRoot ".venv\Scripts\aikeeper.exe"
+$Command = "`"$Aikeeper`" daemon start --host 127.0.0.1 --port $Port"
 
 Write-Host "AI Keeper Windows service prep"
 if ($DryRun) {

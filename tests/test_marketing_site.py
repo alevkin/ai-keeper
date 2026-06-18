@@ -19,7 +19,8 @@ def test_readme_is_product_focused_and_points_to_user_paths() -> None:
     assert "aikeeper outcome done --status useful --type code" in text
     assert "Claude metadata import" in text
     assert "brew install alevkin/tap/aikeeper" in text
-    assert "uv run aikeeper sync claude --once" in text
+    assert "aikeeper sync claude --once" in text
+    assert "uv run aikeeper" not in text
     assert "aikeeper-install --port 8766" in text
     assert "https://andrei.levk.in/ai-keeper/" in text
     assert "docs/user-guide.md" in text
@@ -63,6 +64,7 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert "turn $0.08 / 125.8K tokens" in html
     assert "next: narrow scope" in html
     assert "Install locally" in html
+    assert "Trust the hooks in Codex Settings" in html
     assert "brew install alevkin/tap/aikeeper" in html
     assert "aikeeper-install --port 8766" in html
     assert 'data-copy-command="brew install alevkin/tap/aikeeper&#10;aikeeper-install --port 8766"' in html
@@ -102,8 +104,11 @@ def test_markdown_user_guide_documents_primary_and_recovery_paths() -> None:
     assert "Run setup after Homebrew finishes" in text
     assert "starts the local service" in text
     assert "installs the Codex hooks" in text
+    assert "Trust the hooks in Codex Settings" in text
     assert "aikeeper-install --port 8766" in text
-    assert "uv run aikeeper sync claude --once" in text
+    assert "aikeeper doctor --port 8766" in text
+    assert "aikeeper sync claude --once" in text
+    assert "uv run aikeeper" not in text
     assert "aikeeper install workflow-harness --repo-root ." in text
     assert "aikeeper outcome suggest --cwd . --json" in text
     assert "$CLAUDE_HOME/projects/**/*.jsonl" in text

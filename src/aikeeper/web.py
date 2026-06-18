@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shlex
+import shutil
 import subprocess
 import threading
 from contextlib import asynccontextmanager
@@ -19,7 +20,7 @@ from aikeeper.codex import sync_codex_once
 from aikeeper.db import connect, init_db
 from aikeeper.diagnostics import append_system_action_log, create_diagnostics_bundle, diagnostics_overview, resolve_diagnostics_bundle
 from aikeeper.health import ingest_health
-from aikeeper.installer import codex_hooks_installed
+from aikeeper.installer import codex_hooks_trust_status
 from aikeeper.launchd import default_launch_agent_path, launch_agent_status, project_root
 from aikeeper.service import overview, project_detail, session_detail, simulate_model_cost
 from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home
@@ -128,11 +129,15 @@ def _system_status(*, db: Path, home: Path, host: str, port: int) -> dict:
     service = _safe_launch_agent_status(host=host, port=port)
     app_dir = app_home()
     root = project_root() or Path.cwd()
-    hooks_ok = codex_hooks_installed(scope="user", codex_home=home, project_dir=Path.cwd())
+    hooks = codex_hooks_trust_status(scope="user", codex_home=home, project_dir=Path.cwd())
     db_ok = db.exists()
     checks = [
         {"name": "Database", "status": "ok" if db_ok else "warn", "detail": str(db)},
-        {"name": "Codex hooks", "status": "ok" if hooks_ok else "warn", "detail": str(home / "hooks.json")},
+        {
+            "name": "Codex hooks",
+            "status": "ok" if hooks.ready else "warn",
+            "detail": "trusted and enabled" if hooks.ready else "open Codex Settings and Trust AI Keeper hooks",
+        },
         {
             "name": "LaunchAgent",
             "status": "ok" if service["plist_exists"] and service["loaded"] else "warn",
@@ -156,19 +161,27 @@ def _system_status(*, db: Path, home: Path, host: str, port: int) -> dict:
             "stderr_log": str(app_dir / "logs" / "daemon.stderr.log"),
         },
         "commands": {
-            "doctor_fix": f"uv run aikeeper doctor --fix --port {port}",
-            "install_all": f"uv run aikeeper install all --port {port}",
-            "service_status": f"uv run aikeeper service status --port {port} --json",
-            "service_restart": "uv run aikeeper service restart",
-            "diagnostics_bundle": f"uv run aikeeper diagnostics bundle --port {port}",
+            "doctor_fix": f"aikeeper doctor --fix --port {port}",
+            "install_all": f"aikeeper install all --port {port}",
+            "service_status": f"aikeeper service status --port {port} --json",
+            "service_restart": "aikeeper service restart",
+            "diagnostics_bundle": f"aikeeper diagnostics bundle --port {port}",
         },
         "actions": list(SYSTEM_ACTIONS),
         "jobs": list_system_jobs(db, limit=8),
     }
 
 
+def _aikeeper_executable(root: Path) -> str:
+    for relative in (Path(".venv") / "bin" / "aikeeper", Path(".venv") / "Scripts" / "aikeeper.exe"):
+        candidate = root / relative
+        if candidate.exists():
+            return str(candidate)
+    return shutil.which("aikeeper") or "aikeeper"
+
+
 def _action_command(action: str, port: int, root: Path) -> list[str]:
-    base = ["uv", "--directory", str(root), "run", "aikeeper"]
+    base = [_aikeeper_executable(root)]
     if action == "repair":
         return [*base, "doctor", "--fix", "--port", str(port)]
     if action == "reinstall":
@@ -186,11 +199,7 @@ def _launch_system_job_runner(db: Path, job_id: int) -> None:
     logs_dir.mkdir(parents=True, exist_ok=True)
     runner_log = logs_dir / "system-job-runner.log"
     command = [
-        "uv",
-        "--directory",
-        str(root),
-        "run",
-        "aikeeper",
+        _aikeeper_executable(root),
         "jobs",
         "run",
         "--job-id",

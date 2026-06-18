@@ -6,7 +6,7 @@ metadata-only contract.
 
 Current assumptions:
 
-- Python and `uv` are available on `PATH`.
+- The AI Keeper `.venv` runtime has already been prepared by the installer.
 - The dashboard should bind to `127.0.0.1`.
 - The database should stay under `%USERPROFILE%\.aikeeper` unless
   `AIKEEPER_HOME` is set.

@@ -36,7 +36,8 @@ def test_release_script_dry_run_uses_local_artifacts_without_secrets(tmp_path: P
     assert result.returncode == 0, result.stderr
     assert "AI Keeper release" in result.stdout
     assert "DRY RUN" in result.stdout
-    assert "uv run aikeeper audit distribution --json" in result.stdout
+    assert "aikeeper audit distribution --json" in result.stdout
+    assert "uv run aikeeper" not in result.stdout
     assert "scripts/package.sh --version v0.22.0" in result.stdout
     assert "scripts/sign-release.sh --dist-dir" in result.stdout
     assert "release-notes.md" in result.stdout
@@ -102,8 +103,11 @@ def test_install_script_reports_preflight_in_dry_run() -> None:
 
     assert result.returncode == 0, result.stderr
     assert "Preflight" in result.stdout
-    assert "uv: ok" in result.stdout
+    assert "aikeeper: ok" in result.stdout or "bootstrap AI Keeper runtime" in result.stdout
     assert "Platform:" in result.stdout
+    assert "uv run aikeeper" not in result.stdout
+    assert "aikeeper install all --port 8766" in result.stdout
+    assert "aikeeper doctor --port 8766" in result.stdout
     assert "Waiting for AI Keeper dashboard: http://127.0.0.1:8766/api/ping" in result.stdout
     assert "AI Keeper dashboard: http://127.0.0.1:8766" in result.stdout
     assert (

@@ -46,6 +46,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 AIKEEPER_HOME="${AIKEEPER_HOME:-$HOME/.aikeeper}"
 ROLLBACK_FILE="$AIKEEPER_HOME/rollback-ref"
+AIKEEPER_BIN="$REPO_ROOT/.venv/bin/aikeeper"
+if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == CYGWIN* ]]; then
+  AIKEEPER_BIN="$REPO_ROOT/.venv/Scripts/aikeeper.exe"
+fi
 
 run() {
   echo "+ $*"
@@ -61,13 +65,25 @@ require_cmd() {
   fi
 }
 
+ensure_runtime() {
+  if [[ -x "$AIKEEPER_BIN" ]]; then
+    echo "aikeeper: ok ($AIKEEPER_BIN)"
+    return
+  fi
+  require_cmd uv
+  echo "+ bootstrap AI Keeper runtime"
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    uv --directory "$REPO_ROOT" sync --frozen --no-dev
+  fi
+}
+
 echo "AI Keeper rollback"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN"
 fi
 
 require_cmd git
-require_cmd uv
+ensure_runtime
 
 if [[ -z "$TARGET" && -f "$ROLLBACK_FILE" ]]; then
   TARGET="$(head -n 1 "$ROLLBACK_FILE")"
@@ -80,7 +96,7 @@ fi
 
 echo "Rollback target: $TARGET"
 run git -C "$REPO_ROOT" checkout "$TARGET"
-run uv --directory "$REPO_ROOT" run aikeeper install all --port "$PORT"
-run uv --directory "$REPO_ROOT" run aikeeper doctor --port "$PORT"
+run "$AIKEEPER_BIN" install all --port "$PORT"
+run "$AIKEEPER_BIN" doctor --port "$PORT"
 
 echo "AI Keeper rollback complete"

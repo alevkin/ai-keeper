@@ -65,11 +65,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUTPUT_DIR="$(cd "$(dirname "$OUTPUT_DIR")" && pwd)/$(basename "$OUTPUT_DIR")"
 RELEASE_NOTES="$OUTPUT_DIR/release-notes.md"
+AIKEEPER_BIN="$REPO_ROOT/.venv/bin/aikeeper"
 
 run() {
   echo "+ $*"
   if [[ "$DRY_RUN" -eq 0 ]]; then
     "$@"
+  fi
+}
+
+ensure_runtime() {
+  if [[ -x "$AIKEEPER_BIN" ]]; then
+    return
+  fi
+  echo "+ bootstrap AI Keeper runtime"
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    uv --directory "$REPO_ROOT" sync --frozen --no-dev
   fi
 }
 
@@ -103,8 +114,9 @@ fi
 if [[ "$SKIP_TESTS" -eq 0 ]]; then
   run uv run pytest -q
 fi
-run uv run aikeeper audit privacy --json
-run uv run aikeeper audit distribution --json
+ensure_runtime
+run "$AIKEEPER_BIN" audit privacy --json
+run "$AIKEEPER_BIN" audit distribution --json
 run bash scripts/package.sh --version "$VERSION" --output-dir "$OUTPUT_DIR"
 write_release_notes
 run bash scripts/sign-release.sh --dist-dir "$OUTPUT_DIR" --signer "$SIGNER"

@@ -540,7 +540,8 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     assert "System" in system_page.text
     assert "Doctor" in system_page.text
     assert "LaunchAgent" in system_page.text
-    assert "uv run aikeeper doctor --fix --port 8766" in system_page.text
+    assert "aikeeper doctor --fix --port 8766" in system_page.text
+    assert "uv run aikeeper" not in system_page.text
     assert 'action="/system/actions/repair"' in system_page.text
 
 

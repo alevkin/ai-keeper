@@ -20,6 +20,12 @@ Run setup after Homebrew finishes. That step:
 - creates the local SQLite database under `~/.aikeeper`
 - runs a quick doctor check
 
+Trust the hooks in Codex Settings after setup: open Codex Settings, choose
+User config -> Hooks, expand the AI Keeper hooks for SessionStart,
+UserPromptSubmit, and Stop, click Trust for each one, and enable their toggles.
+The expanded hook row shows an AI Keeper status message so you can identify the
+right hooks.
+
 Open the dashboard:
 
 ```text
@@ -48,7 +54,7 @@ Use these when the service or hooks need a refresh:
 aikeeper-install --port 8766
 aikeeper-upgrade --port 8766
 aikeeper-rollback --target v0.25.2 --port 8766
-uv run aikeeper doctor --port 8766
+aikeeper doctor --port 8766
 ```
 
 ## What It Stores
@@ -69,12 +75,12 @@ chat content.
 ## Daily Commands
 
 ```bash
-uv run aikeeper service status --port 8766
-uv run aikeeper sync codex --once
-uv run aikeeper sync claude --once
-uv run aikeeper diagnostics bundle --port 8766
-uv run aikeeper audit privacy --json
-uv run aikeeper audit distribution --json
+aikeeper service status --port 8766
+aikeeper sync codex --once
+aikeeper sync claude --once
+aikeeper diagnostics bundle --port 8766
+aikeeper audit privacy --json
+aikeeper audit distribution --json
 ```
 
 ## Workflow Harness
@@ -123,7 +129,7 @@ outcomes.
 Claude support is an explicit local sync path:
 
 ```bash
-uv run aikeeper sync claude --once
+aikeeper sync claude --once
 ```
 
 It reads usage metadata from `$CLAUDE_HOME/projects/**/*.jsonl`, including

@@ -15,8 +15,9 @@ def test_github_ci_workflow_runs_metadata_only_release_checks() -> None:
     assert 'python-version: "3.13"' in text
     assert "python -m pip install uv" in text
     assert "uv run pytest -q" in text
-    assert "uv run aikeeper audit privacy --json" in text
-    assert "uv run aikeeper audit distribution --json" in text
+    assert ".venv/bin/aikeeper audit privacy --json" in text
+    assert ".venv/bin/aikeeper audit distribution --json" in text
+    assert "uv run aikeeper" not in text
     assert "bash scripts/package.sh --version ci-${{ github.sha }} --output-dir dist" in text
     assert "bash scripts/sign-release.sh --dist-dir dist --signer none" in text
     assert "shasum -a 256 -c CHECKSUMS.txt" in text
@@ -45,6 +46,9 @@ def test_github_release_workflow_autogenerates_changelog_and_release_artifacts()
     assert "git add CHANGELOG.md pyproject.toml packaging/manifest.json" in text
     assert 'git tag -a "$TAG"' in text
     assert "bash scripts/release.sh --version \"$TAG\" --output-dir dist --signer cosign --skip-tests" in text
+    assert ".venv/bin/aikeeper audit privacy --json" in text
+    assert ".venv/bin/aikeeper audit distribution --json" in text
+    assert "uv run aikeeper" not in text
     assert "gh release create \"$TAG\"" in text
     assert "dist/aikeeper-${TAG}.tar.gz" in text
     assert "dist/aikeeper-${TAG}.tar.gz.sigstore.json" in text

@@ -33,8 +33,10 @@ def test_install_upgrade_and_rollback_scripts_support_dry_run() -> None:
         assert result.returncode == 0, result.stderr
         assert "AI Keeper" in result.stdout
         assert "DRY RUN" in result.stdout
+        assert "uv run aikeeper" not in result.stdout
         if name != "rollback":
             assert "aikeeper install all --port 8766" in result.stdout
+            assert "aikeeper doctor --port 8766" in result.stdout
         if name == "upgrade":
             assert "Rollback ref:" in result.stdout
             assert "Rollback ref: v0.12.0-dirty" not in result.stdout
@@ -146,6 +148,8 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert 'raise "uv resource did not contain uv or uvx" if uv_files.empty?' in formula_text
     assert 'export PATH="#{libexec}/vendor/uv:$PATH"' in formula_text
     assert "aikeeper-install" in formula_text
+    assert '(bin/"aikeeper").write' in formula_text
+    assert 'exec "#{libexec}/.venv/bin/aikeeper" "$@"' in formula_text
     assert "aikeeper-install-git-hooks" in formula_text
     assert "aikeeper-upgrade" in formula_text
 
@@ -174,6 +178,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert "Run setup after install:" in formula_text
     assert "aikeeper-install --port 8766" in formula_text
     assert "Custom port: aikeeper-install --port 8770" in formula_text
+    assert "Doctor: aikeeper doctor --port 8766" in formula_text
 
     with tarfile.open(archive, "r:gz") as package:
         names = package.getnames()

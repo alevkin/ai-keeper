@@ -4,12 +4,35 @@ import json
 import shlex
 import shutil
 import subprocess
+import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 
 from aikeeper.settings import codex_home as default_codex_home
 
 
 HOOK_EVENTS = ("SessionStart", "UserPromptSubmit", "Stop")
+HOOK_STATUS_MESSAGES = {
+    "SessionStart": "AI Keeper: prepare local session tracking",
+    "UserPromptSubmit": "AI Keeper: attach local budget context",
+    "Stop": "AI Keeper: sync local usage metadata",
+}
+_CODEX_HOOK_STATE_EVENTS = {
+    "SessionStart": "sessionStart",
+    "UserPromptSubmit": "userPromptSubmit",
+    "Stop": "stop",
+}
+
+
+@dataclass(frozen=True)
+class CodexHookTrustStatus:
+    installed: bool
+    ready: bool
+    hooks_path: Path
+    config_path: Path
+    missing_events: tuple[str, ...]
+    untrusted_events: tuple[str, ...]
+    disabled_events: tuple[str, ...]
 
 
 def _project_root() -> Path | None:
@@ -49,12 +72,16 @@ def _hook_command() -> str:
         executable = _project_aikeeper_executable(root)
         if executable:
             return shlex.join([str(executable), "hook", "codex"])
-        return shlex.join(["uv", "--directory", str(root), "run", "aikeeper", "hook", "codex"])
     return "aikeeper hook codex"
 
 
-def _hook_entry() -> dict:
-    return {"type": "command", "command": _hook_command(), "timeout": 30, "statusMessage": "Syncing AI Keeper"}
+def _hook_entry(event_name: str) -> dict:
+    return {
+        "type": "command",
+        "command": _hook_command(),
+        "timeout": 30,
+        "statusMessage": HOOK_STATUS_MESSAGES[event_name],
+    }
 
 
 def _is_ai_keeper_hook(hook: dict) -> bool:
@@ -74,6 +101,52 @@ def _target_path(scope: str, codex_home: Path, project_dir: Path) -> Path:
     if scope == "project":
         return project_dir / ".codex" / "hooks.json"
     raise ValueError("scope must be user or project")
+
+
+def _codex_hook_state_key(hooks_path: Path, event_name: str, group_index: int, hook_index: int) -> str:
+    event_key = _CODEX_HOOK_STATE_EVENTS[event_name]
+    return f"{hooks_path}:{event_key}:{group_index}:{hook_index}"
+
+
+def _codex_config_path(codex_home: Path) -> Path:
+    return codex_home / "config.toml"
+
+
+def _read_hooks_json(target: Path) -> dict | None:
+    if not target.exists():
+        return None
+    try:
+        return json.loads(target.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
+def _ai_keeper_hook_positions(data: dict) -> dict[str, tuple[int, int]]:
+    positions: dict[str, tuple[int, int]] = {}
+    hooks = data.get("hooks", {})
+    for event_name in HOOK_EVENTS:
+        for group_index, group in enumerate(hooks.get(event_name, [])):
+            for hook_index, hook in enumerate(group.get("hooks", [])):
+                if _is_ai_keeper_hook(hook):
+                    positions[event_name] = (group_index, hook_index)
+                    break
+            if event_name in positions:
+                break
+    return positions
+
+
+def _codex_hook_state(config_path: Path) -> dict:
+    if not config_path.exists():
+        return {}
+    try:
+        data = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError:
+        return {}
+    hooks = data.get("hooks", {})
+    if not isinstance(hooks, dict):
+        return {}
+    state = hooks.get("state", {})
+    return state if isinstance(state, dict) else {}
 
 
 def install_codex_hooks(*, scope: str = "user", codex_home: Path | None = None, project_dir: Path | None = None) -> Path:
@@ -99,7 +172,7 @@ def install_codex_hooks(*, scope: str = "user", codex_home: Path | None = None, 
                 updated_group = dict(group)
                 updated_group["hooks"] = remaining_hooks
                 updated_groups.append(updated_group)
-        updated_groups.append({"hooks": [_hook_entry()]})
+        updated_groups.append({"hooks": [_hook_entry(event_name)]})
         hooks[event_name] = updated_groups
     target.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return target
@@ -108,18 +181,62 @@ def install_codex_hooks(*, scope: str = "user", codex_home: Path | None = None, 
 def codex_hooks_installed(*, scope: str = "user", codex_home: Path | None = None, project_dir: Path | None = None) -> bool:
     home = codex_home or default_codex_home()
     target = _target_path(scope, home, project_dir or Path.cwd())
-    if not target.exists():
+    data = _read_hooks_json(target)
+    if data is None:
         return False
-    try:
-        data = json.loads(target.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return False
-    hooks = data.get("hooks", {})
+    return set(_ai_keeper_hook_positions(data)) == set(HOOK_EVENTS)
+
+
+def codex_hooks_trust_status(
+    *,
+    scope: str = "user",
+    codex_home: Path | None = None,
+    project_dir: Path | None = None,
+) -> CodexHookTrustStatus:
+    home = codex_home or default_codex_home()
+    target = _target_path(scope, home, project_dir or Path.cwd())
+    config_path = _codex_config_path(home)
+    data = _read_hooks_json(target)
+    if data is None:
+        missing_events = HOOK_EVENTS
+        return CodexHookTrustStatus(
+            installed=False,
+            ready=False,
+            hooks_path=target,
+            config_path=config_path,
+            missing_events=missing_events,
+            untrusted_events=(),
+            disabled_events=(),
+        )
+
+    positions = _ai_keeper_hook_positions(data)
+    missing_events = tuple(event_name for event_name in HOOK_EVENTS if event_name not in positions)
+    state = _codex_hook_state(config_path)
+    untrusted_events: list[str] = []
+    disabled_events: list[str] = []
     for event_name in HOOK_EVENTS:
-        groups = hooks.get(event_name, [])
-        if not any(_is_ai_keeper_hook(hook) for group in groups for hook in group.get("hooks", [])):
-            return False
-    return True
+        position = positions.get(event_name)
+        if position is None:
+            continue
+        state_key = _codex_hook_state_key(target, event_name, position[0], position[1])
+        event_state = state.get(state_key, {})
+        if not isinstance(event_state, dict) or not event_state.get("trusted_hash"):
+            untrusted_events.append(event_name)
+            continue
+        if event_state.get("enabled") is False:
+            disabled_events.append(event_name)
+
+    installed = not missing_events
+    ready = installed and not untrusted_events and not disabled_events
+    return CodexHookTrustStatus(
+        installed=installed,
+        ready=ready,
+        hooks_path=target,
+        config_path=config_path,
+        missing_events=missing_events,
+        untrusted_events=tuple(untrusted_events),
+        disabled_events=tuple(disabled_events),
+    )
 
 
 def uninstall_codex_hooks(
@@ -168,7 +285,12 @@ set -euo pipefail
 cd {shlex.quote(str(repo_root))}
 # Private markers are read from AIKEEPER_PRIVATE_MARKERS or AIKEEPER_HOME.
 echo "AI Keeper: distribution audit"
-uv run --no-sync aikeeper audit distribution --json >/dev/null
+AIKEEPER_BIN="$PWD/.venv/bin/aikeeper"
+if [[ -x "$AIKEEPER_BIN" ]]; then
+  "$AIKEEPER_BIN" audit distribution --json >/dev/null
+else
+  aikeeper audit distribution --json >/dev/null
+fi
 """
 
 
@@ -208,9 +330,18 @@ set -euo pipefail
 cd {shlex.quote(str(repo_root))}
 # Private markers are read from AIKEEPER_PRIVATE_MARKERS or AIKEEPER_HOME.
 echo "AI Keeper: distribution audit"
-uv run --no-sync aikeeper audit distribution --json >/dev/null
+AIKEEPER_BIN="$PWD/.venv/bin/aikeeper"
+if [[ -x "$AIKEEPER_BIN" ]]; then
+  "$AIKEEPER_BIN" audit distribution --json >/dev/null
+else
+  aikeeper audit distribution --json >/dev/null
+fi
 echo "AI Keeper: author history private marker audit"
-uv run --no-sync python - <<'PY'
+PYTHON_BIN="$PWD/.venv/bin/python"
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  PYTHON_BIN="$(command -v python3 || command -v python)"
+fi
+"$PYTHON_BIN" - <<'PY'
 from __future__ import annotations
 
 import subprocess

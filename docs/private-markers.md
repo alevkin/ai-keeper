@@ -46,8 +46,8 @@ the matched marker value.
 Run checks manually:
 
 ```bash
-uv run aikeeper audit distribution --json
-uv run aikeeper audit public-release --tag v0.0.0 --dist-dir dist --allow-dirty --json
+aikeeper audit distribution --json
+aikeeper audit public-release --tag v0.0.0 --dist-dir dist --allow-dirty --json
 ```
 
 Install local git hooks for a developer checkout:

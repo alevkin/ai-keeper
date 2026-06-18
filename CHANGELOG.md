@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.30.8
+
+- fix(install): clarify Codex hook trust setup
+- fix(runtime): run AI Keeper commands without uv run
+
 ## v0.30.7
 
 - fix(install): dedupe codex hooks

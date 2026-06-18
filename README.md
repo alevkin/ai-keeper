@@ -80,8 +80,9 @@ aikeeper-install --port 8766
 From a checkout:
 
 ```bash
-uv run aikeeper install all --port 8766
-uv run aikeeper doctor --port 8766
+uv sync --frozen --no-dev
+.venv/bin/aikeeper install all --port 8766
+.venv/bin/aikeeper doctor --port 8766
 ```
 
 Open the dashboard:
@@ -89,6 +90,11 @@ Open the dashboard:
 ```text
 http://127.0.0.1:8766
 ```
+
+Trust the hooks in Codex Settings after installation: open Codex Settings,
+choose User config -> Hooks, expand the AI Keeper hooks for SessionStart,
+UserPromptSubmit, and Stop, click Trust for each one, and enable their toggles.
+Run `aikeeper doctor --port 8766` afterward; `codex_hooks` should be ok.
 
 Install or refresh local developer git hooks:
 
@@ -139,7 +145,7 @@ It does not store:
 Run a privacy check:
 
 ```bash
-uv run aikeeper audit privacy --json
+aikeeper audit privacy --json
 ```
 
 Private company, project, path, and author markers are configured outside the
@@ -149,22 +155,22 @@ repository in `$AIKEEPER_HOME/private-markers.toml` or the path pointed to by
 ## Commands You Will Actually Use
 
 ```bash
-uv run aikeeper doctor --port 8766
-uv run aikeeper service status --port 8766
-uv run aikeeper sync codex --once
-uv run aikeeper sync claude --once
-uv run aikeeper audit distribution --json
-uv run aikeeper diagnostics bundle --port 8766
-uv run aikeeper export --format markdown
+aikeeper doctor --port 8766
+aikeeper service status --port 8766
+aikeeper sync codex --once
+aikeeper sync claude --once
+aikeeper audit distribution --json
+aikeeper diagnostics bundle --port 8766
+aikeeper export --format markdown
 ```
 
 Service controls:
 
 ```bash
-uv run aikeeper service start
-uv run aikeeper service stop
-uv run aikeeper service restart
-uv run aikeeper service uninstall
+aikeeper service start
+aikeeper service stop
+aikeeper service restart
+aikeeper service uninstall
 ```
 
 ## Data Sources
@@ -183,7 +189,7 @@ Claude support reads local metadata from:
 Claude sync is explicit:
 
 ```bash
-uv run aikeeper sync claude --once
+aikeeper sync claude --once
 ```
 
 ## Release And Distribution
@@ -207,7 +213,7 @@ Release artifacts are signed in GitHub Actions with keyless `cosign`. See
 ## Development
 
 ```bash
-uv run pytest -q
+python -m pytest -q
 ```
 
 Useful docs:

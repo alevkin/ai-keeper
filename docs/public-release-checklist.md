@@ -5,9 +5,9 @@ Use this checklist before changing the repository from private to public.
 - Confirm the default branch is `main`.
 - Confirm all commits and tags use `Andrei Levkin <alevkin@gmail.com>`.
 - Confirm the license choice is intentional.
-- Run `uv run pytest -q`.
-- Run `uv run aikeeper audit privacy --json`.
-- Run `uv run aikeeper audit distribution --json`.
+- Run `python -m pytest -q`.
+- Run `aikeeper audit privacy --json`.
+- Run `aikeeper audit distribution --json`.
 - Confirm local private marker rules live outside the repository. See
   `docs/private-markers.md`.
 - Install or refresh local developer hooks with `scripts/install-git-hooks.sh`.

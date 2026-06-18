@@ -38,6 +38,10 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+AIKEEPER_BIN="$REPO_ROOT/.venv/bin/aikeeper"
+if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == CYGWIN* ]]; then
+  AIKEEPER_BIN="$REPO_ROOT/.venv/Scripts/aikeeper.exe"
+fi
 
 run() {
   echo "+ $*"
@@ -59,6 +63,18 @@ preflight_cmd() {
   else
     echo "$1: missing"
     exit 1
+  fi
+}
+
+ensure_runtime() {
+  if [[ -x "$AIKEEPER_BIN" ]]; then
+    echo "aikeeper: ok ($AIKEEPER_BIN)"
+    return
+  fi
+  preflight_cmd uv
+  echo "+ bootstrap AI Keeper runtime"
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    uv --directory "$REPO_ROOT" sync --frozen --no-dev
   fi
 }
 
@@ -106,7 +122,7 @@ fi
 PLATFORM="$(uname -s)"
 echo "Preflight"
 echo "Platform: $PLATFORM"
-preflight_cmd uv
+ensure_runtime
 preflight_cmd curl
 if [[ "$PLATFORM" == "Darwin" ]]; then
   preflight_cmd launchctl
@@ -114,8 +130,8 @@ else
   echo "launchctl: skipped"
 fi
 
-run uv --directory "$REPO_ROOT" run aikeeper install all --port "$PORT"
-run uv --directory "$REPO_ROOT" run aikeeper doctor --port "$PORT"
+run "$AIKEEPER_BIN" install all --port "$PORT"
+run "$AIKEEPER_BIN" doctor --port "$PORT"
 
 dashboard_url="http://127.0.0.1:$PORT"
 echo "AI Keeper dashboard: $dashboard_url"

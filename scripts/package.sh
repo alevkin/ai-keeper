@@ -183,6 +183,14 @@ formula_text = f'''class Aikeeper < Formula
 
       (libexec/"vendor"/"uv").install uv_files
     end
+    (bin/"aikeeper").write <<~EOS
+      #!/usr/bin/env bash
+      export PATH="#{{libexec}}/vendor/uv:$PATH"
+      if [[ ! -x "#{{libexec}}/.venv/bin/aikeeper" ]]; then
+        "#{{libexec}}/vendor/uv/uv" --directory "#{{libexec}}" sync --frozen --no-dev >/dev/null
+      fi
+      exec "#{{libexec}}/.venv/bin/aikeeper" "$@"
+    EOS
     (bin/"aikeeper-install").write <<~EOS
       #!/usr/bin/env bash
       export PATH="#{{libexec}}/vendor/uv:$PATH"
@@ -223,6 +231,7 @@ formula_text = f'''class Aikeeper < Formula
       export PATH="#{{libexec}}/vendor/uv:$PATH"
       exec "#{{libexec}}/scripts/public-release-gate.sh" "$@"
     EOS
+    chmod 0755, bin/"aikeeper"
     chmod 0755, bin/"aikeeper-install"
     chmod 0755, bin/"aikeeper-install-git-hooks"
     chmod 0755, bin/"aikeeper-upgrade"
@@ -244,6 +253,7 @@ formula_text = f'''class Aikeeper < Formula
         aikeeper-install --port 8766
 
       Dashboard: http://127.0.0.1:8766
+      Doctor: aikeeper doctor --port 8766
       Repair setup: aikeeper-install --port 8766
       Custom port: aikeeper-install --port 8770
     EOS

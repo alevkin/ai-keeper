@@ -102,8 +102,8 @@ jobs:
       - name: Audit release candidate
         if: steps.version.outputs.skip != 'true'
         run: |
-          uv run aikeeper audit privacy --json
-          uv run aikeeper audit distribution --json
+          .venv/bin/aikeeper audit privacy --json
+          .venv/bin/aikeeper audit distribution --json
 
       - name: Commit changelog, tag and push
         if: steps.version.outputs.skip != 'true'

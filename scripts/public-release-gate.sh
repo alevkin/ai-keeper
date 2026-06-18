@@ -65,7 +65,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUTPUT_DIR="$(cd "$(dirname "$OUTPUT_DIR")" && pwd)/$(basename "$OUTPUT_DIR")"
 GATE_DB="$(mktemp "${TMPDIR:-/tmp}/aikeeper-gate.XXXXXX.sqlite")"
+AIKEEPER_BIN="$REPO_ROOT/.venv/bin/aikeeper"
 trap 'rm -f "$GATE_DB"' EXIT
+
+ensure_runtime() {
+  if [[ -x "$AIKEEPER_BIN" ]]; then
+    return
+  fi
+  uv --directory "$REPO_ROOT" sync --frozen --no-dev
+}
 
 echo "AI Keeper public release gate"
 echo "Version: $VERSION"
@@ -74,6 +82,7 @@ echo "Output: $OUTPUT_DIR"
 if [[ "$SKIP_TESTS" -eq 0 ]]; then
   uv --directory "$REPO_ROOT" run pytest -q
 fi
+ensure_runtime
 
 bash "$REPO_ROOT/scripts/package.sh" --version "$VERSION" --output-dir "$OUTPUT_DIR"
 bash "$REPO_ROOT/scripts/sign-release.sh" --dist-dir "$OUTPUT_DIR" --signer none
@@ -82,7 +91,7 @@ ruby -c "$OUTPUT_DIR/homebrew/aikeeper.rb"
 ruby -c "$OUTPUT_DIR/homebrew-tap/Formula/aikeeper.rb"
 
 args=(
-  uv --directory "$REPO_ROOT" run aikeeper audit public-release
+  "$AIKEEPER_BIN" audit public-release
   --repo-root "$REPO_ROOT"
   --db-path "$GATE_DB"
   --dist-dir "$OUTPUT_DIR"

@@ -21,6 +21,7 @@ from aikeeper.exports import export_usage
 from aikeeper.health import ingest_health
 from aikeeper.hooks import handle_codex_hook
 from aikeeper.installer import codex_hooks_installed
+from aikeeper.installer import codex_hooks_trust_status
 from aikeeper.installer import install_codex_hooks
 from aikeeper.installer import install_workflow_harness_hooks
 from aikeeper.installer import uninstall_codex_hooks
@@ -522,6 +523,10 @@ def _overall_status(checks: list[dict[str, str | None]]) -> str:
     return "fail" if "fail" in statuses else "warn" if "warn" in statuses else "ok"
 
 
+def _event_list(events: tuple[str, ...]) -> str:
+    return ", ".join(events)
+
+
 def _doctor_data(*, host: str, port: int, db: Path, scope: str) -> dict:
     home = app_home()
     checks: list[dict[str, str | None]] = []
@@ -543,8 +548,26 @@ def _doctor_data(*, host: str, port: int, db: Path, scope: str) -> dict:
     else:
         checks.append(_doctor_check("database", "warn", f"{db} does not exist", "Run `aikeeper install all`."))
 
-    if codex_hooks_installed(scope=scope, codex_home=codex_home(), project_dir=Path.cwd()):
-        checks.append(_doctor_check("codex_hooks", "ok", f"{scope} hooks installed"))
+    hook_status = codex_hooks_trust_status(scope=scope, codex_home=codex_home(), project_dir=Path.cwd())
+    if hook_status.ready:
+        checks.append(_doctor_check("codex_hooks", "ok", f"{scope} hooks installed, trusted, and enabled"))
+    elif hook_status.installed:
+        pending = []
+        if hook_status.untrusted_events:
+            pending.append(f"Trust: {_event_list(hook_status.untrusted_events)}")
+        if hook_status.disabled_events:
+            pending.append(f"Enable toggles: {_event_list(hook_status.disabled_events)}")
+        detail = f"{scope} hooks installed but need Codex Settings review"
+        if pending:
+            detail += f" ({'; '.join(pending)})"
+        checks.append(
+            _doctor_check(
+                "codex_hooks",
+                "warn",
+                detail,
+                "Open Codex Settings -> User config -> Hooks, click Trust for AI Keeper hooks, then enable their toggles.",
+            )
+        )
     else:
         checks.append(
             _doctor_check("codex_hooks", "warn", f"{scope} hooks are missing", f"Run `aikeeper install codex-hooks --scope {scope}`.")

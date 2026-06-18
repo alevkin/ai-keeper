@@ -36,6 +36,14 @@ def _tokens(value: int) -> str:
     return f"{value:,} tokens"
 
 
+def _compact_tokens(value: int) -> str:
+    if value < 1_000:
+        return f"{value} tok"
+    if value < 1_000_000:
+        return f"{value / 1_000:.1f}K tok"
+    return f"{value / 1_000_000:.1f}M tok"
+
+
 def _usd(value: float | None) -> str:
     amount = float(value or 0)
     if 0 < abs(amount) < 0.01:
@@ -66,6 +74,40 @@ def _budget_fragment(warnings: list[dict] | None) -> str:
     )
 
 
+def _budget_signal(warnings: list[dict] | None) -> str | None:
+    if not warnings:
+        return None
+    warning = warnings[0]
+    return (
+        f"budget {warning['severity']}: {warning['label']} "
+        f"{_budget_value(warning['used'], warning['unit'])}/{_budget_value(warning['limit'], warning['unit'])}"
+    )
+
+
+def _usage_fragment(label: str, tokens: int, cost: float | None = None) -> str:
+    usage = _compact_tokens(tokens)
+    if cost is not None:
+        usage = f"{_usd(cost)} / {usage}"
+    return f"{label} {usage}"
+
+
+def _summary_signal(status: dict) -> str:
+    budget_signal = _budget_signal(status.get("budget_warnings"))
+    if budget_signal:
+        return budget_signal
+    if (status.get("task", {}).get("task_key") or "") == "unassigned":
+        return "needs task"
+    return "on track"
+
+
+def _next_action(status: dict) -> str:
+    if status.get("budget_warnings"):
+        return "narrow scope"
+    if (status.get("task", {}).get("task_key") or "") == "unassigned":
+        return "assign task"
+    return "continue"
+
+
 def _dashboard_candidates() -> list[str]:
     configured = os.environ.get("AIKEEPER_DASHBOARD_URL")
     urls = [configured.rstrip("/")] if configured else []
@@ -93,16 +135,25 @@ def _find_dashboard_url() -> str | None:
 
 
 def _summary(status: dict, dashboard_url: str | None = None) -> str:
-    line = (
-        f"> **AI Keeper** | turn {_tokens_with_cost(status['session']['last_turn_tokens'], status['session'].get('last_turn_cost_usd'))} | "
-        f"session {_tokens_with_cost(status['session']['total_tokens'], status['session'].get('estimated_cost_usd'))} | "
-        f"task today {_tokens(status['task']['today_tokens'])} | "
-        f"project today {_tokens(status['project']['today_tokens'])}"
-    )
+    task = status["task"]
+    project = status["project"]
+    parts = [
+        "> **AI Keeper**",
+        _usage_fragment(
+            "turn",
+            int(status["session"]["last_turn_tokens"]),
+            status["session"].get("last_turn_cost_usd"),
+        ),
+        _usage_fragment("task today", int(task["today_tokens"]), task.get("today_cost_usd")),
+    ]
+    if int(project.get("today_tokens") or 0) != int(task.get("today_tokens") or 0):
+        parts.append(
+            _usage_fragment("project today", int(project["today_tokens"]), project.get("today_cost_usd"))
+        )
+    parts.extend([_summary_signal(status), f"next: {_next_action(status)}"])
     if dashboard_url:
-        line += f" | [dashboard]({dashboard_url})"
-    line += _budget_fragment(status.get("budget_warnings"))
-    return line
+        parts.append(f"[dashboard]({dashboard_url})")
+    return " · ".join(parts)
 
 
 def _prompt_context(status: dict) -> str:

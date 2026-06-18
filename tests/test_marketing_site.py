@@ -59,9 +59,9 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert 'id="codex-hook"' in html
     assert "Codex gets the usage line too" in html
     assert "<strong>AI Keeper</strong> | turn 125,770 tokens" not in html
-    assert "session 237,711,203 tokens" in html
-    assert "task today 20,409,269 tokens" in html
-    assert "project today 20,409,269 tokens" in html
+    assert "session 237,711,203 tokens" not in html
+    assert "turn $0.08 / 125.8K tokens" in html
+    assert "next: narrow scope" in html
     assert "Install in one command" in html
     assert "brew install alevkin/tap/aikeeper" in html
     assert "aikeeper-install --port 8766" not in html
@@ -76,8 +76,9 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert "This week" in svg
     assert "AI Keeper Codex hook summary preview" in hook_svg
     assert "AI Keeper" in hook_svg
-    assert "turn 125,770 tokens" in hook_svg
-    assert "session 237,711,203 tokens" in hook_svg
+    assert "turn $0.08 / 125.8K tok" in hook_svg
+    assert "session 237,711,203 tokens" not in hook_svg
+    assert "next: narrow scope" in hook_svg
     assert "Web preview" in hook_svg
     assert "Ask for follow-up changes" in hook_svg
     assert ".copy-command" in css

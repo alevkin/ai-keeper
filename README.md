@@ -107,7 +107,7 @@ aikeeper outcome done --status useful --type code
 After Codex hooks are installed, each turn can include a short usage line:
 
 ```text
-AI Keeper | turn 85,673 tokens ($0.07 est.) | session 14,195,171 tokens ($12.40 est.) | task today 5,697,011 tokens | project today 5,697,011 tokens | dashboard
+AI Keeper · turn $0.07 / 85.7K tok · task today $4.82 / 5.7M tok · on track · next: continue · dashboard
 ```
 
 The dashboard gives the bigger picture: Task Economics, Workflow Harness

@@ -117,7 +117,7 @@ Recommended flow:
 ## Codex Hooks
 
 After hooks are installed, Codex turns can include a compact AI Keeper line with
-turn, session, task, project, and dashboard totals. Hook output is metadata-only:
+turn cost, task cost, an efficiency signal, one next action, and a dashboard link. Hook output is metadata-only:
 `UserPromptSubmit` explicitly discards prompt text, and `Stop` syncs token
 events from local transcript metadata. The hook also adds a short Workflow
 Harness reminder so agents keep work tied to a task and record verified

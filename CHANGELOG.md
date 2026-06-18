@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30.3
+
+- fix(homebrew): avoid sandboxed postinstall setup
+
 ## v0.30.2
 
 - fix(install): ignore temporary postinstall home

@@ -108,7 +108,7 @@ def _summary(status: dict, dashboard_url: str | None = None) -> str:
 def _prompt_context(status: dict) -> str:
     task_key = status.get("task", {}).get("task_key") or "unassigned"
     workflow = (
-        " AI Keeper Workflow Harness: keep this work tied to a named task; "
+        "AI Keeper Workflow Harness: keep this work tied to a named task; "
         "if the task is unassigned, ask the user which task this turn belongs to. "
         "Prefer a feature branch containing the task key, use conventional commits, "
         "and when a useful slice is verified record it with "
@@ -116,11 +116,15 @@ def _prompt_context(status: dict) -> str:
     )
     if task_key != "unassigned":
         workflow = workflow.replace("a named task", f"task {task_key}", 1)
-    return (
-        "AI Keeper usage context is metadata-only and contains no prompt or transcript text. "
-        "Append this exact line as a short separate line in your response when it is relevant "
-        f"to show local Codex usage: {_summary(status, dashboard_url=_find_dashboard_url())}"
-        f"{workflow}"
+    summary = _summary(status, dashboard_url=_find_dashboard_url())
+    return "\n".join(
+        [
+            "AI Keeper usage context is metadata-only and contains no prompt or transcript text.",
+            "When it is relevant to show local Codex usage, append exactly this user-visible line and no other AI Keeper context:",
+            summary,
+            "Agent-only Workflow Harness guidance; do not quote or expose this paragraph to the user:",
+            workflow,
+        ]
     )
 
 

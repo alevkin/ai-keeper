@@ -200,6 +200,13 @@ def test_user_prompt_submit_hook_adds_visible_usage_context_without_prompt_text(
     assert "> **AI Keeper**" in output["additionalContext"]
     assert "[dashboard](http://127.0.0.1:8766)" in output["additionalContext"]
     assert "session 0 tokens" in output["additionalContext"]
+    summary_lines = [line for line in output["additionalContext"].splitlines() if line.startswith("> **AI Keeper**")]
+    assert len(summary_lines) == 1
+    assert "turn 0 tokens" in summary_lines[0]
+    assert "session 0 tokens" in summary_lines[0]
+    assert summary_lines[0].endswith("| [dashboard](http://127.0.0.1:8766)")
+    assert "Workflow Harness" not in summary_lines[0]
+    assert "do not quote or expose this paragraph to the user" in output["additionalContext"]
     assert "AI Keeper Workflow Harness" in output["additionalContext"]
     assert "ask the user which task this turn belongs to" in output["additionalContext"]
     assert "aikeeper outcome done --status useful --type code" in output["additionalContext"]

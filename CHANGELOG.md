@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.29.1
+
+- fix: keep workflow guidance out of hook summary
+
 ## v0.29.0
 
 - feat: add workflow harness outcomes

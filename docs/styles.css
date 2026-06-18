@@ -90,9 +90,9 @@ nav a:hover {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.82fr) minmax(520px, 1.18fr);
+  grid-template-columns: minmax(500px, 0.9fr) minmax(0, 1.1fr);
   align-items: center;
-  gap: 56px;
+  gap: 48px;
   width: min(1180px, calc(100vw - 48px));
   min-height: 720px;
   margin: 0 auto;
@@ -113,9 +113,10 @@ p {
 
 h1 {
   margin-bottom: 20px;
-  font-size: clamp(56px, 8vw, 104px);
+  font-size: clamp(56px, 7vw, 92px);
   line-height: 0.92;
   letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .hero-lede {
@@ -426,7 +427,7 @@ code {
   }
 
   h1 {
-    font-size: 54px;
+    font-size: clamp(42px, 16vw, 54px);
     line-height: 0.96;
   }
 

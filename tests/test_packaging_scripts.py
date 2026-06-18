@@ -137,6 +137,13 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert "file://" not in tap_formula_text
     assert manifest["sha256"] in formula_text
     assert manifest["sha256"] in tap_formula_text
+    assert 'depends_on "uv"' not in formula_text
+    assert 'resource "uv"' in formula_text
+    assert "uv-aarch64-apple-darwin.tar.gz" in formula_text
+    assert "uv-x86_64-apple-darwin.tar.gz" in formula_text
+    assert "uv-aarch64-unknown-linux-gnu.tar.gz" in formula_text
+    assert "uv-x86_64-unknown-linux-gnu.tar.gz" in formula_text
+    assert 'export PATH="#{libexec}/vendor/uv:$PATH"' in formula_text
     assert "aikeeper-install" in formula_text
     assert "aikeeper-install-git-hooks" in formula_text
     assert "aikeeper-upgrade" in formula_text

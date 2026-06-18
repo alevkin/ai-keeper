@@ -62,6 +62,25 @@ preflight_cmd() {
   fi
 }
 
+open_dashboard() {
+  local url="$1"
+  echo "AI Keeper dashboard: $url"
+  if [[ "${AIKEEPER_NO_OPEN:-}" == "1" ]]; then
+    return
+  fi
+  if [[ "$PLATFORM" == "Darwin" ]]; then
+    echo "+ open $url"
+    if [[ "$DRY_RUN" -eq 0 ]]; then
+      open "$url" >/dev/null 2>&1 || echo "Warning: could not open dashboard URL: $url" >&2
+    fi
+  elif command -v xdg-open >/dev/null 2>&1; then
+    echo "+ xdg-open $url"
+    if [[ "$DRY_RUN" -eq 0 ]]; then
+      xdg-open "$url" >/dev/null 2>&1 || echo "Warning: could not open dashboard URL: $url" >&2
+    fi
+  fi
+}
+
 echo "AI Keeper install"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN"
@@ -80,4 +99,4 @@ fi
 run uv --directory "$REPO_ROOT" run aikeeper install all --port "$PORT"
 run uv --directory "$REPO_ROOT" run aikeeper doctor --port "$PORT"
 
-echo "AI Keeper dashboard: http://127.0.0.1:$PORT"
+open_dashboard "http://127.0.0.1:$PORT"

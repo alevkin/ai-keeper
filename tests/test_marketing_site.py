@@ -86,6 +86,8 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert ".hook-figure" in css
     assert ".codex-window" not in css
     assert "display: grid" in css
+    assert "white-space: nowrap" in css
+    assert "grid-template-columns: minmax(500px, 0.9fr) minmax(0, 1.1fr)" in css
     assert "@media (max-width: 760px)" in css
 
 

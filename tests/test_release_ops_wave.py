@@ -105,4 +105,7 @@ def test_install_script_reports_preflight_in_dry_run() -> None:
     assert "uv: ok" in result.stdout
     assert "Platform:" in result.stdout
     assert "AI Keeper dashboard: http://127.0.0.1:8766" in result.stdout
-    assert "+ open http://127.0.0.1:8766" in result.stdout
+    assert (
+        "+ open http://127.0.0.1:8766" in result.stdout
+        or "+ xdg-open http://127.0.0.1:8766" in result.stdout
+    )

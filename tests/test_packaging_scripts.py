@@ -158,6 +158,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert "aikeeper-sign" in formula_text
     assert "aikeeper-release" in formula_text
     assert "aikeeper-public-release-gate" in formula_text
+    assert 'inreplace libexec/"pyproject.toml", \'readme = "README.md"\', \'readme = "../README.md"\'' in formula_text
     assert "def post_install" in formula_text
     assert 'ENV["AIKEEPER_SKIP_AUTO_INSTALL"]' in formula_text
     assert 'ENV.fetch("AIKEEPER_PORT", "8766")' in formula_text

@@ -146,6 +146,7 @@ formula_text = f'''class Aikeeper < Formula
 
   def install
     libexec.install Dir["*"]
+    inreplace libexec/"pyproject.toml", 'readme = "README.md"', 'readme = "../README.md"'
     (bin/"aikeeper-install").write <<~EOS
       #!/usr/bin/env bash
       exec "#{{libexec}}/scripts/install.sh" "$@"

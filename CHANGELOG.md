@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.29.0
+
+- feat: add workflow harness outcomes
+
 ## v0.28.0
 
 - feat: add task economics efficiency dashboard

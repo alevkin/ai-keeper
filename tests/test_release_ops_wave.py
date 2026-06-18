@@ -110,6 +110,7 @@ def test_install_script_reports_preflight_in_dry_run() -> None:
     assert "aikeeper doctor --port 8766" in result.stdout
     assert "Waiting for AI Keeper dashboard: http://127.0.0.1:8766/api/ping" in result.stdout
     assert "AI Keeper dashboard: http://127.0.0.1:8766" in result.stdout
+    assert result.stdout.index("Waiting for AI Keeper dashboard") < result.stdout.index("aikeeper doctor --port 8766")
     assert (
         "+ open http://127.0.0.1:8766" in result.stdout
         or "+ xdg-open http://127.0.0.1:8766" in result.stdout

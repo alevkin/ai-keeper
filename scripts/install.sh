@@ -131,12 +131,13 @@ else
 fi
 
 run "$AIKEEPER_BIN" install all --port "$PORT"
-run "$AIKEEPER_BIN" doctor --port "$PORT"
 
 dashboard_url="http://127.0.0.1:$PORT"
 echo "AI Keeper dashboard: $dashboard_url"
 if wait_for_dashboard "$dashboard_url"; then
+  run "$AIKEEPER_BIN" doctor --port "$PORT"
   open_dashboard "$dashboard_url"
 else
+  run "$AIKEEPER_BIN" doctor --port "$PORT"
   echo "Warning: dashboard did not become ready; browser was not opened." >&2
 fi

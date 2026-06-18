@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30.9
+
+- fix(install): wait for dashboard before doctor output
+
 ## v0.30.8
 
 - fix(install): clarify Codex hook trust setup

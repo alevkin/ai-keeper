@@ -1,4 +1,6 @@
 import plistlib
+import os
+import pwd
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -9,7 +11,11 @@ from aikeeper.launchd import bootstrap_launch_agent
 from aikeeper.launchd import build_launch_agent_plist
 from aikeeper.launchd import default_launch_agent_path
 from aikeeper.launchd import launch_agent_status
+from aikeeper.launchd import standard_launch_agent_path
 from aikeeper.launchd import write_launch_agent_plist
+from aikeeper.settings import app_home
+from aikeeper.settings import claude_home
+from aikeeper.settings import codex_home
 
 
 def test_build_launch_agent_plist_uses_keepalive_and_repo_command(tmp_path: Path, monkeypatch) -> None:
@@ -78,7 +84,7 @@ def test_default_launch_agent_path_falls_back_when_standard_dir_is_not_writable(
     launch_agents = home / "Library" / "LaunchAgents"
     launch_agents.mkdir(parents=True)
     launch_agents.chmod(0o555)
-    monkeypatch.setattr(Path, "home", lambda: home)
+    monkeypatch.setattr("aikeeper.launchd.user_home", lambda: home)
     monkeypatch.setenv("AIKEEPER_HOME", str(tmp_path / "aikeeper"))
 
     try:
@@ -87,6 +93,21 @@ def test_default_launch_agent_path_falls_back_when_standard_dir_is_not_writable(
         launch_agents.chmod(0o755)
 
     assert path == tmp_path / "aikeeper" / "LaunchAgents" / "com.aikeeper.daemon.plist"
+
+
+def test_default_user_paths_ignore_temporary_process_home(tmp_path: Path, monkeypatch) -> None:
+    temporary_home = tmp_path / "aikeeper-postinstall"
+    temporary_home.mkdir()
+    account_home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+    monkeypatch.setenv("HOME", str(temporary_home))
+    monkeypatch.delenv("AIKEEPER_HOME", raising=False)
+    monkeypatch.delenv("CODEX_HOME", raising=False)
+    monkeypatch.delenv("CLAUDE_HOME", raising=False)
+
+    assert app_home() == account_home / ".aikeeper"
+    assert codex_home() == account_home / ".codex"
+    assert claude_home() == account_home / ".claude"
+    assert standard_launch_agent_path() == account_home / "Library" / "LaunchAgents" / "com.aikeeper.daemon.plist"
 
 
 def test_cli_service_install_writes_plist_without_start(tmp_path: Path, monkeypatch) -> None:

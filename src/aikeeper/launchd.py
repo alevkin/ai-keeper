@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 
 from aikeeper.settings import DEFAULT_HOST, DEFAULT_PORT, app_home, codex_home, default_db_path, ensure_app_home
+from aikeeper.settings import user_home
 
 
 LAUNCHD_LABEL = "com.aikeeper.daemon"
@@ -44,7 +45,7 @@ def default_launch_agent_path(label: str = LAUNCHD_LABEL) -> Path:
 
 
 def standard_launch_agent_path(label: str = LAUNCHD_LABEL) -> Path:
-    return Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
+    return user_home() / "Library" / "LaunchAgents" / f"{label}.plist"
 
 
 def uses_fallback_launch_agent_path(path: Path, label: str = LAUNCHD_LABEL) -> bool:

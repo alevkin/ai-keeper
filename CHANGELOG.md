@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.30.4
+
+- test(install): allow linux dashboard opener
+- fix(homebrew): bundle uv and open dashboard
+
 ## v0.30.3
 
 - fix(homebrew): avoid sandboxed postinstall setup

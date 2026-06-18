@@ -30,6 +30,83 @@ def test_install_codex_hooks_merges_idempotently_and_backs_up_existing_file(tmp_
     ) == 1
 
 
+def test_install_codex_hooks_replaces_previous_aikeeper_versions(tmp_path: Path, monkeypatch) -> None:
+    codex_home = tmp_path / "codex"
+    codex_home.mkdir()
+    homebrew_prefix = tmp_path / "homebrew"
+    current_root = homebrew_prefix / "Cellar" / "aikeeper" / "0.30.6" / "libexec"
+    stable_executable = homebrew_prefix / "opt" / "aikeeper" / "libexec" / ".venv" / "bin" / "aikeeper"
+    stable_executable.parent.mkdir(parents=True)
+    stable_executable.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setattr("aikeeper.installer._project_root", lambda: current_root)
+    hooks_file = codex_home / "hooks.json"
+    old_0303 = "uv --directory /opt/homebrew/Cellar/aikeeper/0.30.3/libexec run aikeeper hook codex"
+    old_0305 = "uv --directory /opt/homebrew/Cellar/aikeeper/0.30.5/libexec run aikeeper hook codex"
+    hooks_file.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    event: [
+                        {"hooks": [{"type": "command", "command": old_0303}]},
+                        {"hooks": [{"type": "command", "command": old_0305}]},
+                    ]
+                    for event in ("SessionStart", "UserPromptSubmit", "Stop")
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    install_codex_hooks(scope="user", codex_home=codex_home, project_dir=tmp_path)
+    data = json.loads(hooks_file.read_text())
+
+    expected_command = f"{stable_executable} hook codex"
+    for event_name in ("SessionStart", "UserPromptSubmit", "Stop"):
+        groups = data["hooks"][event_name]
+        commands = [hook["command"] for group in groups for hook in group["hooks"]]
+        assert commands == [expected_command]
+
+
+def test_install_codex_hooks_preserves_non_aikeeper_hooks_when_replacing_versions(
+    tmp_path: Path, monkeypatch
+) -> None:
+    codex_home = tmp_path / "codex"
+    codex_home.mkdir()
+    current_root = tmp_path / "aikeeper" / "libexec"
+    current_executable = current_root / ".venv" / "bin" / "aikeeper"
+    current_executable.parent.mkdir(parents=True)
+    current_executable.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setattr("aikeeper.installer._project_root", lambda: current_root)
+    hooks_file = codex_home / "hooks.json"
+    hooks_file.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "Stop": [
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": "uv --directory /opt/homebrew/Cellar/aikeeper/0.30.5/libexec run aikeeper hook codex",
+                                },
+                                {"type": "command", "command": "other-tool"},
+                            ]
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    install_codex_hooks(scope="user", codex_home=codex_home, project_dir=tmp_path)
+    data = json.loads(hooks_file.read_text())
+
+    stop_commands = [hook["command"] for group in data["hooks"]["Stop"] for hook in group["hooks"]]
+    assert stop_commands == ["other-tool", f"{current_executable} hook codex"]
+    assert data["hooks"]["SessionStart"] == [{"hooks": [{"command": f"{current_executable} hook codex", "statusMessage": "Syncing AI Keeper", "timeout": 30, "type": "command"}]}]
+
+
 def test_cli_status_json_reads_configured_db(tmp_path: Path) -> None:
     db_path = tmp_path / "keeper.sqlite"
     cwd = tmp_path / "repo"

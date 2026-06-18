@@ -19,10 +19,37 @@ def _project_root() -> Path | None:
     return None
 
 
+def _homebrew_opt_aikeeper_executable(root: Path) -> Path | None:
+    if (
+        root.name == "libexec"
+        and root.parent.parent.name == "aikeeper"
+        and root.parent.parent.parent.name == "Cellar"
+    ):
+        prefix = root.parent.parent.parent.parent
+        candidate = prefix / "opt" / "aikeeper" / "libexec" / ".venv" / "bin" / "aikeeper"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _project_aikeeper_executable(root: Path) -> Path | None:
+    homebrew_executable = _homebrew_opt_aikeeper_executable(root)
+    if homebrew_executable:
+        return homebrew_executable
+    for relative in (Path(".venv") / "bin" / "aikeeper", Path(".venv") / "Scripts" / "aikeeper.exe"):
+        candidate = root / relative
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def _hook_command() -> str:
     root = _project_root()
     if root:
-        return f"uv --directory {shlex.quote(str(root))} run aikeeper hook codex"
+        executable = _project_aikeeper_executable(root)
+        if executable:
+            return shlex.join([str(executable), "hook", "codex"])
+        return shlex.join(["uv", "--directory", str(root), "run", "aikeeper", "hook", "codex"])
     return "aikeeper hook codex"
 
 
@@ -32,7 +59,13 @@ def _hook_entry() -> dict:
 
 def _is_ai_keeper_hook(hook: dict) -> bool:
     command = str(hook.get("command") or "").strip()
-    return command == _hook_command() or command.endswith("aikeeper hook codex")
+    if command == _hook_command():
+        return True
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        parts = command.split()
+    return len(parts) >= 3 and parts[-2:] == ["hook", "codex"] and Path(parts[-3]).name == "aikeeper"
 
 
 def _target_path(scope: str, codex_home: Path, project_dir: Path) -> Path:
@@ -59,13 +92,15 @@ def install_codex_hooks(*, scope: str = "user", codex_home: Path | None = None, 
     hooks = data.setdefault("hooks", {})
     for event_name in HOOK_EVENTS:
         groups = hooks.setdefault(event_name, [])
-        existing = False
+        updated_groups = []
         for group in groups:
-            for hook in group.get("hooks", []):
-                if hook.get("command") == _hook_command():
-                    existing = True
-        if not existing:
-            groups.append({"hooks": [_hook_entry()]})
+            remaining_hooks = [hook for hook in group.get("hooks", []) if not _is_ai_keeper_hook(hook)]
+            if remaining_hooks:
+                updated_group = dict(group)
+                updated_group["hooks"] = remaining_hooks
+                updated_groups.append(updated_group)
+        updated_groups.append({"hooks": [_hook_entry()]})
+        hooks[event_name] = updated_groups
     target.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return target
 

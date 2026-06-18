@@ -178,7 +178,10 @@ formula_text = f'''class Aikeeper < Formula
     libexec.install Dir["*"]
     inreplace libexec/"pyproject.toml", 'readme = "README.md"', 'readme = "../README.md"'
     resource("uv").stage do
-      (libexec/"vendor"/"uv").install Dir["uv-*/*"]
+      uv_files = Dir["uv", "uvx", "uv-*/*"]
+      raise "uv resource did not contain uv or uvx" if uv_files.empty?
+
+      (libexec/"vendor"/"uv").install uv_files
     end
     (bin/"aikeeper-install").write <<~EOS
       #!/usr/bin/env bash

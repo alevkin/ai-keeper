@@ -143,6 +143,7 @@ def test_package_script_builds_release_archive_manifest_and_formula(tmp_path: Pa
     assert "uv-x86_64-apple-darwin.tar.gz" in formula_text
     assert "uv-aarch64-unknown-linux-gnu.tar.gz" in formula_text
     assert "uv-x86_64-unknown-linux-gnu.tar.gz" in formula_text
+    assert 'raise "uv resource did not contain uv or uvx" if uv_files.empty?' in formula_text
     assert 'export PATH="#{libexec}/vendor/uv:$PATH"' in formula_text
     assert "aikeeper-install" in formula_text
     assert "aikeeper-install-git-hooks" in formula_text

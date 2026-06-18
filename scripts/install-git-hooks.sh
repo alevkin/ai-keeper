@@ -10,8 +10,8 @@ AI Keeper local git hook installer
 
 Usage: scripts/install-git-hooks.sh [--repo-root PATH] [--hooks-dir PATH]
 
-Installs local pre-commit and pre-push hooks that run metadata-only AI Keeper
-distribution checks. Private marker values are read from
+Installs local pre-commit, commit-msg, and pre-push hooks that run metadata-only
+AI Keeper distribution and workflow-harness checks. Private marker values are read from
 $AIKEEPER_PRIVATE_MARKERS or $AIKEEPER_HOME/private-markers.toml, never from the
 repository.
 EOF
@@ -106,7 +106,37 @@ if matched_rule_ids:
 PY
 EOF
 
+read -r -d '' COMMIT_MSG <<'EOF' || true
+#!/usr/bin/env bash
+set -euo pipefail
+
+MESSAGE_FILE="$1"
+SUBJECT="$(sed -n '1p' "$MESSAGE_FILE")"
+
+case "$SUBJECT" in
+  Merge\ *|Revert\ *) exit 0 ;;
+esac
+
+if ! printf '%s\n' "$SUBJECT" | grep -Eq '^(feat|fix|docs|test|refactor|perf|build|ci|chore|revert)(\([A-Za-z0-9._/-]+\))?!?: .+'; then
+  cat >&2 <<'MSG'
+AI Keeper: commit subject should follow Conventional Commits.
+Examples:
+  feat: add task economics dashboard
+  fix(hooks): restore dashboard link detection
+MSG
+  exit 1
+fi
+
+BRANCH="$(git branch --show-current 2>/dev/null || true)"
+if [[ -n "$BRANCH" && ! "$BRANCH" =~ ^(main|master|develop|release/.*)$ ]]; then
+  if ! printf '%s\n' "$BRANCH" | grep -Eiq '([A-Z][A-Z0-9]+-[0-9]+|GH-[0-9]+|ISSUE-[0-9]+|PR-[0-9]+|task/|feature/|fix/|docs/|chore/)'; then
+    echo "AI Keeper: branch does not expose a task key/pattern, outcome attribution may be weaker." >&2
+  fi
+fi
+EOF
+
 write_hook "$HOOKS_DIR/pre-commit" "$PRE_COMMIT"
+write_hook "$HOOKS_DIR/commit-msg" "$COMMIT_MSG"
 write_hook "$HOOKS_DIR/pre-push" "$PRE_PUSH"
 
 echo "Installed AI Keeper git hooks in $HOOKS_DIR"

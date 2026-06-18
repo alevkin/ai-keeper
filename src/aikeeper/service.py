@@ -17,6 +17,7 @@ from aikeeper.budgets import (
 from aikeeper.db import connect, init_db
 from aikeeper.gitmeta import get_git_metadata, task_identity
 from aikeeper.health import ingest_health
+from aikeeper.outcomes import workflow_harness_state
 from aikeeper.pricing import PRICING_RETRIEVED_DATE, PRICING_SOURCE_LABEL, PRICING_SOURCE_URL, estimate_event_cost_usd
 from aikeeper.timeutils import now_ms as current_now_ms
 from aikeeper.timeutils import utc_day_start_ms, utc_week_start_ms
@@ -939,6 +940,7 @@ def overview(db_path: Path | str, now_ms: int | None = None, budget_path: Path |
             "current_activity": current_activity,
             "burn_rate": burn_rate,
             "task_economics": _task_economics(con, current_activity, burn_rate),
+            "workflow_harness": workflow_harness_state(con, current_activity),
             "model_efficiency": model_efficiency,
             "provider_totals": _provider_totals(model_efficiency, total_token_count),
             "simulations": _simulation_summaries(con),

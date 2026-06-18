@@ -314,6 +314,13 @@ def test_overview_exposes_v2_dashboard_metadata(tmp_path: Path) -> None:
     assert economics["next_best_move"]["title"]
     assert len(economics["drivers"]) == 4
     assert economics["ledger"][0]["tokens"] == 300
+    harness = data["workflow_harness"]
+    assert harness["configured"] is True
+    assert harness["status"] == "attention"
+    assert harness["outcome_summary"]["useful"] == 0
+    assert any(item["label"] == "Git hooks" for item in harness["coverage"])
+    assert any("Mark the useful outcome" in gap for gap in harness["gaps"])
+    assert any("aikeeper outcome done" in command["command"] for command in harness["commands"])
     assert data["generated_at_ms"] == now
 
 
@@ -491,8 +498,11 @@ def test_dashboard_pages_render_navigation_and_split_surfaces(tmp_path: Path, mo
     assert "Task Economics" in page.text
     assert "Current useful outcome" in page.text
     assert "Next best move" in page.text
+    assert "Workflow Harness" in page.text
     assert "Task Ledger" in page.text
     assert "Cost drivers" in page.text
+    assert "Useful outcomes" in page.text
+    assert "Install workflow hooks" in page.text
     assert "$0.0038 estimated" in page.text
     assert "$0.0038" in page.text
     assert "session-1" in page.text

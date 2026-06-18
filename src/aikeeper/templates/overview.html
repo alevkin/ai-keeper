@@ -5,6 +5,7 @@
 {% set burn_trend = overview.burn_rate.trend %}
 {% set providers = overview.provider_totals %}
 {% set econ = overview.task_economics %}
+{% set harness = overview.workflow_harness %}
 {% set alert_count = (1 if overview.budget_warnings else 0) + (1 if overview.ingest_health.issues else 0) + (1 if overview.privacy_audit.findings else 0) %}
 {% if econ.configured and econ.baseline.estimated_cost_usd %}
   {% set trajectory_percent = econ.spent.estimated_cost_usd * 100 / econ.baseline.estimated_cost_usd %}
@@ -258,6 +259,58 @@
           {% endfor %}
         </div>
         {% endif %}
+      </div>
+    </section>
+
+    <section class="panel workflow-panel {{ harness.status }}">
+      <div class="panel-head">
+        <h2>Workflow Harness</h2>
+        <span>{{ harness.status }}</span>
+      </div>
+      <div class="workflow-body">
+        <div class="workflow-score">
+          <div>
+            <span class="label">Useful outcomes</span>
+            <strong>{{ harness.outcome_summary.useful }}</strong>
+            <small>{{ harness.outcome_summary.total }} total · {{ harness.outcome_summary.candidates }} candidates</small>
+          </div>
+          {% if harness.suggested_outcome %}
+          <div class="candidate-callout">
+            <strong>Candidate found</strong>
+            <small>
+              {{ harness.suggested_outcome.changed_files }} files ·
+              {{ harness.suggested_outcome.tokens | compact_tokens }} tokens ·
+              {{ harness.suggested_outcome.estimated_cost_usd | compact_usd }} est.
+            </small>
+          </div>
+          {% endif %}
+        </div>
+        <div class="coverage-list">
+          {% for item in harness.coverage %}
+          <div class="coverage-row {% if item.ok %}ok{% else %}warn{% endif %}">
+            <span aria-hidden="true"></span>
+            <div>
+              <strong>{{ item.label }}</strong>
+              <small>{{ item.detail }}</small>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% if harness.gaps %}
+        <div class="workflow-gaps">
+          {% for gap in harness.gaps[:3] %}
+          <p>{{ gap }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="command-list">
+          {% for command in harness.commands %}
+          <div>
+            <span>{{ command.label }}</span>
+            <code>{{ command.command }}</code>
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </section>
 

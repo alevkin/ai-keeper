@@ -22,6 +22,7 @@ from aikeeper.health import ingest_health
 from aikeeper.hooks import handle_codex_hook
 from aikeeper.installer import codex_hooks_installed
 from aikeeper.installer import install_codex_hooks
+from aikeeper.installer import install_workflow_harness_hooks
 from aikeeper.installer import uninstall_codex_hooks
 from aikeeper.launchd import bootstrap_launch_agent
 from aikeeper.launchd import default_launch_agent_path
@@ -32,6 +33,7 @@ from aikeeper.launchd import uninstall_launch_agent
 from aikeeper.launchd import uses_fallback_launch_agent_path
 from aikeeper.launchd import write_launch_agent_plist
 from aikeeper.openai_costs import fetch_and_import_costs
+from aikeeper.outcomes import OUTCOME_STATUSES, OUTCOME_TYPES, record_outcome, workflow_harness_state_for_cwd
 from aikeeper.public_release import evaluate_public_release_gate
 from aikeeper.service import status_for_cwd
 from aikeeper.service import simulate_model_cost
@@ -53,6 +55,7 @@ service_app = typer.Typer(help="Install and control the macOS launchd service.")
 uninstall_app = typer.Typer(help="Remove AI Keeper integrations.")
 diagnostics_app = typer.Typer(help="Create metadata-only troubleshooting bundles.")
 jobs_app = typer.Typer(help="Run and inspect AI Keeper system jobs.")
+outcome_app = typer.Typer(help="Record and inspect useful AI-assisted outcomes.")
 app.add_typer(daemon_app, name="daemon")
 app.add_typer(sync_app, name="sync")
 app.add_typer(hook_app, name="hook")
@@ -64,6 +67,7 @@ app.add_typer(service_app, name="service")
 app.add_typer(uninstall_app, name="uninstall")
 app.add_typer(diagnostics_app, name="diagnostics")
 app.add_typer(jobs_app, name="jobs")
+app.add_typer(outcome_app, name="outcome")
 
 
 @daemon_app.command("start")
@@ -151,6 +155,15 @@ def install_codex_hooks_cmd(
 ) -> None:
     target = install_codex_hooks(scope=scope, codex_home=codex_home(), project_dir=Path.cwd())
     console.print(f"Installed Codex hooks at {target}")
+
+
+@install_app.command("workflow-harness")
+def install_workflow_harness_cmd(
+    repo_root: Annotated[Path, typer.Option("--repo-root", help="Repository where local workflow git hooks should be installed.")] = Path.cwd(),
+    hooks_dir: Annotated[Path | None, typer.Option("--hooks-dir", help="Override hooks directory for tests or unusual git setups.")] = None,
+) -> None:
+    target = install_workflow_harness_hooks(repo_root=repo_root, hooks_dir=hooks_dir)
+    console.print(f"Installed AI Keeper Workflow Harness git hooks in {target}")
 
 
 @install_app.command("all")
@@ -280,6 +293,78 @@ def status(
         f"AI Keeper: session {data['session']['total_tokens']} tokens, "
         f"task today {data['task']['today_tokens']}, "
         f"project today {data['project']['today_tokens']}"
+    )
+
+
+@outcome_app.command("done")
+def outcome_done(
+    cwd: Annotated[Path, typer.Option()] = Path.cwd(),
+    task_key: Annotated[str | None, typer.Option("--task", help="Override detected task key.")] = None,
+    status: Annotated[str, typer.Option(help=f"One of: {', '.join(sorted(OUTCOME_STATUSES))}.")] = "useful",
+    outcome_type: Annotated[str, typer.Option("--type", help=f"One of: {', '.join(sorted(OUTCOME_TYPES))}.")] = "code",
+    label: Annotated[str | None, typer.Option(help="Short metadata label for the outcome.")] = None,
+    commit_ref: Annotated[str, typer.Option(help="Git commit/ref used as the outcome signal.")] = "HEAD",
+    db_path: Annotated[Path, typer.Option()] = default_db_path(),
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    try:
+        outcome = record_outcome(
+            db_path,
+            cwd=cwd,
+            task_key=task_key,
+            status=status,
+            outcome_type=outcome_type,
+            display_name=label,
+            commit_ref=commit_ref,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    if as_json:
+        sys.stdout.write(json.dumps(outcome, indent=2) + "\n")
+        return
+    console.print(
+        f"Recorded outcome {outcome['outcome_key']} for task {outcome['task_id']}: "
+        f"{outcome['status']} · {outcome['tokens']} tokens · ${outcome['estimated_cost_usd']:.2f} est."
+    )
+
+
+@outcome_app.command("status")
+def outcome_status(
+    cwd: Annotated[Path, typer.Option()] = Path.cwd(),
+    db_path: Annotated[Path, typer.Option()] = default_db_path(),
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    data = workflow_harness_state_for_cwd(db_path, cwd)
+    if as_json:
+        sys.stdout.write(json.dumps(data, indent=2) + "\n")
+        return
+    console.print(f"Workflow Harness: {data['status']}")
+    summary = data["outcome_summary"]
+    console.print(
+        f"outcomes: {summary['total']} total · {summary['useful']} useful · "
+        f"{summary['candidates']} candidates · {summary['discarded']} discarded"
+    )
+    for gap in data["gaps"]:
+        console.print(f"- {gap}")
+
+
+@outcome_app.command("suggest")
+def outcome_suggest(
+    cwd: Annotated[Path, typer.Option()] = Path.cwd(),
+    db_path: Annotated[Path, typer.Option()] = default_db_path(),
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+) -> None:
+    data = workflow_harness_state_for_cwd(db_path, cwd)
+    suggestion = data.get("suggested_outcome")
+    if as_json:
+        sys.stdout.write(json.dumps({"suggested_outcome": suggestion}, indent=2) + "\n")
+        return
+    if not suggestion:
+        console.print("No outcome candidate found.")
+        return
+    console.print(
+        f"Suggested outcome: {suggestion['commit_sha'][:12]} · {suggestion['confidence']} confidence · "
+        f"{suggestion['tokens']} tokens · ${suggestion['estimated_cost_usd']:.2f} est."
     )
 
 

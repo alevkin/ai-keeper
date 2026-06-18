@@ -10,9 +10,14 @@ from aikeeper.db import connect, init_db
 
 ALLOWED_TEXT_COLUMNS = {
     "api_key_ref",
+    "check_name",
+    "check_status",
+    "commit_sha",
+    "confidence",
     "currency",
     "cwd",
     "display_name",
+    "event_type",
     "git_branch",
     "git_origin",
     "git_origin_url",
@@ -23,6 +28,8 @@ ALLOWED_TEXT_COLUMNS = {
     "model",
     "model_provider",
     "name",
+    "outcome_key",
+    "outcome_type",
     "project_ref",
     "provider",
     "raw_json",
@@ -31,6 +38,7 @@ ALLOWED_TEXT_COLUMNS = {
     "source",
     "source_key",
     "source_path",
+    "status",
     "task_key",
     "transcript_path",
 }

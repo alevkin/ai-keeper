@@ -82,12 +82,46 @@ uv run aikeeper audit privacy --json
 uv run aikeeper audit distribution --json
 ```
 
+## Workflow Harness
+
+Workflow Harness makes useful outcomes easier to detect without storing prompt
+or reply text. It uses project metadata: task branch names, conventional commit
+subjects, local git hooks, explicit outcome markers, and verification signals.
+
+Install local project guardrails:
+
+```bash
+aikeeper install workflow-harness --repo-root .
+```
+
+Record a verified useful slice:
+
+```bash
+aikeeper outcome done --status useful --type code
+```
+
+Inspect the current task's outcome coverage:
+
+```bash
+aikeeper outcome status --cwd . --json
+aikeeper outcome suggest --cwd . --json
+```
+
+Recommended flow:
+
+- use a feature branch with the task key in the name
+- keep commits conventional, such as `feat: add workflow harness`
+- run the relevant check before marking an outcome useful
+- mark discarded or partial work so cost per useful outcome stays honest
+
 ## Codex Hooks
 
 After hooks are installed, Codex turns can include a compact AI Keeper line with
 turn, session, task, project, and dashboard totals. Hook output is metadata-only:
 `UserPromptSubmit` explicitly discards prompt text, and `Stop` syncs token
-events from local transcript metadata.
+events from local transcript metadata. The hook also adds a short Workflow
+Harness reminder so agents keep work tied to a task and record verified
+outcomes.
 
 ## Claude Metadata Sync
 

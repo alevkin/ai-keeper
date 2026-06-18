@@ -95,6 +95,22 @@ def test_cli_install_all_initializes_db_installs_hooks_and_service(tmp_path: Pat
     assert calls[1] == ("bootstrap", plist_path)
 
 
+def test_cli_install_workflow_harness_writes_git_hooks(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    hooks = tmp_path / "hooks"
+    repo.mkdir()
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["install", "workflow-harness", "--repo-root", str(repo), "--hooks-dir", str(hooks)])
+
+    assert result.exit_code == 0
+    assert (hooks / "pre-commit").exists()
+    assert (hooks / "commit-msg").exists()
+    assert (hooks / "pre-push").exists()
+    assert "Workflow Harness" in result.stdout
+    assert "Conventional Commits" in (hooks / "commit-msg").read_text(encoding="utf-8")
+
+
 def test_cli_doctor_json_reports_installation_state(tmp_path: Path, monkeypatch) -> None:
     app_home = tmp_path / "home"
     codex_home = tmp_path / "codex"

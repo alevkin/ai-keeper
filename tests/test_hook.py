@@ -200,6 +200,9 @@ def test_user_prompt_submit_hook_adds_visible_usage_context_without_prompt_text(
     assert "> **AI Keeper**" in output["additionalContext"]
     assert "[dashboard](http://127.0.0.1:8766)" in output["additionalContext"]
     assert "session 0 tokens" in output["additionalContext"]
+    assert "AI Keeper Workflow Harness" in output["additionalContext"]
+    assert "ask the user which task this turn belongs to" in output["additionalContext"]
+    assert "aikeeper outcome done --status useful --type code" in output["additionalContext"]
     with connect(db_path) as con:
         sessions_count = con.execute("select count(*) from sessions").fetchone()[0]
     assert sessions_count == 0

@@ -15,6 +15,8 @@ def test_readme_is_product_focused_and_points_to_user_paths() -> None:
     assert "## Install" in text
     assert "## Privacy Model" in text
     assert "Codex and Claude usage" in text
+    assert "Workflow Harness" in text
+    assert "aikeeper outcome done --status useful --type code" in text
     assert "Claude metadata import" in text
     assert "brew install alevkin/tap/aikeeper" in text
     assert "uv run aikeeper sync claude --once" in text
@@ -52,6 +54,7 @@ def test_github_pages_landing_is_static_product_page() -> None:
     assert "Task Economics" in html
     assert "Next best move" in html
     assert "Task Ledger" in html
+    assert "Workflow Harness" in html
     assert "cache read and cache write tokens" in html
     assert 'id="codex-hook"' in html
     assert "Codex gets the usage line too" in html
@@ -95,6 +98,8 @@ def test_markdown_user_guide_documents_primary_and_recovery_paths() -> None:
     assert "installs the Codex hooks" in text
     assert "aikeeper-install --port 8766" in text
     assert "uv run aikeeper sync claude --once" in text
+    assert "aikeeper install workflow-harness --repo-root ." in text
+    assert "aikeeper outcome suggest --cwd . --json" in text
     assert "$CLAUDE_HOME/projects/**/*.jsonl" in text
     assert "does not store prompts" in text
 

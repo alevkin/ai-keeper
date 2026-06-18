@@ -41,6 +41,9 @@ AI Keeper makes task economics visible while keeping the sensitive parts local:
   provider mix, budgets, and health.
 - **Task Economics**: spent so far, projected next 30 minutes, learned baseline,
   and current status for the active task.
+- **Workflow Harness**: outcome markers, git hook guardrails, conventional
+  commit checks, and task attribution hints that make useful outcomes easier to
+  measure.
 - **Next best move**: lightweight guidance to narrow prompts, split work, or
   commit useful slices before agent work drifts.
 - **Codex hook summary**: after each turn, see current turn, session, task, and
@@ -92,6 +95,13 @@ Install or refresh local developer git hooks:
 scripts/install-git-hooks.sh
 ```
 
+Install Workflow Harness hooks in a project:
+
+```bash
+aikeeper install workflow-harness --repo-root .
+aikeeper outcome done --status useful --type code
+```
+
 ## How It Feels
 
 After Codex hooks are installed, each turn can include a short usage line:
@@ -100,9 +110,9 @@ After Codex hooks are installed, each turn can include a short usage line:
 AI Keeper | turn 85,673 tokens ($0.07 est.) | session 14,195,171 tokens ($12.40 est.) | task today 5,697,011 tokens | project today 5,697,011 tokens | dashboard
 ```
 
-The dashboard gives the bigger picture: Task Economics, active burn rate, cost
-drivers, task ledger, provider mix, budgets, model efficiency, and ingest
-health.
+The dashboard gives the bigger picture: Task Economics, Workflow Harness
+coverage, active burn rate, cost drivers, task ledger, provider mix, budgets,
+model efficiency, and ingest health.
 
 ## Privacy Model
 

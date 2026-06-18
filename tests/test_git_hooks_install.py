@@ -25,14 +25,26 @@ def test_install_git_hooks_writes_local_pre_commit_and_pre_push(tmp_path: Path) 
 
     assert result.returncode == 0, result.stderr
     pre_commit = hooks_dir / "pre-commit"
+    commit_msg = hooks_dir / "commit-msg"
     pre_push = hooks_dir / "pre-push"
     assert pre_commit.exists()
+    assert commit_msg.exists()
     assert pre_push.exists()
     assert "aikeeper audit distribution --json" in pre_commit.read_text(encoding="utf-8")
     assert "aikeeper audit distribution --json" in pre_push.read_text(encoding="utf-8")
+    assert "Conventional Commits" in commit_msg.read_text(encoding="utf-8")
+    assert "branch does not expose a task key" in commit_msg.read_text(encoding="utf-8")
     assert "load_private_marker_rules" in pre_push.read_text(encoding="utf-8")
     assert "AIKEEPER_PRIVATE_MARKERS" in pre_commit.read_text(encoding="utf-8")
     assert "AIKEEPER_PRIVATE_MARKERS" in pre_push.read_text(encoding="utf-8")
 
     assert subprocess.run(["bash", "-n", str(pre_commit)], check=False).returncode == 0
+    assert subprocess.run(["bash", "-n", str(commit_msg)], check=False).returncode == 0
     assert subprocess.run(["bash", "-n", str(pre_push)], check=False).returncode == 0
+
+    good_message = tmp_path / "good-message"
+    bad_message = tmp_path / "bad-message"
+    good_message.write_text("feat: add workflow harness\n", encoding="utf-8")
+    bad_message.write_text("add workflow harness\n", encoding="utf-8")
+    assert subprocess.run([str(commit_msg), str(good_message)], cwd=REPO, check=False).returncode == 0
+    assert subprocess.run([str(commit_msg), str(bad_message)], cwd=REPO, check=False).returncode == 1

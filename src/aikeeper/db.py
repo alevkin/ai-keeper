@@ -121,6 +121,43 @@ create table if not exists system_jobs (
     error text
 );
 
+create table if not exists outcomes (
+    id integer primary key autoincrement,
+    project_id integer not null references projects(id) on delete cascade,
+    task_id integer not null references tasks(id) on delete cascade,
+    outcome_key text not null,
+    source text not null,
+    status text not null,
+    confidence text not null,
+    outcome_type text not null,
+    display_name text not null,
+    git_branch text,
+    commit_sha text,
+    changed_files integer not null default 0,
+    insertions integer not null default 0,
+    deletions integer not null default 0,
+    tokens integer not null default 0,
+    estimated_cost_usd real not null default 0,
+    created_at_ms integer not null,
+    updated_at_ms integer not null,
+    completed_at_ms integer,
+    meta_json text not null default '{}',
+    unique(task_id, outcome_key)
+);
+
+create table if not exists outcome_events (
+    id integer primary key autoincrement,
+    outcome_id integer not null references outcomes(id) on delete cascade,
+    event_type text not null,
+    source text not null,
+    status text not null,
+    created_at_ms integer not null,
+    commit_sha text,
+    check_name text,
+    check_status text,
+    meta_json text not null default '{}'
+);
+
 create index if not exists idx_sessions_cwd on sessions(cwd);
 create index if not exists idx_sessions_project on sessions(project_id);
 create index if not exists idx_sessions_task on sessions(task_id);
@@ -130,6 +167,9 @@ create index if not exists idx_external_costs_bucket on external_costs(provider,
 create index if not exists idx_budget_settings_scope on budget_settings(scope, scope_key);
 create index if not exists idx_system_jobs_created on system_jobs(created_at_ms desc);
 create index if not exists idx_system_jobs_status on system_jobs(status);
+create index if not exists idx_outcomes_task on outcomes(task_id, updated_at_ms desc);
+create index if not exists idx_outcomes_status on outcomes(status);
+create index if not exists idx_outcome_events_outcome on outcome_events(outcome_id, created_at_ms desc);
 """
 
 
